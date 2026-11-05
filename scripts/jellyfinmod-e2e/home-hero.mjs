@@ -17,7 +17,7 @@
 //   JELLYFINMOD_HERO_SHOW_EPISODE  a played episode (with a play date) of a show whose Next Up episode is old in the
 //                             library; the nextup step re-watches it so that show is the one watched most recently
 //   JELLYFINMOD_HERO_OUT      directory for results.json and screenshots
-//   JELLYFINMOD_HERO_STEPS    optional subset of a,finish,b,nextup,c,sections,d,glass; JELLYFINMOD_HERO_LAYOUTS optional subset of the layout names
+//   JELLYFINMOD_HERO_STEPS    optional subset of a,finish,b,nextup,c,sections,d,recent,glass; JELLYFINMOD_HERO_LAYOUTS optional subset of the layout names
 //   JELLYFINMOD_GLASS_VARIANTS  optional: a JSON file of [{ name, css }] for the glass step to measure instead of the
 //                             2026-10-08 bar ("before") and the built one ("after"), for trying values
 //   JELLYFINMOD_GLASS_THEMES    optional subset of the glass step's themes (dark,light,appletv,wmc,blueradiance,purplehaze)
@@ -43,7 +43,7 @@ const MOVIE = required('JELLYFINMOD_HERO_MOVIE');
 // Optional: a played episode of a show whose next episode is old in the library, re-watched to put that show first.
 const SHOW_EPISODE = process.env.JELLYFINMOD_HERO_SHOW_EPISODE;
 const out = path.join(required('JELLYFINMOD_HERO_OUT'), tier);
-const only = (process.env.JELLYFINMOD_HERO_STEPS ?? 'a,finish,b,nextup,c,sections,d,glass').split(',');
+const only = (process.env.JELLYFINMOD_HERO_STEPS ?? 'a,finish,b,nextup,c,sections,d,recent,glass').split(',');
 
 // rd2: dark and Apple TV keep the glass recipe; light reads D259 (white 61.8%, brightness 1.09, no contrast).
 const GLASS_VALUES = { default: { tint: 0.12, brightness: 0.85 }, light: { tint: 0.618, brightness: 1.09 }, appletv: { tint: 0.3, brightness: 1.15 } };
@@ -680,6 +680,43 @@ try {
             record('c', 'Resume positions written back', positions.every(item => back.find(entry => entry.Id === item.Id)?.UserData.PlaybackPositionTicks === item.ticks),
                 { count: positions.length });
         }
+    }
+
+    if (only.includes('recent')) {
+        // Recently Added holds one shape: an episode draws its series' poster, a season says whose it is (ds.t7).
+        await goHome(page);
+        await page.waitForFunction(() => [...document.querySelectorAll('.sect')].some(section => /^Recently Added/.test(section.querySelector('.rowt')?.textContent?.trim() ?? '') && section.querySelector('.cell')), undefined, { timeout: 30000 });
+        await page.waitForTimeout(1500);
+        const cells = await page.evaluate(() => {
+            const section = [...document.querySelectorAll('.sect')].find(node => /^Recently Added/.test(node.querySelector('.rowt')?.textContent?.trim() ?? ''));
+            return [...section.querySelectorAll('.cell')].map(cell => {
+                const box = cell.querySelector('.post').getBoundingClientRect();
+                return { id: cell.dataset.id, type: cell.dataset.type, w: Math.round(box.width), h: Math.round(box.height), captionTop: Math.round(cell.querySelector('.capt').getBoundingClientRect().top),
+                    lines: [...cell.querySelectorAll('.capt .ln')].map(line => line.textContent.trim()), image: cell.querySelector('.post img')?.src ?? '' };
+            });
+        });
+        const sizes = [...new Set(cells.map(cell => cell.w + 'x' + cell.h))];
+        record('recent', 'Every cell of Recently Added has one poster size, 2:3', sizes.length === 1 && Math.abs(cells[0].w / cells[0].h - 2 / 3) < 0.02, sizes);
+        record('recent', 'Their captions start at one height', new Set(cells.map(cell => cell.captionTop)).size === 1, [...new Set(cells.map(cell => cell.captionTop))]);
+        const uid = await userId(page);
+        const about = async cell => (await api(page, 'GET', `Items/${cell.id}?userId=${uid}`)).body;
+        const episodes = cells.filter(cell => cell.type === 'Episode');
+        if (episodes.length) {
+            const facts = await Promise.all(episodes.map(async cell => ({ cell, item: await about(cell) })));
+            record('recent', 'An episode draws its series\' poster, its caption the series and S:E · title, and the card is the episode', facts.every(({ cell, item }) => cell.image.includes(item.SeriesId) && !cell.image.includes(item.Id)
+                && cell.lines[0] === item.SeriesName && cell.lines[1] === `S${item.ParentIndexNumber}:E${item.IndexNumber} · ${item.Name}`), facts.map(({ cell }) => cell.lines.slice(0, 2)));
+        } else record('recent', 'An episode draws its series\' poster', 'NOT VERIFIED', 'no episode in the row');
+        const seasons = cells.filter(cell => cell.type === 'Season');
+        if (seasons.length) {
+            const facts = await Promise.all(seasons.map(async cell => ({ cell, item: await about(cell) })));
+            const expected = item => [item.Name, item.ProductionYear].filter(Boolean).join(' · ');
+            record('recent', 'A season says whose it is: the series, then its name and year, and the card is the season', facts.every(({ cell, item }) => cell.lines[0] === item.SeriesName && cell.lines[1] === expected(item) && item.Type === 'Season'), facts.map(({ cell }) => cell.lines.slice(0, 2)));
+            await page.evaluate(id => { location.hash = '#/details?id=' + id; }, facts[0].item.SeriesId);
+            await page.waitForSelector('.page:not(.hide) [data-ds-section=listChildrenCollapsible] .cell', { timeout: 30000 });
+            const own = await page.locator('.page:not(.hide) [data-ds-section=listChildrenCollapsible] .cell .ln.t').allInnerTexts();
+            record('recent', 'On the series\' own page its Seasons row keeps the plain caption', own.length > 0 && own.every(line => line !== facts[0].item.SeriesName), own);
+        } else record('recent', 'A season says whose it is', 'NOT VERIFIED', 'no season in the row');
+        await page.screenshot({ path: path.join(out, 'recent-1920.png') });
     }
 
     if (only.includes('sections')) {

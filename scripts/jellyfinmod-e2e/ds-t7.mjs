@@ -102,6 +102,47 @@ await page.waitForTimeout(1000);
 record('Escape from the selection menu raises no unhandled rejection', errors.length === before && !await page.locator('[data-ds-actionsheet]').count(), errors.slice(before));
 await page.locator('.selectionCommandsPanel .btnCloseSelectionPanel').click();
 await page.waitForTimeout(500);
+
+// 5. Real Tab: never the browser's ring on what the design draws, on Home, a title page and in the player; the rulebook's on a pill's button.
+const focusLook = () => page.evaluate(() => {
+    const active = document.activeElement;
+    if (!active || active === document.body) return null;
+    const style = getComputedStyle(active);
+    return { tag: active.tagName, cls: String(active.className), design: !!active.closest('.jfds'), visible: active.matches(':focus-visible'), outline: style.outlineStyle, width: parseFloat(style.outlineWidth), offset: parseFloat(style.outlineOffset), color: style.outlineColor, shadow: style.boxShadow, em: parseFloat(style.fontSize) };
+});
+const tabThrough = async (count, onMove) => {
+    const looks = [];
+    for (let index = 0; index < count; index++) {
+        await page.keyboard.press('Tab');
+        await page.waitForTimeout(60);
+        if (onMove) await onMove(index);
+        const look = await focusLook();
+        if (look?.design && look.visible) looks.push(look);
+    }
+    return looks;
+};
+const PRIMARY = 'rgb(0, 164, 220)';
+const ringed = look => look.outline === 'solid' && look.color === PRIMARY && Math.abs(look.width - 0.15 * look.em) < 0.8 && Math.abs(look.offset - 0.15 * look.em) < 0.8;
+await go('#/home', '.homePage:not(.hide)');
+await page.mouse.move(2, 2);
+let looks = await tabThrough(30);
+record('Home by Tab: no stop draws the browser\'s ring', looks.length > 0 && looks.every(look => look.outline !== 'auto'), looks.filter(look => look.outline === 'auto').map(look => look.tag + '.' + look.cls));
+await go('#/details?id=' + process.env.JELLYFINMOD_T7_MOVIE, '.jfmod-dsTitleHost .actbar button');
+await page.mouse.move(2, 2);
+looks = await tabThrough(30);
+const pills = looks.filter(look => /(^|\s)(dbtn|play)(\s|$)/.test(look.cls));
+record('a title page by Tab: no browser ring, and a pill\'s buttons draw the primary 0.15em ring 0.15em off', looks.every(look => look.outline !== 'auto') && pills.length > 0 && pills.every(ringed), pills.slice(0, 2));
+await page.locator('.page:not(.hide) .jfmod-dsTitleHost .actbar button', { hasText: /^(Play|Resume)/ }).first().click();
+await page.waitForFunction(() => location.hash.includes('/video'), undefined, { timeout: 30000 });
+await page.waitForTimeout(5000);
+await page.mouse.move(700, 500);
+await page.waitForTimeout(400);
+looks = await tabThrough(24, async index => page.mouse.move(700 + index, 500));
+const osd = looks.filter(look => /(^|\s)(dbtn|play)(\s|$)/.test(look.cls));
+record('the player by Tab: no browser ring, and its buttons draw the primary ring', looks.every(look => look.outline !== 'auto') && osd.length > 0 && osd.every(ringed), { stops: looks.length, sample: osd.slice(0, 2) });
+await page.screenshot({ path: `${process.env.JELLYFINMOD_T7_SHOTS ?? '.'}/ds-t7-player-${tier}.png` }).catch(() => undefined);
+await page.goBack();
+await page.waitForTimeout(1500);
 record('no page errors', errors.length === 0, errors.slice(0, 3));
 await browser.close();
 console.log(failures === 0 ? 'ALL PASS' : `${failures} FAILED`);
