@@ -42,8 +42,8 @@ const origin = new URL(process.env.JELLYFINMOD_TEST_URL ?? (() => { throw new Er
 // The mod instances only: each Pi instance under its lease (18096 test, 28096 acceptance, 48096 live) and the Mac's local
 // copy of the test instance (envs/local, 127.0.0.1:58096); never production on 8096.
 // The local pool (envs/pool.list) adds bravo to echo on 9096–12096; alpha's 8096 stays refused, as production's number.
-if (!['18096', '28096', '48096', '58096', '9096', '10096', '11096', '12096'].includes(origin.port)) {
-    throw new Error('Runs on the isolated instances 18096, 28096, 48096, the local 58096 or the local pool 9096–12096 only');
+if (!['18096', '28096', '48096'].includes(origin.port) && !(origin.hostname === '127.0.0.1' && ['58096', '9096', '10096', '11096', '12096'].includes(origin.port))) {
+    throw new Error('Runs on the isolated instances 18096, 28096, 48096, or on 127.0.0.1 at the local 58096 or the local pool 9096–12096, only');
 }
 const tier = process.env.JELLYFINMOD_BROWSER ?? 'chromium';
 const env = name => process.env[name] || null;
