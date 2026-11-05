@@ -1195,6 +1195,133 @@
         box-shadow: 0 0 0 0.135em var(--primary);
     }
 
+    /* The tab control (D273, guides/tabs.md): a rail as high and as outlined as a field, a tab an equal share, the selected one a soft
+       blue thumb and a blue 700 name. The Preferences rail is drawn by PrefsPage; the player panel's upstream tabs take the same look here. */
+    & {
+        --tab-on: var(--sel);
+        --tab-shadow: none;
+    }
+
+    &:not(html)[data-theme='light'] {
+        --tab-on: #fff;
+        --tab-shadow: 0 0.09em 0.236em rgba(0, 0, 0, 0.236);
+    }
+
+    .tabs,
+    &.jfmod-dsPlayer .playerSubtitleSettings-profiles {
+        display: flex;
+        box-sizing: border-box;
+        height: 2.7816em;
+        margin: 0;
+        padding: 0;
+        overflow: visible;
+        border: 0;
+        border-radius: 1.3908em;
+        background: none;
+        box-shadow: inset 0 0 0 0.09em var(--neutral-line);
+    }
+
+    &.jfmod-dsPlayer .playerSubtitleSettings-profiles {
+        margin-bottom: 1em;
+    }
+
+    .tab,
+    &.jfmod-dsPlayer .playerSubtitleSettings-profiles .playerSubtitleSettings-profile {
+        display: flex;
+        flex: 1 1 0;
+        align-items: center;
+        justify-content: center;
+        min-width: 0;
+        box-sizing: border-box;
+        height: 100%;
+        margin: 0;
+        padding: 0 0.618em;
+        border: 0.236em solid transparent;
+        border-radius: 1.3908em;
+        background: none;
+        background-clip: padding-box;
+        color: var(--text);
+        font: inherit;
+        font-weight: 600;
+        line-height: 1;
+        white-space: nowrap;
+        cursor: pointer;
+        transform: none;
+        transition: background-color var(--d1) var(--ease), color var(--d1) var(--ease), box-shadow var(--d1) var(--ease);
+    }
+
+    .tab:hover,
+    &.jfmod-dsPlayer .playerSubtitleSettings-profiles .playerSubtitleSettings-profile:hover {
+        background-color: var(--tint);
+    }
+
+    .tab.on,
+    .tab.on:hover,
+    &.jfmod-dsPlayer .playerSubtitleSettings-profiles .playerSubtitleSettings-profile[aria-selected='true'],
+    &.jfmod-dsPlayer .playerSubtitleSettings-profiles .playerSubtitleSettings-profile[aria-selected='true']:hover {
+        background-color: var(--tab-on);
+        box-shadow: var(--tab-shadow);
+        color: var(--primary);
+        font-weight: 700;
+    }
+
+    .tab:focus,
+    &.jfmod-dsPlayer .playerSubtitleSettings-profiles .playerSubtitleSettings-profile:focus {
+        outline: none;
+    }
+
+    &:not(.layout-tv) .tab:focus-visible,
+    &.jfmod-dsPlayer:not(.layout-tv) .playerSubtitleSettings-profiles .playerSubtitleSettings-profile:focus-visible {
+        box-shadow: inset 0 0 0 0.135em var(--primary);
+    }
+
+    .pcol > .tabs {
+        width: 17.94em;
+        max-width: 100%;
+    }
+
+    &.dev-phone .pcol > .tabs {
+        width: 100%;
+    }
+
+    .pcol > .tabs + .scard {
+        margin-top: 0.618em;
+    }
+
+    &.layout-tv .tabs,
+    &.jfmod-dsPlayer.layout-tv .playerSubtitleSettings-profiles {
+        padding: 0.236em;
+    }
+
+    &.layout-tv .tab,
+    &.jfmod-dsPlayer.layout-tv .playerSubtitleSettings-profiles .playerSubtitleSettings-profile {
+        height: auto;
+        border: 0;
+        transition: none;
+    }
+
+    &.layout-tv .tab:hover,
+    &.jfmod-dsPlayer.layout-tv .playerSubtitleSettings-profiles .playerSubtitleSettings-profile:hover {
+        background-color: transparent;
+    }
+
+    &.layout-tv .tab.on:hover,
+    &.jfmod-dsPlayer.layout-tv .playerSubtitleSettings-profiles .playerSubtitleSettings-profile[aria-selected='true']:hover {
+        background-color: var(--tab-on);
+    }
+
+    .tab.tvf,
+    .tab.tvf:hover,
+    &.jfmod-dsPlayer.layout-tv .playerSubtitleSettings-profiles .playerSubtitleSettings-profile:focus,
+    &.jfmod-dsPlayer.layout-tv .playerSubtitleSettings-profiles .playerSubtitleSettings-profile[aria-selected='true']:focus {
+        position: relative;
+        z-index: 1;
+        background-color: var(--primary);
+        color: #fff;
+        box-shadow: 0 0 0 0.16em var(--text);
+        transform: scale(1.08);
+    }
+
     /* No browser ring on anything the design draws: upstream's outline: none stopped reaching these with D268. On a computer or tablet
        the keyboard draws the rulebook's ring, a round row action the card pill's; the TV's stops keep their own focus. */
     a:focus,
