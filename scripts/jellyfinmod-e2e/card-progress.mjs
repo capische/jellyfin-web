@@ -316,7 +316,7 @@ async function run(browser, layout) {
         const seriesId = detail.entry.jellyfinItemId;
         if (!seriesId) throw new Error('the series entry has no Jellyfin item');
         await go(page, `#/details?id=${seriesId}`);
-        await page.waitForSelector(".page:not(.hide) #listChildrenCollapsible .itemsContainer :is(.card:not(.dm), .cell)", { timeout: 30000 });
+        await page.waitForSelector(".page:not(.hide) .jfmod-dsTitleHost :is(.card:not(.dm), .cell)", { timeout: 30000 });
         await page.waitForTimeout(2500);
         detail = await apiGet(page, 'JellyfinMod/Entries/' + seriesEntryId);
         const seasons = await page.evaluate(async id => (await ApiClient.getSeasons(id, { userId: ApiClient.getCurrentUserId() })).Items
@@ -382,12 +382,12 @@ async function run(browser, layout) {
         reads.length = 0;
         await go(page, '#/home');
         await go(page, `#/details?id=${seriesId}`);
-        await page.waitForSelector(".page:not(.hide) #listChildrenCollapsible .itemsContainer :is(.card:not(.dm), .cell)", { timeout: 30000 });
+        await page.waitForSelector(".page:not(.hide) .jfmod-dsTitleHost :is(.card:not(.dm), .cell)", { timeout: 30000 });
         await page.waitForFunction(id => !!document.querySelector(`.page:not(.hide) :is(.card:not(.dm), .cell)[data-id="${id}"] :is(.dm, [data-ds-download])`), native.id, { timeout: 20000 })
             .catch(() => {});
         await page.waitForTimeout(1000);
         const opened = reads.length;
-        const nativeCard = `.page:not(.hide) #listChildrenCollapsible :is(.card:not(.dm), .cell)[data-id="${native.id}"]`;
+        const nativeCard = `.page:not(.hide) .jfmod-dsTitleHost :is(.card:not(.dm), .cell)[data-id="${native.id}"]`;
         const season = await cardState(page, nativeCard);
         record(label, `Season ${native.number} card: the white 85 % bar at the poster's bottom, ${seasonMean}% (the mean of its episodes on their way), 0.28em`,
             !!season?.bar && season.atBottom && Math.abs(season.percent - seasonMean) <= 1 && season.colour === BAR_DARK
@@ -415,7 +415,7 @@ async function run(browser, layout) {
             record(label, `Season ${native.number} card: the disc first of upstream's indicators (no count pill on this card)`,
                 season?.disc?.firstIndicator !== false, { tick: season?.tick, firstIndicator: season?.disc?.firstIndicator });
         }
-        const others = await page.evaluate(id => [...document.querySelectorAll(".page:not(.hide) #listChildrenCollapsible :is(.card:not(.dm), .cell)[data-id]")]
+        const others = await page.evaluate(id => [...document.querySelectorAll(".page:not(.hide) .jfmod-dsTitleHost :is(.card:not(.dm), .cell)[data-id]")]
             .filter(card => card.getAttribute('data-id') !== id && !card.classList.contains('jfmod-missingCard'))
             .map(card => !!card.querySelector(":is(.jfmod-dlCardBar, [data-ds-progress]), :is(.dm, [data-ds-download])")), native.id);
         record(label, 'the other upstream season cards show no download', others.every(shown => !shown), others);
@@ -471,7 +471,7 @@ async function run(browser, layout) {
 
         // ---- The native season page's rows (native and mod rows).
         await go(page, `#/details?id=${native.id}`);
-        await page.waitForSelector('.page:not(.hide) #listChildrenCollapsible .itemsContainer .listItem', { timeout: 30000 });
+        await page.waitForSelector('.page:not(.hide) .jfmod-dsTitleHost .ep', { timeout: 30000 });
         await page.waitForFunction(count => document.querySelectorAll('.page:not(.hide) .jfmod-dlRow').length >= count, SEASON.length,
             { timeout: 20000 }).catch(() => {});
         await page.waitForTimeout(1000);
@@ -528,9 +528,9 @@ async function run(browser, layout) {
         // size as info and fav and heart icons"); no disc or failure mark changes under the mouse, and the failure is no stop.
         const size = await page.evaluate(() => {
             const box = node => { const rect = node.getBoundingClientRect(); return { w: rect.width, h: rect.height, cy: rect.top + rect.height / 2 }; };
-            const row = [...document.querySelectorAll('.page:not(.hide) #listChildrenCollapsible .listItem.jfmod-dlRow')].find(candidate => candidate.querySelector(":is(.dm, [data-ds-download])"));
+            const row = [...document.querySelectorAll('.page:not(.hide) .jfmod-dsTitleHost .ep')].find(candidate => candidate.querySelector(":is(.dm, [data-ds-download])"));
             const disc = row?.querySelector(":is(.dm, [data-ds-download])");
-            const heart = [...document.querySelectorAll('.page:not(.hide) #listChildrenCollapsible .listItem button.listItemButton')].find(button => button.getBoundingClientRect().width > 0);
+            const heart = [...document.querySelectorAll('.page:not(.hide) .jfmod-dsTitleHost .ep .acts .ib')].find(button => button.getBoundingClientRect().width > 0);
             const font = disc ? parseFloat(getComputedStyle(disc).fontSize) : 0;
             return disc ? { disc: box(disc), glyph: box(disc.querySelector(":is(.glyph, .dm .glyph)")), font,
                 heart: heart ? { box: box(heart), glyph: box(heart.querySelector('.material-icons, svg')), cy: box(heart).cy } : null } : null;
@@ -542,12 +542,12 @@ async function run(browser, layout) {
             record(label, `season page row disc: the box and glyph of upstream's round row buttons${size.heart ? ' (measured on the row\'s heart, More or info), centred on the same line' : ' (upstream\'s formula; upstream draws no round buttons on TV rows)'}`,
                 near(size.disc.w, expectedBox) && near(size.disc.h, expectedBox) && near(size.glyph.w, expectedGlyph) && near(size.glyph.h, expectedGlyph)
                 && (!size.heart || Math.abs(size.disc.cy - size.heart.cy) <= 1.5), { ...size, expectedBox, expectedGlyph });
-            await shotOf(page.locator('.page:not(.hide) #listChildrenCollapsible .listItem.jfmod-dlRow').first(), 'row-disc-size');
+            await shotOf(page.locator('.page:not(.hide) .jfmod-dsTitleHost .ep').first(), 'row-disc-size');
         } else {
             record(label, 'season page row disc size', 'NOT VERIFIED', 'no row with a disc');
         }
         if (layout === 'desktop') {
-            await checkInert(page, label, 'a season page row\'s download disc', page.locator(".page:not(.hide) .listItem :is(.dm, [data-ds-download])"));
+            await checkInert(page, label, 'a season page row\'s download disc', page.locator(".page:not(.hide) .jfmod-dsTitleHost .ep :is(.dm, [data-ds-download])"));
             await checkInert(page, label, 'a failed row\'s red bang', page.locator(".page:not(.hide) .jfmod-dlRow--failed :is(.jfmod-mark--none, .mark:is([title=\"Not Downloaded\"],[data-tip=\"Not Downloaded\"]))"));
         }
 

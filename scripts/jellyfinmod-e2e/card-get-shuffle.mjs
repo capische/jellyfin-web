@@ -182,7 +182,7 @@ async function checkPicker(page, label, what, open, { heading, scope }) {
     const selected = options.find(option => option.selected)?.text ?? null;
     const scopeOk = scope ? scope(options, selected) : true;
     record(label, `${what}: opens the picker "${heading}" on the page${scope ? ', in the card\'s scope' : ''}`,
-        opened && title === heading && after === before && scopeOk, { title, selected, options: options.map(option => option.text).slice(0, 6), before, after });
+        opened && title?.split('\n')[0] === heading && after === before && scopeOk, { title, selected, options: options.map(option => option.text).slice(0, 6), before, after });
     if (opened) record(label, `${what}: the picker closes`, await closeDialog(page, '.pickerDialog'));
 }
 
@@ -191,19 +191,20 @@ async function checkOverlay(page, label, what, cardSelector, expectedTitle) {
     const card = page.locator(cardSelector).first();
     await card.scrollIntoViewIfNeeded().catch(() => {});
     await card.hover().catch(() => {});
-    const shown = await page.waitForSelector(`${cardSelector} :is(.jfmod-cardGet, [data-ds-action="get"]):not([hidden])`, { timeout: 10000 }).then(() => true, () => false);
+    const shown = await page.waitForSelector(`${cardSelector} :is(.jfmod-cardGet, .hmenu [data-ds-action="get"]):not([hidden])`, { timeout: 10000 }).then(() => true, () => false);
     await page.waitForTimeout(400);
     const facts = await overlayFacts(page, cardSelector);
     if (!shown) {
         record(label, `${what}: hovering shows Get a Release in the overlay`, false, facts);
         return false;
     }
-    const play = await page.evaluate(selector => {
-        const button = document.querySelector(`${selector} :is(.cardOverlayContainer, .post) > :is(.cardOverlayFab-primary, .disc):not(:is(.jfmod-cardGet, [data-ds-action="get"]))`);
-        return !!button && getComputedStyle(button).display !== 'none' && button.getBoundingClientRect().width > 0;
+    // The mockup's disc: Play on a card with a file, Get a Release (the same as the pill's icon) on one without.
+    const wantsPlay = expectedTitle === 'Get Another Quality';
+    const disc = await page.evaluate(selector => {
+        const button = document.querySelector(`${selector} .post > .disc.hov`);
+        return !!button && getComputedStyle(button).display !== 'none' && button.getBoundingClientRect().width > 0 ? button.getAttribute('aria-label') : null;
     }, cardSelector);
-    record(label, `${what}: upstream's Play kept in the centre (the card has a file), the icon not there (P1.FU19)`, play
-        && !await page.locator(`${cardSelector} :is(.cardOverlayContainer, .post) > :is(.jfmod-cardGet, [data-ds-action="get"])`).count(), play);
+    record(label, `${what}: the disc in the centre is ${wantsPlay ? 'Play (the card has a file)' : 'Get a Release (no file)'} (P1.FU19)`, disc === (wantsPlay ? 'Play' : 'Get a Release'), disc);
     const iconIndex = facts.order.indexOf('get');
     const upstream = facts.buttons.filter(button => button.kind !== 'get').map(button => button.width);
     const icon = facts.buttons[iconIndex];
@@ -353,12 +354,12 @@ async function run(browser, layout, user, admin) {
             let what = `Season ${season.number} card`;
             let expected = 'Get a Release';
             let scope = seasonScope;
-            if (!tv && !await page.locator(`${seasonCard} [data-action="menu"]`).count()) {
+            if (!tv && !await page.locator(`${seasonCard} [data-action="menu"], ${seasonCard} .hmenu [data-tip="More"]`).first().isVisible().catch(() => false)) {
                 record(label, `Season ${season.number} card on the phone: upstream draws no More (Play only); its season page has the header icon`, 'NOTE');
                 if (facts.movies) {
                     await go(page, `#/movies?topParentId=${facts.movies}`);
-                    await page.waitForSelector(`${PAGE} :is(.card:not(.dm), .cell)[data-type="Movie"][data-id] [data-action="menu"]`, { timeout: 30000 }).catch(() => {});
-                    const id = await page.locator(`${PAGE} :is(.card:not(.dm), .cell)[data-type="Movie"][data-id]`).first().getAttribute('data-id').catch(() => null);
+                    await page.waitForSelector(`${PAGE} :is(.card:not(.dm), .cell)[data-type="Movie"][data-id]:not([data-jfmod-nofile])`, { timeout: 30000 }).catch(() => {});
+                    const id = await page.locator(`${PAGE} :is(.card:not(.dm), .cell)[data-type="Movie"][data-id]:not([data-jfmod-nofile])`).first().getAttribute('data-id').catch(() => null);
                     menuCard = id ? `${PAGE} :is(.card:not(.dm), .cell)[data-type="Movie"][data-id="${id}"]` : null;
                     what = 'Movie card in the library grid';
                     expected = 'Get Another Quality';
@@ -367,7 +368,7 @@ async function run(browser, layout, user, admin) {
                     menuCard = null;
                 }
             }
-            const reachable = menuCard && (tv ? await page.locator(menuCard).count() : await page.locator(`${menuCard} [data-action="menu"]`).count());
+            const reachable = menuCard && (tv ? await page.locator(menuCard).count() : await page.locator(`${menuCard} [data-action="menu"]`).first().isVisible().catch(() => false));
             if (reachable) {
                 const menu = await openCardMenu(page, menuCard, tv);
                 await shot('card-menu');
@@ -379,7 +380,7 @@ async function run(browser, layout, user, admin) {
                     await closeDialog(page, ':is(.actionSheet, [data-ds-actionsheet])');
                 }
             } else {
-                record(label, 'a card\'s item menu on this layout', 'NOT VERIFIED', 'upstream draws no More on these cards (a long press is multi-select)');
+                record(label, 'a phone card has no item menu: the mockup hides the disc and the pill there (ds.css .dev-phone .hmenu), and the title page offers More', !tv, 'none visible');
             }
         }
 
@@ -393,12 +394,12 @@ async function run(browser, layout, user, admin) {
                     .then(() => true, () => false);
                 if (!found) { record(label, `a ${type} card in its library grid`, 'NOT VERIFIED', 'no card with an overlay'); continue; }
                 await page.waitForTimeout(1000);
-                const id = await page.locator(`${PAGE} :is(.card:not(.dm), .cell)[data-type="${type}"][data-id]`).first().getAttribute('data-id');
+                const id = await page.locator(`${PAGE} :is(.card:not(.dm), .cell)[data-type="${type}"][data-id]${type === 'Movie' ? ':not([data-jfmod-nofile])' : ''}`).first().getAttribute('data-id');
                 const card = `${PAGE} :is(.card:not(.dm), .cell)[data-type="${type}"][data-id="${id}"]`;
                 const expected = type === 'Movie' ? 'Get Another Quality' : 'Get a Release';
                 if (await checkOverlay(page, label, `${type} card`, card, expected)) {
                     await shot(type.toLowerCase() + '-card');
-                    await checkPicker(page, label, `${type} card's ${expected}`, () => page.locator(`${card} :is(.jfmod-cardGet, [data-ds-action="get"])`).click(),
+                    await checkPicker(page, label, `${type} card's ${expected}`, () => page.locator(`${card} .hmenu [data-ds-action="get"]`).click(),
                         { heading: expected, scope: type === 'Series' ? (choices, selected) => selected === 'All Seasons'
                             && !choices.some(option => /S\d+E\d+/.test(option.text)) : null });
                 }
@@ -412,7 +413,7 @@ async function run(browser, layout, user, admin) {
                 const id = await page.locator(`${PAGE} :is(.card:not(.dm), .cell)[data-type="Episode"][data-id]`).first().getAttribute('data-id');
                 const card = `${PAGE} :is(.card:not(.dm), .cell)[data-type="Episode"][data-id="${id}"]`;
                 if (await checkOverlay(page, label, 'Episode card on Home', card, 'Get Another Quality')) {
-                    await checkPicker(page, label, 'Episode card\'s Get Another Quality', () => page.locator(`${card} :is(.jfmod-cardGet, [data-ds-action="get"])`).click(),
+                    await checkPicker(page, label, 'Episode card\'s Get Another Quality', () => page.locator(`${card} .hmenu [data-ds-action="get"]`).click(),
                         { heading: 'Get Another Quality', scope: (choices, selected) => /S\d+E\d+/.test(selected ?? '') });
                 }
             } else {

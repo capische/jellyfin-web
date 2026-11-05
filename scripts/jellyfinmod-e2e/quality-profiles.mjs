@@ -61,11 +61,11 @@ const LAYOUTS = {
     // The TV layout is not a target of this administrator dialog; the run only shows it still works there.
     tv1080: { viewport: { width: 1920, height: 1080 } }
 };
-const PRESETS = ['4K', '2K', '1080p', '720p', 'Any Quality', 'SD'];
+const PRESETS = ['4K', '2K', '1080p', '720p', 'SD', 'Any Quality'];
 const SUMMARIES = {
-    '4K': '4K first, then down to 720p · any size · no upgrades',
+    '4K': '4K first, then down to 720p · any size · best on my TVs · no upgrades',
     '2K': '2K first, then down to 720p · up to 10 GB per hour · no upgrades',
-    '1080p': '1080p first, then down to 720p · up to 6 GB per hour · no upgrades',
+    '1080p': '1080p first, then down to 720p · up to 6 GB per hour · plays everywhere · no upgrades',
     '720p': '720p only · up to 1 GB per hour · no upgrades',
     'Any Quality': '4K first, then down to 480p · any size · no upgrades',
     SD: 'SD first, then down to 480p · up to 0.5 GB per hour · no upgrades'
@@ -229,7 +229,7 @@ async function settingsChecks(page, layout) {
     const opened = await dialogState(page);
     record(layout, '3 Add Profile starts from the 4K preset: its name, 4K and Large pressed, fall back to 720p, the sentence',
         opened.preset === '4K' && opened.name === '4K' && opened.best.join() === 'best-2160p' && opened.size.join() === 'size-large' && opened.fallback && opened.floor === '720p'
-            && opened.summary === '4K picks 4K (2160p) first, then down to 720p, any file size, and does not upgrade later.'
+            && opened.summary === '4K picks 4K (2160p) first, then down to 720p, any file size, among releases of the same quality takes the one that plays best on your TVs, and does not upgrade later.'
             && opened.order.join() === FOUR_K.join() && !opened.saveDisabled, opened);
     record(layout, '3 the Predefined dropdown shows 4K with its description; no Custom heading, provenance line, Reset or chip',
         opened.heading === 'Predefined' && opened.preset === '4K' && opened.presetDescription === 'Best picture, big files. Falls back to lower quality if 4K is not available.'
@@ -372,7 +372,7 @@ async function settingsChecks(page, layout) {
             && second.cutoff === 'remux-1080p', second);
     await openSection(page);
     const customRow = (await rows(page)).find(row => row.name === custom);
-    record(layout, '6 its row says what it does', customRow?.summary === '1080p first, then down to 480p · any size · no upgrades' && !customRow.preset, customRow);
+    record(layout, '6 its row says what it does', customRow?.summary === '1080p first, then down to 480p · any size · best on my TVs · no upgrades' && !customRow.preset, customRow);
 }
 
 async function pickerChecks(page, layout) {

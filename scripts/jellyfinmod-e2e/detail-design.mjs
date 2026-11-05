@@ -301,8 +301,9 @@ async function checkPickerOpens(page, layout, selector, label) {
     // A phone's width wraps the two choices by design (each takes at least 20em).
     if (!isMobile(layout)) record(layout, `${label}: the picker's choices share one line`, shape.lines <= 1, `${shape.lines} lines`);
     if (layoutOf(layout) === 'desktop' && shape.viewport[0] >= 1280) {
-        record(layout, `${label}: the picker takes most of a large screen and scrolls inside`, shape.size[0] >= 0.75 * shape.viewport[0]
-            && shape.size[1] >= 0.85 * shape.viewport[1] && shape.scrolls, `${shape.size} of ${shape.viewport}`);
+        // The mockup's picker (D268): 76.01em wide, as tall as its rows, scrolling once they outgrow the window.
+        record(layout, `${label}: the picker takes most of a large screen's width, follows its rows' height and scrolls inside`, shape.size[0] >= 0.75 * shape.viewport[0]
+            && shape.scrolls, `${shape.size} of ${shape.viewport}`);
     }
     await back(page, layout);
     if (await dialog.count()) await page.locator('.pickerDialog .pickerDialog .dlghead [aria-label="Close"]').first().click().catch(() => {});
