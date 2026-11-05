@@ -101,7 +101,8 @@ export const cardOf = (node: HTMLElement, index: number): TitleCard => {
     const server = node.getAttribute('data-serverid');
     const row = node.classList.contains('listItem') || node.classList.contains('jfmod-missingRow') || !!node.querySelector('.jfmod-missingRow');
     const type = node.getAttribute('data-type');
-    const factNodes = Array.from(lines[1]?.querySelectorAll('.mediaInfoItem, .jfmod-dlMeta') ?? []);
+    // A placeholder has no file to finish: its source row hides "Ends at", which this reads past.
+    const factNodes = Array.from(lines[1]?.querySelectorAll('.mediaInfoItem, .jfmod-dlMeta') ?? []).filter(item => !(item.classList.contains('endsAt') && node.hasAttribute('data-jfmod-placeholder')));
     // Without a meta line (a phone's row) the download's figure is the row's last line.
     const figure = node.querySelector('.jfmod-dlMeta');
     if (figure && !factNodes.includes(figure)) factNodes.push(figure);
