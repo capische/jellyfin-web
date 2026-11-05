@@ -156,7 +156,7 @@ const cardState = (page, selector) => page.evaluate(sel => {
     const indicators = frame.querySelector(":is(.cardIndicators, .pill2)");
     const none = frame.querySelector(":is(.jfmod-mark--none, .mark:is([title=\"Not Downloaded\"],[data-tip=\"Not Downloaded\"]))");
     const fontSize = parseFloat(getComputedStyle(frame).fontSize);
-    const discBox = disc?.getBoundingClientRect();
+    const discBox = (disc?.closest('.cmark') ?? disc)?.getBoundingClientRect();
     const arc = disc?.querySelector(":is(.arc .val, .arc .turn, .dm .val, .dm .turn)");
     const pillBefore = pill ? getComputedStyle(pill, '::before').content : null;
     return {
@@ -166,8 +166,8 @@ const cardState = (page, selector) => page.evaluate(sel => {
         heightEm: bar ? Math.round(bar.getBoundingClientRect().height / fontSize * 100) / 100 : null,
         atBottom: bar ? Math.abs(bar.getBoundingClientRect().bottom - frame.getBoundingClientRect().bottom) < 1.5 : false,
         disc: disc ? {
-            kind: disc.getAttribute('data-jfmod-kind'), card: !!disc.querySelector('.dm.card') || disc.classList.contains('jfmod-dlmark--card'), title: disc.title,
-            colour: getComputedStyle(disc).color, background: getComputedStyle(disc).backgroundColor, backdrop: getComputedStyle(disc).backdropFilter,
+            kind: disc.getAttribute('data-jfmod-kind'), card: !!disc.closest('.cmark') || disc.classList.contains('card') || disc.classList.contains('jfmod-dlmark--card'), title: disc.title,
+            colour: getComputedStyle(disc).color, background: getComputedStyle(disc.closest('.cmark') ?? disc).backgroundColor, backdrop: getComputedStyle(disc.closest('.cmark') ?? disc).backdropFilter,
             arcColour: arc ? getComputedStyle(arc).stroke : null,
             sizeEm: Math.round(discBox.width / fontSize * 100) / 100, visible: discBox.width > 0,
             glyphAnimation: getComputedStyle(disc.querySelector(":is(.glyph, .dm .glyph)")).animationName.replace(/^jfds-dmbob$/, 'jfmod-dlmarkBob'),
@@ -195,7 +195,7 @@ const cardState = (page, selector) => page.evaluate(sel => {
 }, selector);
 
 /** The rows that show a download: the disc and where it sits, the meta figure and where it sits, no bar, a failure's button. */
-const rowStates = page => page.evaluate(endSlot => [...document.querySelectorAll('.page:not(.hide) .jfmod-dlRow')].map(row => {
+const rowStates = page => page.evaluate(endSlot => [...document.querySelectorAll('.page:not(.hide) :is(.jfmod-dlRow, .jfmod-dsTitleHost .ep:has(.dm:not(.not-downloaded)))')].map(row => {
     const disc = row.querySelector(":is(.dm, [data-ds-download])");
     const meta = row.querySelector('.jfmod-dlMeta');
     const cloud = row.querySelector(":is(.jfmod-mark--none, .mark:is([title=\"Not Downloaded\"],[data-tip=\"Not Downloaded\"]))");
