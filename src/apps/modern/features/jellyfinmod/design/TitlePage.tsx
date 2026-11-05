@@ -172,8 +172,11 @@ const Card: FC<{ card: TitleCard; view: HTMLElement }> = ({ card, view }) => {
     const name = <><div className='nm'>{card.title}</div><div className='ln2'>{card.facts.length ? card.facts.map(fact => <span key={fact.text} className={fact.figure?.className ?? (fact.star ? 'star' : undefined)} title={fact.figure?.title}>{fact.star && <Icon name='star' />}{fact.text}</span>) : <span>{card.second}</span>}</div></>;
     const overview = <p className='ov'>{card.overview}</p>;
     const state = cardState(card);
-    const rowCommands = device === 'phone' ? phoneRowCommands(card, !!state) : card.commands;
-    const actions = <div className='acts'>{state && (card.mark?.kind === 'failed' || !card.commands.some(command => command.icon === 'cloud')) && <span className='ib' data-ds-state-kind={card.mark?.kind} data-tip={card.mark?.label} aria-label={card.mark?.label}>{state}</span>}{rowCommands.map(command => <Command key={command.key} command={command} view={view} row />)}</div>;
+    // A failure takes Get a Release's place on the row: the bang is an indicator, never both (download-state-mark.md).
+    const failedRow = card.mark?.kind === 'failed';
+    const commands = failedRow ? card.commands.filter(command => command.icon !== 'cloud') : card.commands;
+    const rowCommands = device === 'phone' ? phoneRowCommands({ ...card, commands }, !!state) : commands;
+    const actions = <div className='acts'>{state && (failedRow || !card.commands.some(command => command.icon === 'cloud')) && <span className='ib' data-ds-state-kind={card.mark?.kind} data-tip={card.mark?.label} aria-label={card.mark?.label}>{state}</span>}{rowCommands.map(command => <Command key={command.key} command={command} view={view} row />)}</div>;
     const prepare = () => card.node.dispatchEvent(new Event('pointerover', { bubbles: true }));
     const attributes = { ref: host, tabIndex: 0, onMouseEnter: prepare, onFocus: () => {
         setFocus(true);
