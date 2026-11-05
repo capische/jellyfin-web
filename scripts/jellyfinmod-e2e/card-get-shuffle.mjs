@@ -330,6 +330,7 @@ async function run(browser, layout, user, admin) {
                 await checkPicker(page, label, `Season ${season.number} card's Get a Release`,
                     () => page.locator(`${seasonCard} :is(.jfmod-cardGet, [data-ds-action="get"])`).click(), { heading: 'Get a Release', scope: seasonScope });
                 // Keyboard: Tab onto the icon shows the cyan ring.
+                await page.locator(seasonCard).hover();
                 await page.locator(`${seasonCard} :is(.jfmod-cardGet, [data-ds-action="get"])`).focus();
                 await page.mouse.move(1, 1);
                 await page.keyboard.press('Shift+Tab');
@@ -339,7 +340,7 @@ async function run(browser, layout, user, admin) {
                     const active = document.activeElement;
                     return active?.matches(`${sel} :is(.jfmod-cardGet, [data-ds-action="get"])`) ? getComputedStyle(active).boxShadow : null;
                 }, seasonCard);
-                record(label, 'keyboard focus on the icon draws the cyan ring', !!ring && ring.includes('rgb(0, 164, 220)'), ring);
+                record(label, 'keyboard focus on the icon draws the cyan ring and the pill stays', !!ring && ring.includes('rgb(0, 164, 220)'), ring);
                 // The overlay's More opens the card's item menu, the same menu a phone's More and the TV's Menu key open.
                 await page.locator(seasonCard).hover();
                 const menu = await openCardMenu(page, seasonCard, false);
