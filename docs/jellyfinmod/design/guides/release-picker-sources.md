@@ -1,5 +1,7 @@
 # Release picker: Sources (the icon, the train, the checklist) and the searching ring's colours
 
+**Review fixes (2026-11-04), built, not accepted:** the native picker's full-width release row keeps its markup. On TV, Right explicitly moves row → Add → Replace (or row → Cancel while pending); Left reverses that path. Refused actions remain reachable for reading/confirmation. Up/Down still use upstream `focusManager` and arrive on the row. Arrow keys and directional `command` events share this path; acquisition, cancellation and replacement semantics stay unchanged.
+
 **Status:** approved 2026-10-25 (user: "Looks great, tell parent to implement", finished state F1; "yes, recolour the torrent ring
 too" the same day). Record: [release-picker-source-filter.md](../release-picker-source-filter.md) Revisions 2, 5 and 5b, the mockup
 [release-picker-sources-dot.html](../release-picker-sources-dot.html) (PNGs beside it), [UX.md §9](../../UX.md). Built in P4.FU25

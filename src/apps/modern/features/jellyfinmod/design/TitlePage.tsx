@@ -1,6 +1,7 @@
 import type { BaseItemDto } from '@jellyfin/sdk/lib/generated-client';
 import React, { type FC, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import focusManager from 'components/focusManager';
+import inputManager from 'scripts/inputManager';
 import { Head } from './Head';
 import RatingIcon from '../components/RatingIcon';
 import { Root, DesignContext } from './Root';
@@ -126,6 +127,22 @@ const cardState = (card: TitleCard) => {
 const Card: FC<{ card: TitleCard; view: HTMLElement }> = ({ card, view }) => {
     const device = useContext(DesignContext);
     const [focus, setFocus] = useState(false);
+    const host = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        const painted = host.current;
+        if (!painted) return;
+        const forward = (event: Event) => {
+            if (event.defaultPrevented) return;
+            const source = event as CustomEvent;
+            rememberCommandOpener(card.node, painted);
+            const command = new CustomEvent('command', { bubbles: true, cancelable: true, detail: source.detail });
+            if (!card.node.dispatchEvent(command)) event.preventDefault();
+            // The hidden original has already offered the command to upstream's listeners.
+            event.stopPropagation();
+        };
+        inputManager.on(painted, forward);
+        return () => inputManager.off(painted, forward);
+    }, [card.node]);
     const open = () => openCard(card);
     const still = <div className='still'><Poster src={card.image} icon='tv' className='stillimage' />
         {card.played && <span className='pill2 tick'><Icon name='check' /></span>}
@@ -139,7 +156,7 @@ const Card: FC<{ card: TitleCard; view: HTMLElement }> = ({ card, view }) => {
     const rowCommands = device === 'phone' ? card.commands.filter(command => command.icon !== 'check' && (command.icon !== 'heart' || !hasState)) : card.commands;
     const actions = <div className='acts'>{state && !card.commands.some(command => command.icon === 'cloud') && <span className='ib' data-ds-state-kind={card.mark?.kind} data-tip={card.mark?.label} aria-label={card.mark?.label}>{state}</span>}{rowCommands.map(command => <Command key={command.key} command={command} view={view} row />)}</div>;
     const prepare = () => card.node.dispatchEvent(new Event('pointerover', { bubbles: true }));
-    const attributes = { tabIndex: 0, onMouseEnter: prepare, onFocus: () => {
+    const attributes = { ref: host, tabIndex: 0, onMouseEnter: prepare, onFocus: () => {
         setFocus(true);
         prepare();
     }, onBlur: () => setFocus(false),

@@ -111,9 +111,19 @@ const SignInBody = () => {
     };
     const quickConnect = () => {
         if (!client || stopQuick.current) return;
-        authenticateQuickConnect(client, target).then((stop: false | (() => void)) => {
-            if (!stop) return;
-            if (page.current?.isConnected) stopQuick.current = stop;
+        let finished = false;
+        stopQuick.current = () => {
+            finished = true;
+        };
+        authenticateQuickConnect(client, target, () => {
+            finished = true;
+            stopQuick.current = null;
+        }).then((stop: false | (() => void)) => {
+            if (!stop) {
+                stopQuick.current = null;
+                return;
+            }
+            if (!finished && page.current?.isConnected) stopQuick.current = stop;
             else stop();
         });
     };

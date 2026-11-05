@@ -16,7 +16,8 @@ export const Menu: FC<PropsWithChildren<{ close: () => void; label: string; id?:
     useLayoutEffect(() => {
         const layer = ref.current;
         if (layer) layers.push(layer);
-        const previous = document.activeElement as HTMLElement | null;
+        const focused = document.activeElement;
+        const previous = anchor ?? (focused instanceof HTMLElement && focused !== document.body && focused !== document.documentElement && focused.matches('button, a, input, select, textarea, [tabindex]') ? focused : null);
         let closing = false;
         let timer: ReturnType<typeof setTimeout>;
         const dismiss = () => {

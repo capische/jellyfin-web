@@ -19,7 +19,7 @@ const mocks = {
     keyboardNavigation: 'export const getKeyName=event=>event.key;',
     dpadModals: `export const isBackKey=key=>['Escape','GoBack','BrowserBack'].includes(key);`,
     loading: 'export default {show(){window.loading=true},hide(){window.loading=false}};',
-    globalize: "export default {translate:key=>key,getCurrentDateTimeLocale:()=> 'en-US'};"
+    globalize: "export default {translate:key=>key,getCurrentDateTimeLocale:()=> 'en-US',getIsRTL:()=>false};"
 };
 const result = await build({
     stdin:{contents:`import React from 'react'; import {createRoot} from 'react-dom/client'; import {flushSync} from 'react-dom';
@@ -43,7 +43,7 @@ const result = await build({
             pin:()=>({kept:false,title:'Keep'}),onPin:()=>window.pins=(window.pins||0)+1,canRemove:()=>true,onRemove:()=>window.removes=(window.removes||0)+1,
             removeDate:()=>null,onHistory:(version,anchor)=>setHistory({version,anchor}),
             pending:React.createElement('div',{className:'pend'},'Pending'),note:'Whole folder delete warning'}),
-            history&&React.createElement(FileHistoryPopover,{...history,history:[],onClose:closeHistory}));};
+            history&&React.createElement(FileHistoryPopover,{...history,history:Array.from({length:100},(_,i)=>({id:String(i),bindingId:history?.version.bindingId,createdAt:new Date(Date.now()-i*86400000).toISOString(),eventType:'imported',summary:'Imported file',detail:null})),onClose:closeHistory}));};
         let starting; const manager={};
         window.api={render(type='Movie'){flushSync(()=>root.render(React.createElement(TitlePage,{view,type,art:''})));},
             sources(){setTitleSources(view,[{Id:'aaaa',Size:55000000000,MediaStreams:[{Type:'Video',Width:3840,Height:2160,Codec:'hevc'},{Type:'Audio',Codec:'truehd',Profile:'Atmos'}]},
@@ -176,6 +176,12 @@ try {
     assert.deepEqual(await page.evaluate(()=>window.cardPlay),{ids:['movie2'],startPositionTicks:65432,serverId:'server',queryOptions:{SortBy:'PremiereDate',SortOrder:'Descending'}});
     assert.equal(await page.evaluate(()=>window.cardSortKey),'items-folder-Folder');
     assert.equal(await page.evaluate(()=>window.preparedCard),true);
+    await nativeCard.focus();
+    assert.equal(await nativeCard.evaluate(node=>node.dispatchEvent(new CustomEvent('command',{bubbles:true,cancelable:true,detail:{command:'play'}}))),false,'remote Play is consumed by original shortcuts');
+    assert.deepEqual(await page.evaluate(()=>window.cardPlay),{ids:['movie2'],startPositionTicks:65432,serverId:'server',queryOptions:{SortBy:'PremiereDate',SortOrder:'Descending'}});
+    await page.evaluate(()=>document.querySelector('#similarCollapsible .itemsContainer').addEventListener('command',event=>{if(event.detail.command==='menu'){window.remoteMenu=event.target.dataset.id;event.preventDefault();event.stopPropagation()}},true));
+    assert.equal(await nativeCard.evaluate(node=>node.dispatchEvent(new CustomEvent('command',{bubbles:true,cancelable:true,detail:{command:'menu'}}))),false);
+    assert.equal(await page.evaluate(()=>window.remoteMenu),'movie2');
     await page.evaluate(()=>document.querySelector('#similarCollapsible .card').insertAdjacentHTML('beforeend',
         '<span class="jfmod-mark--none" title="Not Downloaded"></span><span class="dm row downloading" data-jfmod-kind="downloading" title="40%"><svg class="arc"><circle class="val" stroke-dasharray="40 100"></circle></svg></span><span class="jfmod-dlBar-fill" style="width:40%"></span>'));
     await nativeCard.locator('.cmark .dm.downloading').waitFor();
@@ -206,6 +212,10 @@ try {
     assert.equal(await painted.locator('.vlist').count(),1);
     await painted.locator('[data-jfmod-file-history]').first().click();
     await page.locator('.historyportal').waitFor();
+    await page.keyboard.press('ArrowDown');
+    assert.equal(await page.locator('.historyportal').evaluate(n=>n.scrollTop>0&&n.contains(document.activeElement)),true);
+    await page.keyboard.press('Tab');
+    assert.equal(await page.locator('.historyportal').evaluate(n=>n.contains(document.activeElement)),true);
     await page.keyboard.press('Escape');
     await page.locator('.historyportal').waitFor({state:'detached'});
     assert.equal(await painted.locator('.vlist').count(),1,'Back closes history alone');
@@ -294,6 +304,7 @@ try {
     });
     const ratings=page.locator('#widgets .rgroup:not([aria-hidden=true])');
     await ratings.waitFor();
+    await page.locator('#widgets .jfds.layout-tv').waitFor();
     assert.equal(await ratings.locator('[data-jfmod-rating=imdb]').evaluate(node=>getComputedStyle(node).opacity),'0.55');
     await ratings.focus();
     assert.equal(await page.locator('#widgets .rmenu.open').count(),0);
