@@ -169,7 +169,7 @@ async function dialogStep() {
             await row.focus();
             await page.keyboard.press('Enter');
         } else {
-            await row.locator('.qrow .ib').click();
+            await row.locator('.ib[aria-label^="Actions"]').click();
         }
         if (phone || tv) {
             await page.waitForSelector(':is(.actionSheet, [data-ds-actionsheet]) [data-id="remove"]', { timeout: 10000 });
@@ -196,8 +196,8 @@ async function dialogStep() {
         checkPlan(step, key, state, expected(data));
         record(step, `${key}: a dialog that can delete the files promises no episode stays in the library`,
             !state.choices.some(choice => choice.id === 'delete') || !state.facts.some(fact => fact.includes('stay there')), JSON.stringify(state.facts));
-        record(step, `${key}: the close X is level with the title on its right, at least 40 px, labelled Close`,
-            !!state.close && state.close.size >= 40 && state.close.dy <= 4 && state.close.right && state.close.label === 'Close', JSON.stringify(state.close));
+        record(step, `${key}: the close X is level with the title on its right, at the mockup's 2.5em (40 px on a phone and the TV), labelled Close`,
+            !!state.close && state.close.size >= (phone || tv ? 40 : 37) && state.close.dy <= 4 && state.close.right && state.close.label === 'Close', JSON.stringify(state.close));
         const safe = state.choices.find(choice => choice.id === 'cancel');
         record(step, `${key}: the safe choice is ${tv ? 'blue (the TV\'s focus fill)' : 'outlined'} as the dialog opens`,
             safe?.background === (tv ? state.colours.blue : state.colours.other) && safe?.ring !== 'none', JSON.stringify({ safe: safe?.background, ...state.colours, focusVisible: state.focusVisible }));
@@ -272,7 +272,7 @@ async function openFromQueue(title) {
         }
         await page.keyboard.press('Enter');
     } else {
-        await row.locator('.qrow .ib').click();
+        await row.locator('.ib[aria-label^="Actions"]').click();
         if (phone) await page.locator(':is(.actionSheet, [data-ds-actionsheet]) [data-id="remove"]').click();
         else await page.locator('[data-ds-actionsheet] [data-id][data-id="remove"]').click();
     }
@@ -378,7 +378,7 @@ async function openersStep() {
         await page.locator(':is(.jfmod-removeChoice, [data-ds-dialog] .btn[data-choice])[data-choice="cancel"]').click();
         await waitClosed();
         const focus = await active();
-        record(step, 'episode page: Keep Downloading returns focus to Cancel Download', focus.cls.includes('jfmod-dlblock-cancel'), JSON.stringify(focus));
+        record(step, 'episode page: Keep Downloading returns focus to Cancel Download', focus.text.trim() === 'Cancel Download', JSON.stringify(focus));
     }
     // The picker's added-row X on a missing movie.
     const entries = (await api(page, 'GET', '/JellyfinMod/Entries?limit=200')).body.items;
@@ -457,7 +457,7 @@ async function postLinkStep() {
     await page.locator('.queue').waitFor({ state: 'visible', timeout: 30000 });
     await page.waitForTimeout(2000);
     const row = page.locator('.qrow').filter({ hasText: 'Adolescence.S01' }).first();
-    await row.locator('.qrow .ib').click();
+    await row.locator('.ib[aria-label^="Actions"]').click();
     await page.locator('[data-ds-actionsheet] [data-id][data-id="remove"]').click();
     await waitDialog();
     const state = await dialogState();
