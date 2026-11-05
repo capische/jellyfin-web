@@ -1589,11 +1589,9 @@ async function run(browser, layout, user, admin) {
             if (layout === 'desktop') {
                 const selector = `.page:not(.hide) [data-jfmod-tmdb-id="${movie.entry.tmdbId}"]`;
                 const hover = await hoverCard(page, selector, canDownload);
-                record(label, `${movie.entry.title} search card (no file): ${canDownload ? 'hovering shows Get a Release in the centre' : 'hovering shows no Get a Release'}, no Play`,
-                    !!hover && !hover.play && hover.centre === canDownload && hover.bottom === canDownload, hover);
-                if (canDownload && hover?.centre) {
-                    await pickerOpens(page, label, `${movie.entry.title} search card's centre Get a Release`, page.locator(`${selector} .disc:is([data-ds-primary-action=get], [data-ds-action=get])`));
-                }
+                // search-card.md: a library title without a file has the cloud as an indicator, never a button on the card.
+                record(label, `${movie.entry.title} search card (no file): hovering shows no disc and no pill, the cloud stays an indicator`,
+                    !!hover && !hover.play && !hover.centre && !hover.bottom, hover);
             }
         }
         record(label, 'no page errors', errors.length === 0, errors);
