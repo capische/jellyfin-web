@@ -28,6 +28,7 @@ Base unit 1em (computer 14.88 px, phone 14.4 px, TV 20 px). φ steps named; exce
 | --- | --- |
 | Corners | 0.618em (φ⁻¹), poster and still |
 | Hover ring | `0 0 0 0.135em` primary, follows the corners, no lift; in 0.382 s, out 0.236 s. Keyboard focus 0.236em (φ⁻³) |
+| Keyboard on a computer or tablet | Tab onto the card shows its pill; a pill icon draws `0 0 0 0.135em` primary |
 | Dim | black 23.6 % (φ⁻³), on the overlay's fill, with the ring. The overlay's own opacity stays 1: a parent fading its opacity cuts a child's blur off from the poster |
 | Disc | 3.236em (2φ, 48 px at a computer), card glass, glyph 2em; hidden at rest, so a grid pays for no blur until hovered |
 | Disc under the pointer | scale 1.146 (55 px), fill white 85.4 % with a `#101010` glyph, light theme `rgba(16,16,16,.854)` with a white glyph; 0.236 s; press scale 1.09 on 0.146 s; no ring; pointer cursor |

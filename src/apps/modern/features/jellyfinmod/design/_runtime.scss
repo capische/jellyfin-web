@@ -1111,6 +1111,25 @@
         box-shadow: 0 0 0 0.135em var(--primary);
     }
 
+    /* A card's pill by keyboard: the Tab that reaches the card shows it, and its icons draw the primary ring.
+       Computer and tablet only, in rules of their own: a browser without :has() drops just these. */
+    &.dev-computer .cell:focus-visible .hmenu,
+    &.dev-tablet .cell:focus-visible .hmenu {
+        visibility: visible;
+        opacity: 1;
+    }
+
+    &.dev-computer .cell:has(:focus-visible) .hmenu,
+    &.dev-tablet .cell:has(:focus-visible) .hmenu {
+        visibility: visible;
+        opacity: 1;
+    }
+
+    .pi:focus-visible {
+        outline: 0;
+        box-shadow: 0 0 0 0.135em var(--primary);
+    }
+
     .ipop {
         max-height: 80vh;
         overflow-y: auto;
