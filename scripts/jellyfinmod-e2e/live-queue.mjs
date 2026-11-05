@@ -71,8 +71,8 @@ for (const layout of layouts) {
             await page.keyboard.press('Escape'); // the remote's Back on the TV layout
             await page.waitForTimeout(1200);
             const after = await page.evaluate(() => ({ focused: document.activeElement?.className ?? '', sheet: !!document.querySelector(':is(.actionSheet, [data-ds-actionsheet])') }));
-            record(label, 'TV: Enter opens the row actions (Remove; Open in client only when configured); Back closes them and focus returns to the row',
-                sheet.some(text => /Remove/.test(text)) && !after.sheet && /\bqrow\b/.test(after.focused), { sheet, after });
+            record(label, 'TV: Enter opens the row actions (Cancel Download or Remove; Open in client only when configured); Back closes them and focus returns to the row',
+                sheet.some(text => /Remove|Cancel Download/.test(text)) && !after.sheet && /\bqrow\b/.test(after.focused), { sheet, after });
         }
         record(label, 'No page errors', page.jfmodErrors.length === 0, page.jfmodErrors.slice(0, 3));
     } catch (error) {
