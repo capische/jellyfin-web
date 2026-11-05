@@ -94,6 +94,12 @@ try {
         assert.deepEqual(await page.evaluate(()=>saved),['uk','123456','body { color: red; }']);
         await page.evaluate(()=>{const error=document.createElement('div');error.className='quickConnectError';error.textContent='The service rejected this code.';document.querySelector('#quickConnectPreferencesPage form').append(error)});
         await painted.getByRole('alert').filter({hasText:'The service rejected'}).waitFor();
+        // A hidden page stays cached by the view manager: its form scan stops while hidden and starts again on show.
+        assert.equal(await page.evaluate(()=>timers.size),1);
+        await page.evaluate(()=>document.getElementById('quickConnectPreferencesPage').dispatchEvent(new Event('viewhide',{bubbles:true})));
+        assert.equal(await page.evaluate(()=>timers.size),0);
+        await page.evaluate(()=>document.getElementById('quickConnectPreferencesPage').dispatchEvent(new Event('viewshow',{bubbles:true})));
+        await page.waitForFunction(()=>timers.size===1);
         await page.evaluate(()=>document.getElementById('quickConnectPreferencesPage').remove());
         try { await page.waitForFunction(()=>mounts===unmounts&&timers.size===0&&observers.size===1); } catch(error) { console.log(await page.evaluate(()=>({mounts,unmounts,timers:timers.size,observers:observers.size}))); throw error; }
     }
