@@ -129,8 +129,14 @@
 
     /* A download disc that opens nothing is no control, on a card that opens its page (P1.FU19). */
     .post .dm:not([role='link']),
-    .post .mark {
+    .post .mark,
+    .acts > span.ib,
+    .acts > span.ib .dm:not([role='link']) {
         cursor: default;
+    }
+
+    .acts > span.ib [role='link'] {
+        cursor: pointer;
     }
 
     /* Row arrows: the library toolbar's pill on the title line, above the posters; a computer only (title-pages.md). */
