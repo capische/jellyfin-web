@@ -55,6 +55,8 @@ settings for that view: 2:3 shape, title and year always on, no card layout.
 
 **The ring needs room:** the ring is drawn outside the poster, so a card must not contain paint. `cardDesign.scss` takes `paint` out of upstream's `.card:not(.show-animation)` containment; with it, a row's cards lose the ring's left side (the user's report, 2026-11-04).
 
+**Marks are no controls (ds.t6, built, not accepted):** a download disc that opens nothing and the Not Downloaded mark keep the default arrow on a card whose click opens its page. The title pages' season cards draw the same four-button pill as the grid: Get a Release sits in the pill and on the disc, as the mockup draws it.
+
 **Icon sizes:** the foot pill's glyphs are 1.236em (18.4 px on a computer) in 2em buttons, the disc's 2em. Each rule also sets `font-size: 1em` on the svg, because MUI's SvgIcon sets 1.5rem and an em width would count from that (the user's report, 2026-11-04).
 
 **Corner marks (ds.t4, 2026-11-05, built, not accepted):** the count (or tick) and the file mark sit in one `.corner` row, top right at 0.225em, with the mark 0.183em left of the count. The count grows and pushes the mark along, so no count width can overlap it. The download mark `downloadMark.ts` paints goes into the same row.
