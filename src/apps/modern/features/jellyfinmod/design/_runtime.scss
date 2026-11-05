@@ -127,6 +127,25 @@
         margin: 0;
     }
 
+    /* A row's waiting figure leads less than an active one; a client that could not be read less still (download-state-mark.md). */
+    .ln2 .dlf.wait { opacity: 0.75; }
+    .ln2 .dlf.stale { opacity: 0.55; }
+
+    /* The row's state disc is its round buttons' box (ds2.js epRow), the mockup's glyph inside it. */
+    .acts > span.ib > .dm.row {
+        width: 2.7816em;
+        height: 2.7816em;
+    }
+
+    /* The added row's Add slot only holds the disc: no hover, no pointer (P1.FU19). */
+    .rel [data-jfmod-release-add][aria-hidden='true'] {
+        cursor: default;
+
+        &:hover { background: none; }
+
+        [role='link'] { cursor: pointer; }
+    }
+
     /* A download disc that opens nothing is no control, on a card that opens its page (P1.FU19). */
     .post .dm:not([role='link']),
     .post .mark,
