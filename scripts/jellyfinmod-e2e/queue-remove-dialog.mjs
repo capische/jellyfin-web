@@ -86,7 +86,10 @@ const dialogState = () => page.evaluate(() => {
         close: (() => {
             const x = dialog.querySelector(':is(.jfmod-removeClose, [data-ds-dialog] .dlghead .rb)')?.getBoundingClientRect();
             const title = dialog.querySelector(':is(.jfmod-removeTitle, [data-ds-dialog] .dlghead h3)').getBoundingClientRect();
-            return x ? { size: Math.round(Math.min(x.width, x.height)), dy: Math.round(Math.abs(x.top + x.height / 2 - title.top - title.height / 2)),
+            // The guide's minimum: the pointer still lands on the button 19.5 px from its centre, in all four directions.
+            const button = dialog.querySelector(':is(.jfmod-removeClose, [data-ds-dialog] .dlghead .rb)');
+            const target = x && [[19.5, 0], [-19.5, 0], [0, 19.5], [0, -19.5]].every(([dx, dy]) => document.elementFromPoint(x.left + x.width / 2 + dx, x.top + x.height / 2 + dy)?.closest('button') === button);
+            return x ? { size: Math.round(Math.min(x.width, x.height)), target, dy: Math.round(Math.abs(x.top + x.height / 2 - title.top - title.height / 2)),
                 right: x.right > title.right, label: dialog.querySelector(':is(.jfmod-removeClose, [data-ds-dialog] .dlghead .rb)').getAttribute('aria-label') } : null;
         })(),
         // rd2: the outlined other button, its 12% hover tint, and TV focus blue.
@@ -196,8 +199,8 @@ async function dialogStep() {
         checkPlan(step, key, state, expected(data));
         record(step, `${key}: a dialog that can delete the files promises no episode stays in the library`,
             !state.choices.some(choice => choice.id === 'delete') || !state.facts.some(fact => fact.includes('stay there')), JSON.stringify(state.facts));
-        record(step, `${key}: the close X is level with the title on its right, at the mockup's 2.5em (40 px on a phone and the TV), labelled Close`,
-            !!state.close && state.close.size >= (phone || tv ? 40 : 37) && state.close.dy <= 4 && state.close.right && state.close.label === 'Close', JSON.stringify(state.close));
+        record(step, `${key}: the close X is level with the title on its right, the mockup's 2.5em with a target of at least 40 px, labelled Close`,
+            !!state.close && state.close.size >= (phone || tv ? 40 : 37) && state.close.target && state.close.dy <= 4 && state.close.right && state.close.label === 'Close', JSON.stringify(state.close));
         const safe = state.choices.find(choice => choice.id === 'cancel');
         record(step, `${key}: the safe choice is ${tv ? 'blue (the TV\'s focus fill)' : 'outlined'} as the dialog opens`,
             safe?.background === (tv ? state.colours.blue : state.colours.other) && safe?.ring !== 'none', JSON.stringify({ safe: safe?.background, ...state.colours, focusVisible: state.focusVisible }));

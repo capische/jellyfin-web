@@ -831,6 +831,18 @@
         background: none;
     }
 
+    /* The mockup's 2.5em is 37 px at a computer's root; the target reaches the guide's 40 px minimum around it. */
+    .rb::before {
+        content: '';
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 40px;
+        height: 40px;
+        margin: -20px 0 0 -20px;
+        border-radius: 50%;
+    }
+
     .dsc { padding: 0.382em 0.618em; }
 
     .seg:focus,
