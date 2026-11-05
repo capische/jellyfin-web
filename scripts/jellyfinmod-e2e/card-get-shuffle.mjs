@@ -331,6 +331,7 @@ async function run(browser, layout, user, admin) {
                     () => page.locator(`${seasonCard} :is(.jfmod-cardGet, [data-ds-action="get"])`).click(), { heading: 'Get a Release', scope: seasonScope });
                 // Keyboard: Tab onto the icon shows the cyan ring.
                 await page.locator(`${seasonCard} :is(.jfmod-cardGet, [data-ds-action="get"])`).focus();
+                await page.mouse.move(1, 1);
                 await page.keyboard.press('Shift+Tab');
                 await page.keyboard.press('Tab');
                 await page.waitForTimeout(400);
