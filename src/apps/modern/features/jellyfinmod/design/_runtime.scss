@@ -269,6 +269,7 @@
     }
 
     .post > .disc,
+    .post > .corner,
     .post > .mark,
     .post > .cmark,
     .post > .hmenu,
@@ -277,12 +278,26 @@
         z-index: 2;
     }
 
-    .pill2 ~ .mark,
-    .pill2 ~ .cmark {
-        right: 2.1em;
+    /* The count and the file mark share the corner, so the count grows and pushes the mark along. */
+    .corner {
+        position: absolute;
+        top: 0.225em;
+        right: 0.225em;
+        display: flex;
+        flex-direction: row-reverse;
+        align-items: center;
     }
 
-    .ds-downloading .post > .mark:not([data-ds-download]) {
+    .corner > .pill2,
+    .corner > .mark,
+    .corner > .cmark {
+        position: static;
+        flex: none;
+    }
+
+    .corner > * + * { margin-right: 0.183em; }
+
+    .ds-downloading .post .mark:not([data-ds-download]) {
         display: none;
     }
 
@@ -583,20 +598,18 @@
         background: var(--ground);
     }
 
-    &.onart .bar,
-    &.onart .tvbar {
+}
+
+/* ds.css's .hero2 .bar and .hero2 .barsearch: here the bar is not inside the hero, so Home's shell stands for it. */
+.jfmod-dsHomeShell .jfds.barroot {
+    .bar,
+    .tvbar {
         color: #fff;
     }
 
-    &.onart::before {
-        content: '';
-        position: absolute;
-        left: 0;
-        right: 0;
-        top: 0;
-        height: 6.854em;
-        background: linear-gradient(rgba(0, 0, 0, 0.618), rgba(0, 0, 0, 0));
-        pointer-events: none;
+    &:not(.layout-tv):not(.no-bf) .barsearch {
+        background: rgba(255, 255, 255, 0.09);
+        color: rgba(255, 255, 255, 0.854);
     }
 }
 
@@ -932,9 +945,6 @@
 }
 
 .jfds.dev-phone .itemName { font-size: 1.618em; }
-
-/* Still art owns its corners; the row's focus ring must remain outside its box. */
-.jfds .ep .still { overflow: visible; }
 
 /* dsE: source spans are semantic controls; poster thumbnails keep their box on image failure. */
 .jfds {

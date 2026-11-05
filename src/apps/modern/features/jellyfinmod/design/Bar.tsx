@@ -149,9 +149,9 @@ export const Bar: FC<{ onDrawer?: React.MouseEventHandler<HTMLElement> }> = ({ o
     let leading: ReactNode;
     if (tv) {
         leading = <>
-            <button className='focusable' title='Back' onClick={() => { void appRouter.back(); }}><Icon name='back' /></button>
-            <button className='focusable' title='Home' onClick={() => { window.location.hash = '#/home'; }}><Icon name='home' /></button>
-            <button className='focusable' title='Favorites' onClick={() => { window.location.hash = '#/home?tab=1'; }}><Icon name='heart' /></button>
+            <button className='focusable' aria-label='Back' onClick={() => { void appRouter.back(); }}><Icon name='back' /></button>
+            <button className='focusable' aria-label='Home' onClick={() => { window.location.hash = '#/home'; }}><Icon name='home' /></button>
+            <button className='focusable' aria-label='Favorites' onClick={() => { window.location.hash = '#/home?tab=1'; }}><Icon name='heart' /></button>
             {title && <span className='ttl'>{title}</span>}
         </>;
     } else if (phone) {
@@ -174,7 +174,7 @@ export const Bar: FC<{ onDrawer?: React.MouseEventHandler<HTMLElement> }> = ({ o
                 <span className='spacer' />
                 {syncControl}
                 {iconLink('cast', playerInfo?.isLocalPlayer === false ? playerInfo.deviceName || playerInfo.name || 'Cast to Device' : 'Cast to Device', 'cast')}
-                {phone && <a className='bic' href='#/search' title='Search'><Icon name='search' className='icon' /></a>}
+                {phone && <a className='bic' href='#/search' aria-label='Search'><Icon name='search' className='icon' /></a>}
                 <span className='avatar focusable' role='button' tabIndex={0} aria-label='User Menu' aria-controls='app-user-menu' aria-haspopup='menu'
                     onClick={event => open('user', event.currentTarget)} onKeyDown={activate}><Icon name='person' /></span>
                 {tv && <span className='clock'>{clock.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>}
