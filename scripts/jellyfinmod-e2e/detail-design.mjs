@@ -1239,7 +1239,7 @@ async function checkBadge(page, layout, { id, text }) {
         const box = el => { const r = el.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; };
         const play = [...document.querySelectorAll(`${sel} .jfmod-dsTitleHost .actbar > .dbtn:not([data-ds-command~=btnPlaystate])`)]
             .find(el => el.getBoundingClientRect().width > 0);
-        return { text: badge?.textContent ?? null, title: badge?.title ?? null, color: badge ? getComputedStyle(badge).color : null,
+        return { text: badge?.textContent ?? null, title: button?.getAttribute('data-tip') ?? null, color: badge ? getComputedStyle(badge).color : null,
             size: button ? box(button) : null, neighbour: play ? box(play) : null,
             played: button?.getAttribute('aria-pressed') ?? '', second: badge === button?.children[1] };
     }, PAGE);

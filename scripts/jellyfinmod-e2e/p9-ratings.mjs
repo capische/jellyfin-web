@@ -30,14 +30,16 @@ const signedIn = () => {
     }
 };
 const origin = new URL(required('JFMOD_P9_URL'));
-if (origin.port !== '18096') throw new Error('Runs only against the isolated instance (18096)');
+// The local pool's bravo to echo on 127.0.0.1 hold the same plugin and the same stand-in (the mod's web at /web/).
+const localPool = origin.hostname === '127.0.0.1' && ['9096', '10096', '11096', '12096'].includes(origin.port);
+if (origin.port !== '18096' && !localPool) throw new Error('Runs only against the isolated instance (18096) or the local pool');
 const KEY = readFileSync(required('JFMOD_P9_KEY_FILE'), 'utf8').trim();
 const STATE_FILE = required('JFMOD_P9_STATE');
 const STATE = JSON.parse(readFileSync(STATE_FILE, 'utf8'));
 const tier = process.env.JELLYFINMOD_BROWSER ?? 'chromium';
 const SHOTS = process.env.JFMOD_P9_SHOTS;
 if (SHOTS) mkdirSync(SHOTS, { recursive: true });
-const BASE = new URL('/web-mod/', origin).href;
+const BASE = new URL(localPool ? '/web/' : '/web-mod/', origin).href;
 // The plugin's default sources (user decision 9): IMDb, Rotten Tomatoes critics and audience, Trakt.
 const DEFAULT_ORDER = ['imdb', 'tomatoes_critic', 'tomatoes_audience', 'trakt'];
 
