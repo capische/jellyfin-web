@@ -52,6 +52,7 @@ const portraitOptions = {
     ...rowOptions,
     shape: CardShape.Portrait,
     preferThumb: false,
+    preferParentPoster: true,
     showParentTitle: true
 };
 
