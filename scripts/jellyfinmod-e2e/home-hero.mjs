@@ -879,6 +879,9 @@ if (only.includes('d')) for (const layout of LAYOUTS.filter(entry => !layoutFilt
                 { walk, top: back.top });
             // Up once more reaches the bar, whose focused button must still show its ring now that the bar is transparent.
             await layoutPage.keyboard.press('ArrowUp');
+            // A hero title with ratings has their group between Play and the bar (Phase 9): one more Up.
+            await layoutPage.waitForTimeout(350);
+            if (await layoutPage.evaluate(() => document.activeElement?.hasAttribute('data-jfmod-ratings-group'))) await layoutPage.keyboard.press('ArrowUp');
             await layoutPage.waitForTimeout(1000);
             const barFocus = await layoutPage.evaluate(() => {
                 const active = document.activeElement;
