@@ -196,9 +196,26 @@ export const PrefsPage: FC<{ view: HTMLElement }> = ({ view }) => {
     }), [view]);
     useEffect(() => {
         // Controllers set `.value` after their async load with no event, so a mutation observer alone would miss it.
-        const timer = window.setInterval(refresh, 500);
-        return () => window.clearInterval(timer);
-    }, [refresh]);
+        // The view manager keeps a page cached while it is hidden: nothing to read until it shows again.
+        let timer: number | undefined;
+        const pause = () => {
+            window.clearInterval(timer);
+            timer = undefined;
+        };
+        const resume = () => {
+            pause();
+            refresh();
+            timer = window.setInterval(refresh, 500);
+        };
+        resume();
+        view.addEventListener('viewhide', pause);
+        view.addEventListener('viewshow', resume);
+        return () => {
+            pause();
+            view.removeEventListener('viewhide', pause);
+            view.removeEventListener('viewshow', resume);
+        };
+    }, [view, refresh]);
     const loaded = parts.length > 0;
     useEffect(() => {
         // The TV starts on the first control, as the mockup's focus state does.
