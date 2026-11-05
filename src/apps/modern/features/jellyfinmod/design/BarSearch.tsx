@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useRef, useState, type FC } from 'react';
+import React, { type KeyboardEvent as ReactKeyboardEvent, useContext, useEffect, useRef, useState, type FC } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 import focusManager from 'components/focusManager';
@@ -9,6 +9,25 @@ import { Icon } from './Icon';
 import { DesignContext } from './Root';
 
 import { isBackKey } from '../shell/dpadModals';
+
+/** The TV's arrows in the field: the caret moves inside the words, and at their edge the D-pad goes on; Down goes to the results, or on to the page. */
+const tvFieldKey = (event: ReactKeyboardEvent<HTMLInputElement>, key: string) => {
+    const field = event.currentTarget;
+    const done = (move: () => void) => {
+        event.preventDefault();
+        event.stopPropagation();
+        move();
+    };
+    if (key === 'ArrowDown') {
+        const first = document.querySelector<HTMLElement>('#searchPage .card, #searchPage .cell.focusable')
+            || document.querySelector<HTMLElement>('#searchPage .alpha button');
+        if (first) done(() => focusManager.focus(first));
+    } else if (key === 'ArrowLeft' && field.selectionStart === 0) {
+        done(() => focusManager.moveLeft(field));
+    } else if (key === 'ArrowRight' && field.selectionEnd === field.value.length) {
+        done(() => focusManager.moveRight(field));
+    }
+};
 
 /** One URL-backed field. Navigating on the first character keeps the same mounted input and its caret. */
 const BarSearch: FC = () => {
@@ -81,12 +100,8 @@ const BarSearch: FC = () => {
                     // A real input keeps the trusted OK gesture, so webOS can open its native keyboard.
                     if (!isSearch) openSearch(value);
                     input.current?.focus();
-                } else if (tv && event.key === 'ArrowDown') {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    const first = document.querySelector<HTMLElement>('#searchPage .card, #searchPage .cell.focusable')
-                        || document.querySelector<HTMLElement>('#searchPage .alpha button');
-                    if (first) focusManager.focus(first);
+                } else if (tv) {
+                    tvFieldKey(event, key);
                 }
             }}
         />
