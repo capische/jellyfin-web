@@ -309,23 +309,25 @@ async function desktop(browser) {
     await page.route('**/JellyfinMod/Ratings/Items/**', route => {
         stalled.push(route);
     });
-    const refresh = page.locator('[data-jfmod-ratings-refresh]:visible').first();
+    // Refresh Ratings is a More-menu item on a native page; the button is the file-less series page's.
+    await page.locator('.jfmod-dsTitleHost .actbar [data-ds-command~=btnMoreCommands]').first().click();
+    await page.waitForSelector('[data-ds-actionsheet] [data-id="jfmod-more-refresh-ratings"]', { timeout: 10000 });
     await expectOwn(page);
-    await refresh.click();
+    await page.locator('[data-ds-actionsheet] [data-id="jfmod-more-refresh-ratings"]').click();
     await page.waitForTimeout(1500);
-    const message = await page.locator('.jfmod-nativeEntryDetails [role="status"]').first().innerText().catch(() => '');
+    // A native page's announcements are toasts, one after another.
+    const toasts = () => page.evaluate(() => [...document.querySelectorAll('.toast')].map(node => node.textContent ?? '').join(' | '));
+    const message = await toasts();
     record(layout, 'Refresh ratings queues a refresh and says so', /queued/i.test(message), message);
     // It then waits for the server's refresh queue to empty and reads the title again (web review P2 3).
-    await page.waitForFunction(() => /Ratings refreshed|no new values|still waiting/.test(document.querySelector('.jfmod-nativeEntryDetails [role="status"]')
-        ?.textContent ?? ''), undefined, { timeout: 75000 }).catch(ignore);
-    const finished = await page.locator('.jfmod-nativeEntryDetails [role="status"]').first().innerText().catch(() => '');
+    await page.waitForFunction(() => [...document.querySelectorAll('.toast')].some(node => /Ratings refreshed|no new values|still waiting/.test(node.textContent ?? '')), undefined, { timeout: 75000 }).catch(ignore);
+    const finished = await toasts();
     await page.waitForTimeout(500);
-    const busy = await refresh.getAttribute('aria-busy');
     const stalledReads = stalled.length;
     const after = await waitGroup(page);
-    record(layout, 'When the queued refresh has run the page says so, the button is free although a background read stalls, and the group stays',
-        finished === 'Ratings refreshed.' && busy === 'false' && stalledReads > 0 && sources(after).length === 4,
-        { finished, busy, stalledReads, inline: sources(after) });
+    record(layout, 'When the queued refresh has run the page says so although a background read stalls, and the group stays',
+        /Ratings refreshed\./.test(finished) && stalledReads > 0 && sources(after).length === 4,
+        { finished, stalledReads, inline: sources(after) });
     await page.unroute('**/JellyfinMod/Ratings/Items/**');
     await Promise.all(stalled.map(route => route.abort().catch(ignore)));
     // With focus on the group, a minute's refetch that changes a value is shown at once (inside the reserved space) and focus
