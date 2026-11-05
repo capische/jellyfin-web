@@ -127,6 +127,11 @@
         margin: 0;
     }
 
+    /* A TV has no glass to lean on: over bright art the fade holds its 61.8 % across the bar, so its icons keep 4.5:1, then fades. */
+    &.layout-tv .hero2 .pic::after {
+        background: linear-gradient(rgba(0, 0, 0, 0.618) 38.2%, rgba(0, 0, 0, 0));
+    }
+
     /* A row's waiting figure leads less than an active one; a client that could not be read less still (download-state-mark.md). */
     .ln2 .dlf.wait { opacity: 0.75; }
     .ln2 .dlf.stale { opacity: 0.55; }
