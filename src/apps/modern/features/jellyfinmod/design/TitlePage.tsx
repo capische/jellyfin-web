@@ -131,6 +131,23 @@ const cardState = (card: TitleCard) => {
     return <DownloadMark kind={mark.kind} progress={mark.progress} size={card.row ? 'row' : 'card'} link={mark.link} />;
 };
 
+const CardStill: FC<{ card: TitleCard }> = ({ card }) => <div className='still'><Poster src={card.image} icon='tv' className='stillimage' />
+    {card.played && <span className='pill2 tick'><Icon name='check' /></span>}
+    {card.downloadProgress && <span className='prog' data-ds-progress=''><i className='dl' style={{ width: card.downloadProgress }} /></span>}
+    {card.progress && <span className='prog'><i style={{ width: card.progress }} /></span>}</div>;
+
+const CardCorner: FC<{ card: TitleCard; state: React.ReactNode }> = ({ card, state }) => <span className='corner'>
+    {card.played && <span className='pill2 tick'><Icon name='check' /></span>}
+    {card.count && <span className='pill2'>{card.count}</span>}
+    {state && <span className={'cmark glassy' + (['countdown', 'searching'].includes(card.mark?.kind ?? '') ? ' mark' : '') + (card.mark?.kind === 'unaired' ? ' pillm' : '')} data-ds-state-kind={card.mark?.kind} title={card.mark?.label}>{card.mark?.kind === 'unaired' ? <><Clock /><span>{card.mark.date}</span></> : state}</span>}
+</span>;
+
+/** ds.js season: a phone's row has no Played, and the state mark takes the heart's place. */
+const phoneRowCommands = (card: TitleCard, marked: boolean) => {
+    const hasState = marked || card.commands.some(command => command.icon === 'cloud');
+    return card.commands.filter(command => command.icon !== 'check' && (command.icon !== 'heart' || !hasState));
+};
+
 const Card: FC<{ card: TitleCard; view: HTMLElement }> = ({ card, view }) => {
     const device = useContext(DesignContext);
     const [focus, setFocus] = useState(false);
@@ -151,16 +168,11 @@ const Card: FC<{ card: TitleCard; view: HTMLElement }> = ({ card, view }) => {
         return () => inputManager.off(painted, forward);
     }, [card.node]);
     const open = () => openCard(card);
-    const still = <div className='still'><Poster src={card.image} icon='tv' className='stillimage' />
-        {card.played && <span className='pill2 tick'><Icon name='check' /></span>}
-        {card.downloadProgress && <span className='prog' data-ds-progress=''><i className='dl' style={{ width: card.downloadProgress }} /></span>}
-        {card.progress && <span className='prog'><i style={{ width: card.progress }} /></span>}</div>;
+    const still = <CardStill card={card} />;
     const name = <><div className='nm'>{card.title}</div><div className='ln2'>{card.facts.length ? card.facts.map(fact => <span key={fact.text} className={fact.star ? 'star' : undefined}>{fact.star && <Icon name='star' />}{fact.text}</span>) : <span>{card.second}</span>}</div></>;
     const overview = <p className='ov'>{card.overview}</p>;
     const state = cardState(card);
-    // ds.js season: a phone's row has no Played, and the state mark takes the heart's place.
-    const hasState = !!state || card.commands.some(command => command.icon === 'cloud');
-    const rowCommands = device === 'phone' ? card.commands.filter(command => command.icon !== 'check' && (command.icon !== 'heart' || !hasState)) : card.commands;
+    const rowCommands = device === 'phone' ? phoneRowCommands(card, !!state) : card.commands;
     const actions = <div className='acts'>{state && (card.mark?.kind === 'failed' || !card.commands.some(command => command.icon === 'cloud')) && <span className='ib' data-ds-state-kind={card.mark?.kind} data-tip={card.mark?.label} aria-label={card.mark?.label}>{state}</span>}{rowCommands.map(command => <Command key={command.key} command={command} view={view} row />)}</div>;
     const prepare = () => card.node.dispatchEvent(new Event('pointerover', { bubbles: true }));
     const attributes = { ref: host, tabIndex: 0, onMouseEnter: prepare, onFocus: () => {
@@ -186,11 +198,7 @@ const Card: FC<{ card: TitleCard; view: HTMLElement }> = ({ card, view }) => {
     }
     return <div className={'cell focusable ' + card.shape + (card.shape !== 'c' ? ' act' : '') + (card.downloadProgress ? ' ds-downloading' : '') + (focus && device !== 'phone' ? ' focus' : '')} data-ds-source-classes={card.node.className} data-ds-href={card.href} {...card.attributes} {...attributes}>
         <div className='tile'><Poster src={card.image} icon={({ c: 'person', p: 'movie', w: 'tv' } as const)[card.shape]}>
-            <span className='corner'>
-                {card.played && <span className='pill2 tick'><Icon name='check' /></span>}
-                {card.count && <span className='pill2'>{card.count}</span>}
-                {state && <span className={'cmark glassy' + (['countdown', 'searching'].includes(card.mark?.kind ?? '') ? ' mark' : '') + (card.mark?.kind === 'unaired' ? ' pillm' : '')} data-ds-state-kind={card.mark?.kind} title={card.mark?.label}>{card.mark?.kind === 'unaired' ? <><Clock /><span>{card.mark.date}</span></> : state}</span>}
-            </span>
+            <CardCorner card={card} state={state} />
             {card.downloadProgress && <span className='prog' data-ds-progress=''><i className='dl' style={{ width: card.downloadProgress }} /></span>}
             {card.progress && <span className='prog'><i style={{ width: card.progress }} /></span>}
             {card.shape !== 'c' && <PosterActions card={card} view={view} />}
