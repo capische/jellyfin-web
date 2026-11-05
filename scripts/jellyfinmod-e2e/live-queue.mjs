@@ -16,9 +16,9 @@ const browser = await launch();
 // A downloading card (P4.FU1, P4.FU6): the amber bar at the poster's bottom, whose length is the percentage (the figure is the
 // disc's tooltip), and the download disc top right.
 const cardPercent = page => page.evaluate(name => {
-    const card = [...document.querySelectorAll(":is(.card:not(.dm), .cell)")].find(node => (node.textContent ?? '').includes(name));
-    const fill = card?.querySelector(":is(.jfmod-dlCardBar, [data-ds-progress]) :is(.jfmod-dlBar-fill, [data-ds-progress] > i)");
-    const arrow = card?.querySelector(":is(.dm, [data-ds-download])");
+    const card = [...document.querySelectorAll('.page:not(.hide) .cell')].find(node => (node.textContent ?? '').includes(name));
+    const fill = card?.querySelector('[data-ds-progress] > i');
+    const arrow = card?.querySelector('.dm:not(.not-downloaded):not(.unaired)');
     return { found: !!card, inFlight: !!fill && !!arrow, text: fill ? Math.floor(parseFloat(fill.style.width)) + '%' : null,
         cards: document.querySelectorAll(":is(.card:not(.dm), .cell)").length };
 }, title);
@@ -36,10 +36,12 @@ for (const layout of layouts) {
         await signIn(page);
         if (layout.startsWith('tv')) await setTvLayout(page);
         // Movies grid: the card shows the amber bar and the arrow; sample the bar across polls and count cards.
-        await page.evaluate(id => { location.hash = '#/movies?topParentId=' + id; }, libraryId);
-        // Wait for the Movies route itself (Home also shows the card in Recently Added).
-        await page.waitForFunction(name => location.hash.startsWith('#/movies')
-            && [...document.querySelectorAll(":is(.card:not(.dm), .cell)")].some(node => (node.textContent ?? '').includes(name)), title, { timeout: 45000 });
+        // An episode's download shows on its series' card in the Shows library.
+        const route = (await api(page, 'GET', `JellyfinMod/Entries/${entryId}`)).body?.entry?.mediaType === 'series' ? '#/tv' : '#/movies';
+        await page.evaluate(([hash, id]) => { location.hash = hash + '?topParentId=' + id; }, [route, libraryId]);
+        // Wait for the library's route itself (Home also shows the card in Recently Added).
+        await page.waitForFunction(([hash, name]) => location.hash.startsWith(hash)
+            && [...document.querySelectorAll(":is(.card:not(.dm), .cell)")].some(node => (node.textContent ?? '').includes(name)), [route, title], { timeout: 45000 });
         await page.waitForTimeout(1500);
         const samples = [];
         for (let i = 0; i < 5; i++) { samples.push(await cardPercent(page)); await page.waitForTimeout(3500); }

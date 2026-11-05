@@ -44,7 +44,8 @@ async function pickProfile(page, { name, index }) {
 }
 
 const origin = new URL(process.env.JELLYFINMOD_TEST_URL ?? (() => { throw new Error('JELLYFINMOD_TEST_URL is required'); })());
-if (origin.port !== '28096') throw new Error('Runs only against the acceptance instance');
+// The local pool's bravo to echo on 127.0.0.1 carry the same stand-ins, with the backup the header asks for.
+if (origin.port !== '28096' && !(origin.hostname === '127.0.0.1' && ['9096', '10096', '11096', '12096'].includes(origin.port))) throw new Error('Runs only against the acceptance instance or the local pool');
 const env = name => process.env[name] ?? (() => { throw new Error(name + ' is required'); })();
 const ITEM = env('JELLYFINMOD_REVIEW_ITEM');
 const LIBRARY = env('JELLYFINMOD_REVIEW_LIBRARY');
