@@ -100,7 +100,12 @@ const PosterActions: FC<{ card: TitleCard; view: HTMLElement }> = ({ card, view 
     const playCommand = !card.node.matches('[data-jfmod-placeholder], [data-jfmod-nofile], [data-jfmod-empty]') && !!card.node.dataset.id
         && ['Movie', 'Series', 'Season', 'Episode'].includes(card.node.dataset.type ?? '');
     // The mockup's pill keeps Get a Release beside the disc that offers the same; Play stays only on the disc.
-    const menuCommands = card.commands.filter(command => command !== primary || command.icon === 'cloud');
+    const pillOrder = ['check', 'heart', 'cloud'];
+    const pillRank = (command: TitleCommand) => {
+        const rank = pillOrder.indexOf(command.icon);
+        return rank < 0 ? pillOrder.length : rank;
+    };
+    const menuCommands = card.commands.filter(command => command !== primary || command.icon === 'cloud').sort((a, b) => pillRank(a) - pillRank(b));
     return <>
         {(primary || playCommand) && <button type='button' className={'disc hov glassy' + (device === 'tv' ? '' : ' focusable')} tabIndex={device === 'tv' ? -1 : 0} data-ds-primary-action={primary ? primaryAction(primary) : 'play'} aria-label={primary?.label || 'Play ' + card.title} onClick={event => {
             event.stopPropagation();
