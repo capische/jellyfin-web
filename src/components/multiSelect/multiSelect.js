@@ -344,6 +344,8 @@ function showMenuForSelectedItems(e) {
                                 break;
                         }
                     }
+                }).catch(() => {
+                    // Escape or a click outside closes the menu with nothing chosen.
                 });
             });
         });
