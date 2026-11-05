@@ -1,5 +1,7 @@
 # Poster card
 
+**ds.t7 (2026-11-05), built, not accepted:** Recently Added holds one shape: an episode there (`preferParentPoster`, the row's upstream option) draws its series' 2:3 poster, never a crop of its still, keeps the caption (series, then `S1:E4 · title`) and opens the episode. Continue Watching, Next Up and any row that asks for wide keep the 16:9 still; Favourites' Episodes and Search's Episodes stay stills in rows of their own. A season card (`Cell`: Recently Added, Favourites, Search) names its series, as the user approved: first line the series, second `Season 12 · 2018` (no year, the season's name alone), third unchanged; the poster and what it opens stay. The series' own Seasons row is the title page's and keeps its plain caption.
+
 **Review fixes (2026-11-04), built, not accepted:** More's Select eligibility and handler recognize `.jfds .cell[data-id]` as well as upstream `.card`, using the existing multiselect controller. Only the Primary Movies/Shows grid uses the fixed three-line caption: its View Settings omits Show Title, Show Year and Enable Card Layout. List, Thumb, Banner and the other image types render through upstream ItemsView with their original controls/settings.
 
 **dsF sweep (2026-11-04), built, not accepted:** every user page now draws `cell`, so `cardDesign.scss` is deleted. A computer window under 600 px takes the phone's page (2 posters a row). `SectionContainer` draws `sect/rowt/rowx` on painted pages, so Suggestions, Genres and Upcoming rows match. Row and pill have no Info: the card or row itself opens the title.
