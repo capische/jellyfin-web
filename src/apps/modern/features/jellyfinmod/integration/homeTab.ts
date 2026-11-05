@@ -143,7 +143,9 @@ export default class ModHomeTab {
     onPause() {
         if (layoutManager.tv) rememberFocus(this.view, this.lastFocused);
         // Not homeSections.pause: the mod's React rows are .itemsContainer too and have no pause of their own.
-        this.sections?.querySelectorAll<HTMLElement & { pause?: () => void }>('.itemsContainer').forEach(row => row.pause?.());
+        this.sections?.querySelectorAll<HTMLElement & { pause?: () => void }>('.itemsContainer').forEach(row => {
+            row.pause?.();
+        });
     }
 
     /** @param keepBackdrop leaving Home for another page, whose own backdrop must not be cleared */
