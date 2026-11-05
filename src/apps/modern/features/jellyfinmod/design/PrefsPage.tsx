@@ -138,7 +138,7 @@ const FieldRow: FC<{ part: Part; refresh: () => void }> = ({ part, refresh }) =>
     if (part.kind === 'item') {
         return <Row title={part.text}>{part.controls.map(control => (control.check ?
             <SwitchButton key={control.key} label={part.text} checked={!!control.checked} onClick={() => click(control.node)} /> :
-            <button type='button' key={control.key} className='ib focusable' title={control.title} aria-label={control.title} onClick={() => click(control.node)}><Icon name={control.icon} /></button>))}</Row>;
+            <button type='button' key={control.key} className='ib focusable' data-tip={control.title} aria-label={control.title} onClick={() => click(control.node)}><Icon name={control.icon} /></button>))}</Row>;
     }
     return null;
 };

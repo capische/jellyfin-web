@@ -85,6 +85,6 @@ export const DialogContent: FC<PropsWithChildren<{ title?: string;
     close?: () => void;
     className?: string }>> = ({ title, narrow, close, children, className = '' }) =>
     <div data-ds-dialog='' className={`dialog${narrow ? ' narrow' : ''} ${className}`} role='dialog' aria-modal='true' aria-label={title}>
-        <div className='dlghead'><h3>{title}</h3>{close && <button type='button' className='rb focusable' aria-label='Close' title='Close' onClick={close}><Icon name='close' /></button>}</div>
+        <div className='dlghead'><h3>{title}</h3>{close && <button type='button' className='rb focusable' aria-label='Close' data-tip='Close' onClick={close}><Icon name='close' /></button>}</div>
         <div className='dlgbody'>{children}</div>
     </div>;

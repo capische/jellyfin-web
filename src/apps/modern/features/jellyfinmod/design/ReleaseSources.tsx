@@ -189,7 +189,7 @@ export const ReleaseSources: FC<SourcesProps> = props => {
     const rest = searching ? null : restingDot(props, narrowed);
     if (lines.length === 0) return null;
     return createPortal(<>
-        <button type='button' className={'rb focusable' + (anchor ? ' foc' : '')} title={label} aria-label={label} aria-haspopup='true' aria-expanded={!!anchor}
+        <button type='button' className={'rb focusable' + (anchor ? ' foc' : '')} data-tip={label} aria-label={label} aria-haspopup='true' aria-expanded={!!anchor}
             onClick={open}><ReleaseGlyph name='funnel' />
             {searching && train.cars.map(car => <i key={car.id} className='sat' aria-hidden='true'
                 style={{ background: car.colour, transform: 'rotate(' + car.angle + 'deg) translateY(-1em)' }} />)}

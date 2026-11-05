@@ -65,11 +65,11 @@ const factClass = (fact: { badge: boolean; star: boolean; critic: boolean }) => 
 
 const Command: FC<{ view: HTMLElement; command: TitleCommand; row?: boolean }> = ({ view, command, row }) => <button type='button'
     className={(row ? 'ib' : commandClass(command)) + ' focusable' + (command.pressed ? ' on' : '') + (command.disabled ? ' off' : '')}
-    title={command.label} aria-label={command.label} aria-pressed={['check', 'heart'].includes(command.icon) ? command.pressed : undefined}
+    data-tip={command.play ? undefined : command.badge?.title ?? command.label} aria-label={command.label} aria-pressed={['check', 'heart'].includes(command.icon) ? command.pressed : undefined}
     data-ds-state-kind={row && command.icon === 'cloud' ? 'not-downloaded' : undefined} aria-disabled={command.disabled} data-ds-command={command.node.className} onClick={event => runTitleCommand(view, command, event.currentTarget)}
     onFocus={event => event.currentTarget.classList.add('focus')} onBlur={event => event.currentTarget.classList.remove('focus')}>
     {row && command.icon === 'cloud' ? <Cloud /> : <Icon name={command.icon} />}{command.play && command.label}
-    {command.badge && <span className={'tickb' + (command.badge.kept ? ' kept' : '')} title={command.badge.title}>{command.badge.text}</span>}
+    {command.badge && <span className={'tickb' + (command.badge.kept ? ' kept' : '')}>{command.badge.text}</span>}
 </button>;
 
 const openCard = (card: TitleCard) => {
@@ -106,7 +106,7 @@ const PosterActions: FC<{ card: TitleCard; view: HTMLElement }> = ({ card, view 
             // The same existing shortcut command as a remote's Play key, on the original command host.
             else card.node.dispatchEvent(new CustomEvent('command', { bubbles: true, cancelable: true, detail: { command: 'play' } }));
         }}>{posterActionIcon(primary, card.mark)}</button>}
-        {menuCommands.length > 0 && <span className='hmenu glassy'>{menuCommands.map(command => <button type='button' key={command.key} className={'pi' + (device === 'tv' ? '' : ' focusable')} tabIndex={device === 'tv' ? -1 : 0} title={command.label}
+        {menuCommands.length > 0 && <span className='hmenu glassy'>{menuCommands.map(command => <button type='button' key={command.key} className={'pi' + (device === 'tv' ? '' : ' focusable')} tabIndex={device === 'tv' ? -1 : 0} data-tip={command.label}
             aria-pressed={['check', 'heart'].includes(command.icon) ? command.pressed : undefined}
             onClick={event => {
                 event.stopPropagation();
@@ -137,7 +137,7 @@ const Card: FC<{ card: TitleCard; view: HTMLElement }> = ({ card, view }) => {
     // ds.js season: a phone's row has no Played, and the state mark takes the heart's place.
     const hasState = !!state || card.commands.some(command => command.icon === 'cloud');
     const rowCommands = device === 'phone' ? card.commands.filter(command => command.icon !== 'check' && (command.icon !== 'heart' || !hasState)) : card.commands;
-    const actions = <div className='acts'>{state && !card.commands.some(command => command.icon === 'cloud') && <span className='ib' data-ds-state-kind={card.mark?.kind} title={card.mark?.label}>{state}</span>}{rowCommands.map(command => <Command key={command.key} command={command} view={view} row />)}</div>;
+    const actions = <div className='acts'>{state && !card.commands.some(command => command.icon === 'cloud') && <span className='ib' data-ds-state-kind={card.mark?.kind} data-tip={card.mark?.label} aria-label={card.mark?.label}>{state}</span>}{rowCommands.map(command => <Command key={command.key} command={command} view={view} row />)}</div>;
     const prepare = () => card.node.dispatchEvent(new Event('pointerover', { bubbles: true }));
     const attributes = { tabIndex: 0, onMouseEnter: prepare, onFocus: () => {
         setFocus(true);
@@ -162,11 +162,13 @@ const Card: FC<{ card: TitleCard; view: HTMLElement }> = ({ card, view }) => {
     }
     return <div className={'cell focusable ' + card.shape + (card.shape !== 'c' ? ' act' : '') + (card.downloadProgress ? ' ds-downloading' : '') + (focus && device !== 'phone' ? ' focus' : '')} data-ds-source-classes={card.node.className} data-ds-href={card.href} {...card.attributes} {...attributes}>
         <div className='tile'><Poster src={card.image} icon={({ c: 'person', p: 'movie', w: 'tv' } as const)[card.shape]}>
-            {card.played && <span className='pill2 tick'><Icon name='check' /></span>}
-            {card.count && <span className='pill2'>{card.count}</span>}
+            <span className='corner'>
+                {card.played && <span className='pill2 tick'><Icon name='check' /></span>}
+                {card.count && <span className='pill2'>{card.count}</span>}
+                {state && <span className={'cmark glassy' + (['countdown', 'searching'].includes(card.mark?.kind ?? '') ? ' mark' : '') + (card.mark?.kind === 'unaired' ? ' pillm' : '')} data-ds-state-kind={card.mark?.kind} title={card.mark?.label}>{card.mark?.kind === 'unaired' ? <><Clock /><span>{card.mark.date}</span></> : state}</span>}
+            </span>
             {card.downloadProgress && <span className='prog' data-ds-progress=''><i className='dl' style={{ width: card.downloadProgress }} /></span>}
             {card.progress && <span className='prog'><i style={{ width: card.progress }} /></span>}
-            {state && <span className={'cmark glassy' + (['countdown', 'searching'].includes(card.mark?.kind ?? '') ? ' mark' : '') + (card.mark?.kind === 'unaired' ? ' pillm' : '')} data-ds-state-kind={card.mark?.kind} title={card.mark?.label}>{card.mark?.kind === 'unaired' ? <><Clock /><span>{card.mark.date}</span></> : state}</span>}
             {card.shape !== 'c' && <PosterActions card={card} view={view} />}
         </Poster><div className='capt'><div className='ln t'>{card.title}</div><div className='ln d' data-jfmod-count={card.captionCount ? '' : undefined}>{card.second}</div><div className='ln d' /></div>
         </div>

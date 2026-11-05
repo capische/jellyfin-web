@@ -30,3 +30,5 @@ links Favorites, Shows, Movies; other existing links follow them.
 Exceptions: 1366/900px responsive thresholds; 42% cap, upstream 3.226em bar/3em icons, 1.382em search glyph, glass recipes,
 half-height pill radius, .135em ring, 40px touch targets, existing search debounce. Native webOS keyboard timing and physical
 C1 performance require device verification; rd2 did not contact a server or device.
+
+**Over art (ds.t4, 2026-11-05, built, not accepted):** the bar draws no layer of its own under the pill: the top gradient belongs to Home's hero (`.hero2 .pic::after`), and a title page has none. On Home the bar and search pill take the mockup's hero colours in both themes (white bar, pill `rgba(255,255,255,0.09)` with 85.4 % white text) until the bar turns to glass.

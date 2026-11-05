@@ -175,3 +175,5 @@ Remove from Queue and Remove the Torrent. Code: `integration/queueActions.ts` (`
 
 - Put a text button inside a list row, or a labelled button where a row icon is the pattern.
 - Invent a fourth colour or a smaller size; a secondary action is grey at Save's size.
+
+**Tooltips (ds.t4, 2026-11-05, built, not accepted):** icon actions carry `data-tip` and `aria-label`, never `title`: the shared `[data-tip]::after` draws the rulebook's tooltip (paper, 0.618em corners, 0.382 s wait, 0.236 s fade, none on a phone or TV).
