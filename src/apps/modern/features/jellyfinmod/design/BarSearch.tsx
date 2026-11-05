@@ -18,6 +18,7 @@ const BarSearch: FC = () => {
     const [params] = useSearchParams();
     const input = useRef<HTMLInputElement>(null);
     const keyboardVisible = useRef(false);
+    const typing = useRef(false);
     const isSearch = location.pathname === '/search';
     const query = isSearch ? params.get('query') || '' : '';
     const [value, setValue] = useState(query);
@@ -58,13 +59,19 @@ const BarSearch: FC = () => {
             data-keyboard='true'
             value={value}
             onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
+            onBlur={() => {
+                setFocused(false);
+                // The TV's results take focus when they load; while typing, the field keeps it.
+                if (tv && typing.current && isSearch) input.current?.focus();
+            }}
             onChange={event => {
+                typing.current = true;
                 setValue(event.target.value);
                 openSearch(event.target.value);
             }}
             onKeyDown={event => {
                 const key = getKeyName(event.nativeEvent);
+                if (key.length > 1 && key !== 'Backspace') typing.current = false;
                 if (tv && isBackKey(key) && keyboardVisible.current) {
                     event.preventDefault();
                     event.stopPropagation();

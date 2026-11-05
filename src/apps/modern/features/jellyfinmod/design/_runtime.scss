@@ -750,6 +750,9 @@
     padding-top: 3.85em;
 }
 
+/* A window taller than the page: the ground, not upstream's full-window backdrop, fills the rest. */
+.jfmod-dsTitleHost .jfds { min-height: 100vh; }
+
 .jfds {
     .titlefoot { padding-bottom: 2.618em; }
 
