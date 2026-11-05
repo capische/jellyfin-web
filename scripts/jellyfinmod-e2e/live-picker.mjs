@@ -30,15 +30,15 @@ try {
     const detail = await api(page, 'GET', `JellyfinMod/Entries/${entryId}`);
     await page.evaluate(id => { location.hash = '#/details?entryId=' + encodeURIComponent(id); }, entryId);
     // A series picker offers seasons only (user, 2026-10-12): an episode is searched from its own row's Search Releases.
-    const searchSelector = episodeId ? `button[data-episode-id="${episodeId}"][title="Search Releases"]` : null;
-    const search = searchSelector ? page.locator(searchSelector) : page.locator('button', { hasText: 'Search releases' }).first();
+    const searchSelector = episodeId ? `button[data-episode-id="${episodeId}"][aria-label^="Search releases"]` : null;
+    const search = searchSelector ? page.locator(searchSelector) : page.locator('button', { hasText: 'Get a Release' }).first();
     await search.waitFor({ state: 'visible', timeout: 30000 });
     if (tv) {
         // Reach the action by keys only: record what has focus on open, then arrow along until Search releases has it.
         await page.waitForTimeout(1500);
         const onOpen = await page.evaluate(() => document.activeElement === document.body ? 'body' : (document.activeElement?.textContent ?? '').trim().slice(0, 30));
         const isSearch = () => page.evaluate(selector => document.activeElement?.tagName === 'BUTTON' && (selector ?
-            document.activeElement.matches(selector) : /Search releases/i.test(document.activeElement.textContent ?? '')), searchSelector);
+            document.activeElement.matches(selector) : /Get a Release/i.test(document.activeElement.textContent ?? '')), searchSelector);
         let reached = await isSearch();
         const path = [];
         for (let i = 0; i < 25 && !reached; i++) {
@@ -70,7 +70,8 @@ try {
     }
     record(label, 'The picker lists eligible rows (raw title present; shown while Show Names is on) and a collapsed rejected group with reasons', eligible.length > 0,
         { status, notice, eligible: eligible.slice(0, 12), rejected: rejected.slice(0, 12), eligibleCount: eligible.length, rejectedCount: rejected.length });
-    record(label, 'Focus starts on the first eligible row', firstFocused);
+    // Only the TV's D-pad needs a row focused; elsewhere a script focus would leave the first row highlighted (picker, D-pad decision).
+    record(label, tv ? 'TV: focus starts on the first eligible row' : 'Not the TV: no row takes focus by itself', tv ? firstFocused : !firstFocused);
     // The indexer name is the link to the release's page (2026-10-12): a sibling of the row's button, the item's last child (one
     // stop after Replace), laid over the name's own box, opening a new tab; plain text on the TV.
     const links = await page.evaluate(() => [...document.querySelectorAll('.rels .rel')].map(item => {
@@ -96,7 +97,7 @@ try {
     const client = await page.evaluate(() => {
         const link = document.querySelector('.pickerDialog .dlghead a.rb');
         const header = [...document.querySelectorAll('.pickerDialog .dlghead > button, .pickerDialog .dlghead > a')].map(node => node.hasAttribute('aria-pressed') ? 'names' : node.tagName === 'A' ? 'client' : 'close');
-        return { shown: !!link && !link.hidden && link.getBoundingClientRect().width > 0, title: link?.title ?? null, target: link?.target ?? null, header };
+        return { shown: !!link && !link.hidden && link.getBoundingClientRect().width > 0, title: link?.dataset.tip ?? null, target: link?.target ?? null, header };
     });
     if (tv) {
         record(label, 'TV: no Open Transmission icon', !client.shown, client);
@@ -112,7 +113,7 @@ try {
     const namesState = () => page.evaluate(() => {
         const button = document.querySelector('.pickerDialog .dlghead [aria-pressed]');
         const titles = [...document.querySelectorAll('.rels:not(.rejrows) > .rel')];
-        return { pressed: button?.getAttribute('aria-pressed'), label: button?.getAttribute('aria-label'), tooltip: button?.getAttribute('title'),
+        return { pressed: button?.getAttribute('aria-pressed'), label: button?.getAttribute('aria-label'), tooltip: button?.getAttribute('data-tip'),
             rows: titles.length, shown: titles.filter(node => node.querySelector('.rname')?.getBoundingClientRect().height > 0).length, stored: localStorage.getItem('jfmod-releaseNames') };
     });
     const before = await namesState();
@@ -123,8 +124,9 @@ try {
         await page.locator('.rels .rel').first().focus();
         const path = [];
         let onToggle = false;
+        // The header row holds Sources, Show Names and Close: Up reaches the row, Right walks along it.
         for (let i = 0; i < 6 && !onToggle; i++) {
-            await page.keyboard.press('ArrowUp');
+            await page.keyboard.press(i < 3 ? 'ArrowUp' : 'ArrowRight');
             onToggle = await page.evaluate(() => document.activeElement?.matches('.pickerDialog .dlghead [aria-pressed]') ?? false);
             path.push(await page.evaluate(() => (document.activeElement?.getAttribute('aria-label') ?? document.activeElement?.className ?? '').slice(0, 30)));
         }
@@ -141,8 +143,9 @@ try {
     const off = await namesState();
     record(label, 'Show Names off again: no file names, stored 0', off.pressed === 'false' && off.shown === 0 && off.stored === '0', off);
     if (tv) await page.keyboard.press('Enter'); else await namesToggle.click(); // on again: the reload check below needs it stored
-    const order = eligible.map(text => Number(/score (-?\d+)/.exec(text)?.[1]));
-    record(label, 'Eligible rows are ordered by descending score', order.every((score, index) => index === 0 || order[index - 1] >= score), order);
+    // The row shows its score beside the file name, so read it while Show Names is on.
+    const order = (await rowTexts(page.locator('.rels .rel'))).map(text => Number(/score (-?\d+)/.exec(text)?.[1]));
+    record(label, 'Eligible rows are ordered by descending score', order.length > 0 && order.every(Number.isFinite) && order.every((score, index) => index === 0 || order[index - 1] >= score), order);
 
     if (step === 'grab' || step === 'cancel') {
         const rows = page.locator('.rels .rel');
@@ -166,7 +169,8 @@ try {
                 tickStop: item.querySelector('[data-jfmod-release-add]')?.getAttribute('tabindex') !== '-1',
                 figure: item.querySelector('.dlf')?.textContent ?? null,
                 bar: !!item.querySelector('.bar2'),
-                label: item.querySelector('.rel')?.getAttribute('aria-label') ?? '',
+                disc: !!item.querySelector('[data-jfmod-release-add] .dm'),
+                label: item.getAttribute('aria-label') ?? '',
                 blockButtons: document.querySelectorAll('.grab button').length
             };
         });
@@ -193,10 +197,10 @@ try {
             // administrator), and the download figure from the queue, read right after the handoff.
             const done = await until(async () => {
                 const row = await addedRow();
-                return row?.tick && row.figure ? row : null;
+                return (row?.tick || row?.disc) && row.figure ? row : null;
             }, { timeout: 20000, every: 500, label: 'the added row\'s download figure' }).catch(() => null);
-            record(label, 'The added row: a green tick, an X to remove it from the queue, a progress bar and figure (Queued, a percentage or Importing…)',
-                !!done && done.x === 'Remove from Queue' && !done.tickStop && done.bar && /^(Queued|\d+%|Importing…|Failed · )/.test(done.figure), done);
+            record(label, 'The added row: the download disc (a green tick once the queue cannot be read), an X to remove it from the queue, a figure (Queued, a percentage or Importing…) with a progress bar once a percentage shows',
+                !!done && done.x === 'Remove from Queue' && !done.tickStop && (done.bar || !/^\d+%/.test(done.figure)) && /^(Queued|\d+%|Importing…|Failed · )/.test(done.figure), done);
         }
         const grabs = requests.filter(line => line === 'POST /JellyfinMod/Releases/Grab').length;
         record(label, 'Exactly one grab request despite the second Enter', grabs === 1, requests);
@@ -208,11 +212,12 @@ try {
     await page.waitForTimeout(800);
     const back = await page.evaluate(() => ({ open: !!document.querySelector('.picker'), focus: document.activeElement?.textContent?.trim().slice(0, 40) }));
     // Stock dialogHelper restores focus to the opener only on the TV layout; elsewhere closing is the whole contract.
-    if (tv) record(label, 'Back closes the picker and restores focus to the opener', !back.open && /Search releases/i.test(back.focus ?? ''), back);
+    if (tv) record(label, 'Back closes the picker and restores focus to the opener', !back.open && /Get a Release/i.test(back.focus ?? ''), back);
     else record(label, 'Back closes the picker', !back.open, back);
     // The choice survives a reload: reopen the picker and read the toggle, then switch it off for the next run.
     await page.reload();
-    const reopen = page.locator('button', { hasText: 'Search releases' }).first();
+    // The pill's cloud: the download block's Get a Release is gone while a grab runs.
+    const reopen = page.locator('.actbar [aria-label="Get a Release"]').first();
     await reopen.waitFor({ state: 'visible', timeout: 30000 });
     if (tv) { await reopen.focus(); await page.keyboard.press('Enter'); } else await reopen.click();
     await page.waitForSelector('.pickerDialog .dlghead [aria-pressed]', { timeout: 15000 });

@@ -162,7 +162,7 @@ try {
         await page.evaluate(()=>document.documentElement.dataset.theme='dark');
         await page.evaluate(()=>ui.picker('addVersion'));await page.locator('.rel').first().waitFor();
         if(device==='phone')assert.equal(await page.locator('.rel').first().locator(':scope > .rl').count(),3);
-        if(device==='tv')assert.equal(await page.locator('.pickerDialog [title="Open Transmission"]').count(),0);
+        const openClient=page.locator('.pickerDialog [aria-label="Open Transmission"]');if(device!=='tv')await openClient.waitFor();await page.waitForTimeout(100);assert.equal(await openClient.count(),device==='tv'?0:1,'Open Transmission is in the picker except on the TV');if(device!=='tv')assert.equal(await openClient.getAttribute('data-tip'),'Open Transmission');
         const actions=await page.locator('.ract').first().evaluate(n=>[...n.children].map(c=>c.getBoundingClientRect().toJSON()));
         assert.ok(actions[0].right<=actions[1].left+1,'Add and Replace remain beside each other');
         if(process.env.DS_SHOTS&&['computer','phone'].includes(device))await page.screenshot({path:process.env.DS_SHOTS+'/'+device+'-picker.png'});
