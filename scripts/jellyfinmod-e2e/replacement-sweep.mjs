@@ -512,9 +512,10 @@ async function sweepLayout(name) {
         if (before.userData) {
             const versions = Object.keys(before.versions).length ? before.versions : { [played]: before.userData };
             const statuses = [];
+            // Every unmarking first: the copies share a user-data key, so unmarking one after another's write would undo that write.
+            for (const [id, u] of Object.entries(versions)) if (u && !u.LastPlayedDate) await api('DELETE', `UserPlayedItems/${id}?userId=${userId}`);
             for (const [id, u] of Object.entries(versions)) {
                 if (!u) continue;
-                if (!u.LastPlayedDate) await api('DELETE', `UserPlayedItems/${id}?userId=${userId}`);
                 statuses.push((await api('POST', `UserItems/${id}/UserData?userId=${userId}`, {
                     Played: !!u.Played, PlayCount: u.PlayCount ?? 0, IsFavorite: !!u.IsFavorite, PlaybackPositionTicks: u.PlaybackPositionTicks ?? 0,
                     LastPlayedDate: u.LastPlayedDate ?? null, Rating: u.Rating ?? null, Likes: u.Likes ?? null
