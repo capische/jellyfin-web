@@ -20,6 +20,18 @@ export const isTopDialog = (host: HTMLElement) => {
     return opened[opened.length - 1] === host;
 };
 
+/** Back to the dialog's opener. It can go while the dialog is open (a grab replaces Get a Release): the TV's D-pad must not fall to the top bar. */
+export const returnFocus = (opener: HTMLElement | null) => {
+    if (opener?.isConnected) {
+        focusManager.focus(opener);
+    } else if (layoutManager.tv) {
+        const page = document.querySelector<HTMLElement>('.mainAnimatedPage:not(.hide)');
+        const action = page?.querySelector<HTMLElement>('.actbar .focusable');
+        if (action) focusManager.focus(action);
+        else focusManager.autoFocus(page);
+    }
+};
+
 /** Keep dialogHelper's host, history, backdrop and focus scope;
 replace only its contents. */
 export const mountDialog = (host: HTMLElement, children: ReactNode, close: () => void, menu = false) => {
@@ -73,14 +85,6 @@ export const mountDialog = (host: HTMLElement, children: ReactNode, close: () =>
         // These dialogs close at once: a double press of Back still means one Back.
         setTimeout(() => document.removeEventListener('keydown', key), 200);
         root.unmount();
-        if (previous?.isConnected) {
-            focusManager.focus(previous);
-        } else if (layoutManager.tv) {
-            // The opener can go while the dialog is open (a grab replaces Get a Release): the D-pad must not fall to the top bar.
-            const page = document.querySelector<HTMLElement>('.mainAnimatedPage:not(.hide)');
-            const action = page?.querySelector<HTMLElement>('.actbar .focusable');
-            if (action) focusManager.focus(action);
-            else focusManager.autoFocus(page);
-        }
+        returnFocus(previous);
     }, { once: true });
 };

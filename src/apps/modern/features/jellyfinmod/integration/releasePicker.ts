@@ -8,10 +8,9 @@ import { renderComponent } from 'utils/reactUtils';
 import { type EntryDetail, getEntry, loadEntryEpisodeList } from '../api/modApi';
 import { type ReleasePickerEpisode } from '../components/ReleasePickerDialog';
 import { ReleasePicker } from '../design/ReleasePicker';
-import { isTopDialog } from '../design/dialogHost';
+import { isTopDialog, returnFocus } from '../design/dialogHost';
 import { getKeyName } from 'scripts/keyboardNavigation';
 import { isBackKey } from '../shell/dpadModals';
-import focusManager from 'components/focusManager';
 import type { ReleaseIntent } from '../types/acquisition';
 import type { EntryEpisode } from '../types/entry';
 
@@ -137,7 +136,7 @@ export const openReleasePicker = (options: OpenOptions): Promise<void> => {
     const release = () => {
         document.removeEventListener('keydown', key);
         unmount();
-        if (opener?.isConnected) focusManager.focus(opener);
+        returnFocus(opener);
     };
     return dialogHelper.open(dlg).then(release, release);
 };
