@@ -1072,7 +1072,8 @@ const useAddedFocus = (container: RefObject<HTMLDivElement | null>, addedId: str
         const lost = !active || active === document.body;
         const rowOf = (id: string) => root.querySelector<HTMLElement>('[data-jfmod-release-row="' + id + '"]');
         if (addedId) {
-            if (active?.getAttribute('data-jfmod-release-add') === addedId || (lost && previous === addedId)) {
+            // Lost at once too: the Add button that had focus goes when the row turns into its added actions.
+            if (active?.getAttribute('data-jfmod-release-add') === addedId || lost) {
                 const target = root.querySelector<HTMLElement>('[data-jfmod-release-x="' + addedId + '"]') ?? rowOf(addedId);
                 if (target) focusManager.focus(target);
             }
