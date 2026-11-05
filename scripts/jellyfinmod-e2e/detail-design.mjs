@@ -181,7 +181,8 @@ async function reachByKeys(page, layout, selector) {
     }, selector);
     const down = ['ArrowDown', 'ArrowRight', 'ArrowLeft'];
     const up = ['ArrowUp', 'ArrowLeft', 'ArrowRight'];
-    let phases = [['Tab']];
+    // A second Tab when the first runs off the page's end: it wraps to the first stop.
+    let phases = [['Tab', 'Tab']];
     if (tv) phases = above ? [up, down] : [down, up];
     if (tv && sameRow) phases = [['ArrowRight'], ['ArrowLeft'], ...phases];
     for (const keys of phases) {
