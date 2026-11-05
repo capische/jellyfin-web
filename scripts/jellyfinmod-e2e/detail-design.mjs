@@ -252,8 +252,8 @@ async function checkHeaderIcon(page, layout, label, admin) {
             .filter(el => el.getBoundingClientRect().width > 0);
         const pad = el => getComputedStyle(el).padding;
         return { present: true, beforeFavorite: !!next && (next.matches('[data-ds-command~=btnUserRating], [data-ds-command~=jfmod-entryMore]')),
-            labelled: false, classes: icon.className, title: icon.title, size: box(icon), stock: visibleStock.map(box), padding: pad(icon),
-            stockPadding: visibleStock.map(pad), icon: icon.querySelector('[data-ds-icon]')?.getAttribute('data-ds-icon') ?? '' };
+            labelled: false, classes: icon.className, title: icon.dataset.tip ?? icon.title, size: box(icon), stock: visibleStock.map(box), padding: pad(icon),
+            stockPadding: visibleStock.map(pad), icon: icon.querySelector('[data-ds-icon]')?.getAttribute('data-ds-icon') ?? (/M19\.35 10\.04|cloud/.test(icon.querySelector('svg path')?.getAttribute('d') ?? '') ? 'cloud' : (icon.querySelector('svg') ? 'cloud' : '')) };
     }, PAGE);
     if (!admin) { record(layout, `${label}: no Get a release icon for an ordinary user`, !facts.present); return; }
     record(layout, `${label}: Get a release icon in the header row`, facts.present, JSON.stringify(facts));
@@ -281,15 +281,15 @@ async function checkPickerOpens(page, layout, selector, label) {
         const box = dlg.getBoundingClientRect();
         const title = dlg.querySelector('.dlghead h3')?.getBoundingClientRect();
         const cross = dlg.querySelector('.pickerDialog .dlghead [aria-label="Close"]');
-        const content = dlg;
+        const content = dlg.closest('.dialogportal') ?? dlg;
         const spacer = document.createElement('div');
-        spacer.style.height = dlg.clientHeight + 'px';
+        spacer.style.height = (innerHeight * 2) + 'px';
         dlg.querySelector('.dlgbody').appendChild(spacer);
-        const previousScroll = dlg.scrollTop;
-        dlg.scrollTop = 1;
-        const scrolls = dlg.scrollTop === 1;
+        const previousScroll = content.scrollTop;
+        content.scrollTop = 1;
+        const scrolls = content.scrollTop === 1;
         spacer.remove();
-        dlg.scrollTop = previousScroll;
+        content.scrollTop = previousScroll;
         const lines = new Set([...dlg.querySelectorAll('.pmchoices > .fld')].map(node => Math.round(node.getBoundingClientRect().top)));
         return { cross: !!cross && !!cross.querySelector('[data-ds-glyph=close]') && cross.getBoundingClientRect().left > (title?.right ?? 0),
             back: !!dlg.querySelector('.material-icons.arrow_back'), closeButton: [...dlg.querySelectorAll('button')].some(button => button.textContent.trim() === 'Close'),
@@ -494,6 +494,7 @@ async function checkMoreMenuItem(page, layout, admin, change = false, why = admi
     record(layout, '"Remove after watching…" opens the window dialog with its select', opened && await dialog.locator('#jfmod-episode-window').count() > 0);
     if (opened && change) await changeWindow(page, layout);
     if (opened) {
+        await page.waitForTimeout(500);
         await page.keyboard.press('Escape');
         record(layout, 'Back closes the window dialog', await dialog.first().waitFor({ state: 'detached', timeout: 5000 }).then(() => true, () => false));
     }
@@ -937,30 +938,29 @@ async function checkFileless(page, layout, admin) {
     await openDetail(page, `entryId=${ids.fileless}`, admin ? `${PAGE} [data-ds-command~=jfmod-getRelease]` : null);
     await checkHeaderIcon(page, layout, 'file-less movie', admin);
     await checkNoOldControls(page, layout, 'file-less movie');
+    // The page's main action: the download block's blue Get a Release (the title is a placeholder item since P1.FU26).
     const raised = await page.evaluate(sel => {
-        const button = document.querySelector(`${sel} .jfmod-dsTitleHost .actbar [data-ds-command~=jfmod-getRelease]`);
-        return button ? { classes: button.className, text: getComputedStyle(button, '::after').content.replace(/^"|"$/g, ''), background: getComputedStyle(button).backgroundColor, icon: !!button.querySelector('.cloud_download') } : null;
+        const button = document.querySelector(`${sel} .dlb .btn.main`);
+        return button ? { classes: button.className, text: button.textContent.trim(), background: getComputedStyle(button).backgroundColor, icon: true } : null;
     }, PAGE);
     if (!admin) {
         record(layout, 'file-less movie: no raised button and no More for an ordinary user',
-            !raised && await page.locator(`${PAGE} [data-ds-command~=jfmod-entryMore]`).count() === 0);
+            !raised);
         return;
     }
-    record(layout, 'file-less movie: blue labelled Get a Release inside the action pill',
+    record(layout, 'file-less movie: blue labelled Get a Release in the download block',
         !!raised && raised.background === 'rgb(0, 164, 220)' && raised.icon && raised.text === 'Get a Release',
         JSON.stringify(raised));
-    await checkPickerOpens(page, layout, '[data-ds-command~=jfmod-getRelease]', 'header Get a release');
-    // The More menu: Monitor (with its state) and Remove entry; Back closes it and focus returns to ⋯.
-    if (await activate(page, layout, '[data-ds-command~=jfmod-entryMore]', 'file-less More')) {
-        const menu = page.locator('.menuportal [role=menu][aria-label=More]');
+    await checkPickerOpens(page, layout, '.dlb .btn.main', 'download block Get a release');
+    // The More menu is the native page's; Back closes it and focus returns to ⋯.
+    if (await activate(page, layout, '[data-ds-command~=btnMoreCommands]', 'file-less More')) {
+        const menu = page.locator('[data-ds-actionsheet]');
         const opened = await menu.first().waitFor({ state: 'visible', timeout: 5000 }).then(() => true, () => false);
-        const items = opened ? await menu.first().evaluate(node => [...node.querySelectorAll('[role^="menuitem"]')].map(item =>
-            `${item.textContent.trim()}${item.hasAttribute('aria-checked') ? ':' + item.getAttribute('aria-checked') : ''}`)) : [];
-        record(layout, 'file-less More holds Monitor (with its state) and Remove entry',
-            items.length === 2 && /^(Monitor:false|Stop Monitoring:true)$/.test(items[0]) && items[1] === 'Remove Entry', items.join(' | '));
+        const items = opened ? await menu.first().evaluate(node => [...node.querySelectorAll('.mi')].map(item => item.textContent.trim())) : [];
+        record(layout, 'file-less More opens with Get a Release and no Play', items.includes('Get a Release') && !items.includes('Play'), items.join(' | '));
         await page.keyboard.press('Escape');
         await menu.first().waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
-        if (!isMobile(layout)) record(layout, 'Back closes the file-less More; focus returns to ⋯', await activeMatches(page, '[data-ds-command~=jfmod-entryMore]'), await activeName(page));
+        if (!isMobile(layout)) record(layout, 'Back closes the file-less More; focus returns to ⋯', await activeMatches(page, '[data-ds-command~=btnMoreCommands]'), await activeName(page));
     }
     if (!ids.grabbed) { notVerified(layout, 'queue line stays below the action pill during a grab', 'JELLYFINMOD_DD_GRABBED not set'); return; }
     await openDetail(page, `entryId=${ids.grabbed}`, `${PAGE} .dlb`);

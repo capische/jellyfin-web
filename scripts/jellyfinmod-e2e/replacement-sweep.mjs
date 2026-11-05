@@ -376,8 +376,12 @@ async function sweepLayout(name) {
     };
     /** Opens the preferences menu: the user menu's Settings, or on the TV the header's user button. */
     const prefsMenu = async () => {
-        if (cfg.tv) await activate(page, cfg, { sel: ":is(.headerUserButton, .jfds [aria-label=\"User Menu\"])" });
-        else await userMenu('Settings');
+        if (cfg.tv) {
+            await activate(page, cfg, { sel: ":is(.headerUserButton, .jfds [aria-label=\"User Menu\"])" });
+            await activate(page, cfg, { sel: '.pmenu .mi', text: '^\\s*Settings\\s*$' });
+        } else {
+            await userMenu('Settings');
+        }
         await poll(() => page.evaluate(() => ({ ok: !!document.querySelector('.page:not(.hide) a[href^="#/mypreferencesdisplay"]') })), { timeout: 15000 });
     };
 
