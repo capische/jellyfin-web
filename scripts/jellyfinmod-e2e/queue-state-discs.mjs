@@ -146,10 +146,9 @@ function checkDisc(name, disc, want) {
 async function checkTooltip(name, release, want, link) {
     const wrapper = rowOf(release).locator('.q-s');
     await wrapper.hover();
-    const tip = page.locator('.qtip').last();
+    const tip = rowOf(release).locator('.qtip');
     const shown = await tip.waitFor({ state: 'visible', timeout: 5000 }).then(() => true, () => false);
-    const state = shown ? await page.evaluate(() => {
-        const node = [...document.querySelectorAll('.qtip')].find(node => getComputedStyle(node).display !== 'none');
+    const state = shown ? await tip.evaluate(node => {
         return { lines: node.innerText.trim().split('\n'), bottom: node.getBoundingClientRect().bottom,
             placement: getComputedStyle(node).bottom !== 'auto' ? 'top' : null };
     }) : null;
@@ -206,7 +205,7 @@ async function checkClick(name, release, linked) {
     record(label, `${name}: a click ${linked ? 'opens the client\'s page (intercepted) and nothing else' : 'opens nothing'}`,
         linked ? state.opened === 1 && state.matches && state.hash === hash : state.opened === 0 && state.hash === hash, state);
     await page.mouse.move(2, 2);
-    await page.locator('.qtip').first().waitFor({ state: 'hidden', timeout: 5000 }).catch(() => undefined);
+    await page.locator('.qtip:visible').waitFor({ state: 'hidden', timeout: 5000 }).catch(() => undefined);
 }
 
 async function checkTvSheet(name, release) {
@@ -261,7 +260,7 @@ async function realRows(queue) {
         if (!tv && !phone) {
             const wrapper = rowOf(item.releaseTitle).locator('.q-s');
             await wrapper.hover();
-            const tip = page.locator('.qtip').last();
+            const tip = rowOf(item.releaseTitle).locator('.qtip');
             await tip.waitFor({ state: 'visible', timeout: 5000 }).catch(() => undefined);
             const lines = await tip.evaluate(node => node.innerText.trim().split('\n')).catch(() => []);
             record(label, `${name}: the tooltip reads Downloading with its figures${item.client?.openUrl ? ', then Open' : ''}`,
@@ -284,7 +283,7 @@ async function realRows(queue) {
             await page.waitForTimeout(400);
         } else {
             await rowOf(seeding[0].releaseTitle).locator('.q-s').hover();
-            await page.locator('.qtip').last().waitFor({ state: 'visible', timeout: 5000 }).catch(() => undefined);
+            await page.locator('.qtip:visible').waitFor({ state: 'visible', timeout: 5000 }).catch(() => undefined);
             await page.waitForTimeout(400);
             await shot(page, 'real-seeding-tooltip');
             await page.mouse.move(2, 2);
