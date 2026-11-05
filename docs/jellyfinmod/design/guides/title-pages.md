@@ -37,3 +37,5 @@ follow their guides' dsD sections. Earlier `.jfmod-titlePage`/`titlePages.scss` 
 Verification uses the offline dsD/dsC browser runners with real components, original controller functions, source styles and blocked
 network. Compiler/linter results are recorded with the slice. Server-backed and physical webOS acceptance remain unrun under the
 user's environment restriction; this page documents a built slice, not accepted or deployed behavior.
+
+Every row on a title or browse page (`TitleRow.tsx`) sits on upstream's scroller, with the same arrows and focus walking as Home's rows (D252).
