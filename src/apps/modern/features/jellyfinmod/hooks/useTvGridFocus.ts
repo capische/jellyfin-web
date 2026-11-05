@@ -82,7 +82,8 @@ export const useTvGridFocus = (pageRef: RefObject<HTMLElement>) => {
             const grid = container();
             if (placed || !grid?.querySelector('.card, .cell')) return;
             placed = true;
-            const restore = restoreIdentity ? findCard(grid, restoreIdentity) : null;
+            // A Back that only closed a menu or dialog over the grid (its history entry) finds focus back on its opener: it stays there.
+            const restore = restoreIdentity && !focusIsOnPage() ? findCard(grid, restoreIdentity) : null;
             if (restore) {
                 focusManager.focus(restore);
                 restore.scrollIntoView?.({ block: 'center' });
