@@ -161,7 +161,7 @@ const Card: FC<{ card: TitleCard; view: HTMLElement }> = ({ card, view }) => {
     // ds.js season: a phone's row has no Played, and the state mark takes the heart's place.
     const hasState = !!state || card.commands.some(command => command.icon === 'cloud');
     const rowCommands = device === 'phone' ? card.commands.filter(command => command.icon !== 'check' && (command.icon !== 'heart' || !hasState)) : card.commands;
-    const actions = <div className='acts'>{state && !card.commands.some(command => command.icon === 'cloud') && <span className='ib' data-ds-state-kind={card.mark?.kind} data-tip={card.mark?.label} aria-label={card.mark?.label}>{state}</span>}{rowCommands.map(command => <Command key={command.key} command={command} view={view} row />)}</div>;
+    const actions = <div className='acts'>{state && (card.mark?.kind === 'failed' || !card.commands.some(command => command.icon === 'cloud')) && <span className='ib' data-ds-state-kind={card.mark?.kind} data-tip={card.mark?.label} aria-label={card.mark?.label}>{state}</span>}{rowCommands.map(command => <Command key={command.key} command={command} view={view} row />)}</div>;
     const prepare = () => card.node.dispatchEvent(new Event('pointerover', { bubbles: true }));
     const attributes = { ref: host, tabIndex: 0, onMouseEnter: prepare, onFocus: () => {
         setFocus(true);
