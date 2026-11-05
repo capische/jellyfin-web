@@ -96,7 +96,11 @@ export const cardOf = (node: HTMLElement, index: number): TitleCard => {
     const server = node.getAttribute('data-serverid');
     const row = node.classList.contains('listItem') || node.classList.contains('jfmod-missingRow') || !!node.querySelector('.jfmod-missingRow');
     const type = node.getAttribute('data-type');
-    const facts = Array.from(lines[1]?.querySelectorAll('.mediaInfoItem, .jfmod-dlMeta') ?? []).map(item => ({ text: text(item), star: item.classList.contains('starRatingContainer') }));
+    const factNodes = Array.from(lines[1]?.querySelectorAll('.mediaInfoItem, .jfmod-dlMeta') ?? []);
+    // Without a meta line (a phone's row) the download's figure is the row's last line.
+    const figure = node.querySelector('.jfmod-dlMeta');
+    if (figure && !factNodes.includes(figure)) factNodes.push(figure);
+    const facts = factNodes.map(item => ({ text: text(item), star: item.classList.contains('starRatingContainer') }));
     let shape: TitleCard['shape'] = 'p';
     if (type === 'Episode' || /backdrop|Backdrop/.test(node.className)) shape = 'w';
     if (type === 'Person' || node.classList.contains('personCard')) shape = 'c';
