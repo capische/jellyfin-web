@@ -34,6 +34,15 @@ const activate = (event: KeyboardEvent<HTMLElement>) => {
     event.currentTarget.click();
 };
 
+/** The TV has no other way to Shows and Movies now that Home draws no My Media row. */
+const TvLibraries: FC = () => {
+    const { data: views } = useUserViews();
+    const primary = ['tvshows', 'movies'].map(type => views?.Items?.find(view => view.CollectionType === type)).filter(view => !!view);
+    return <>{primary.map(view => <button className='focusable' key={view.Id} aria-label={view.Name ?? ''}
+        onClick={() => { window.location.href = appRouter.getRouteUrl(view, { context: view.CollectionType }); }}>
+        <Icon name={view.CollectionType === 'tvshows' ? 'tv' : 'movie'} /></button>)}</>;
+};
+
 const ComputerNavigation: FC = () => {
     const { pathname, search } = useLocation();
     const { data: views } = useUserViews();
@@ -152,6 +161,7 @@ export const Bar: FC<{ onDrawer?: React.MouseEventHandler<HTMLElement> }> = ({ o
             <button className='focusable' aria-label='Back' onClick={() => { void appRouter.back(); }}><Icon name='back' /></button>
             <button className='focusable' aria-label='Home' onClick={() => { window.location.hash = '#/home'; }}><Icon name='home' /></button>
             <button className='focusable' aria-label='Favorites' onClick={() => { window.location.hash = '#/home?tab=1'; }}><Icon name='heart' /></button>
+            <TvLibraries />
             {title && <span className='ttl'>{title}</span>}
         </>;
     } else if (phone) {
