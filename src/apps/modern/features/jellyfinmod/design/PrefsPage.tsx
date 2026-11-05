@@ -1,6 +1,7 @@
-import React, { type FC, useCallback, useEffect, useState } from 'react';
+import React, { type FC, useCallback, useEffect, useRef, useState } from 'react';
 import focusManager from 'components/focusManager';
 import layoutManager from 'components/layoutManager';
+import { getKeyName } from 'scripts/keyboardNavigation';
 import { Button, Select } from './Controls';
 import { Icon, type IconName } from './Icon';
 import { Root } from './Root';
@@ -13,7 +14,9 @@ type Part =
     | { kind: 'check'; key: string; node: HTMLInputElement; label: string; desc: string; checked: boolean; disabled: boolean }
     | { kind: 'input'; key: string; node: HTMLInputElement | HTMLTextAreaElement; label: string; desc: string; value: string; type: string; disabled: boolean }
     | { kind: 'item'; key: string; text: string; controls: Control[] }
-    | { kind: 'button'; key: string; node: HTMLElement; label: string; main: boolean };
+    | { kind: 'button'; key: string; node: HTMLElement; label: string; main: boolean }
+    | TabsPart;
+type TabsPart = { kind: 'tabs'; key: string; label: string; tabs: { key: string; node: HTMLElement; id: string; label: string; selected: boolean }[] };
 type Control = { key: string; node: HTMLElement; icon: IconName; title: string; check?: boolean; checked?: boolean };
 
 const ICONS: [RegExp, IconName][] = [
@@ -77,8 +80,16 @@ const fieldPart = (node: HTMLSelectElement | HTMLInputElement | HTMLTextAreaElem
     return { ...base, kind: 'input', node, value: node.value, type: node.type };
 };
 
+/** A page's own tab list (the Subtitles page's Primary and Secondary): drawn as the rail, its buttons are not parts of their own. */
+const tabsPart = (node: HTMLElement, view: HTMLElement): Part => ({ kind: 'tabs', key: keyOf(node), label: node.getAttribute('aria-label') ?? '',
+    tabs: Array.from(node.querySelectorAll<HTMLElement>('[role=tab]')).filter(tab => shownIn(tab, view)).map(tab => (
+        { key: keyOf(tab), node: tab, id: tab.id, label: clean(tab), selected: tab.getAttribute('aria-selected') === 'true' }
+    )) });
+
 const partOf = (node: HTMLElement, view: HTMLElement): Part | null => {
     if (node.parentElement?.closest('.listItem') || !shownIn(node, view)) return null;
+    if (node.matches('[role=tablist]')) return tabsPart(node, view);
+    if (node.closest('[role=tablist]')) return null;
     if (node.matches('.quickConnectError')) return { kind: 'error', key: keyOf(node), text: clean(node) };
     if (node.matches('.listItem')) return itemPart(node, view);
     if (node.matches('h1, h2, h3, legend, p')) return textPart(node);
@@ -89,7 +100,7 @@ const partOf = (node: HTMLElement, view: HTMLElement): Part | null => {
 /** Everything the page's controller shows, in order. Nothing is read twice or kept: the form stays the only state. */
 const readParts = (view: HTMLElement): Part[] => Array.from(view.children)
     .filter(child => !child.classList.contains('jfmod-dsPrefsHost'))
-    .flatMap(top => Array.from(top.querySelectorAll<HTMLElement>('h1, h2, h3, legend, p, select, input, textarea, button, .listItem, .quickConnectError')))
+    .flatMap(top => Array.from(top.querySelectorAll<HTMLElement>('h1, h2, h3, legend, p, select, input, textarea, button, [role=tablist], .listItem, .quickConnectError')))
     .map(node => partOf(node, view))
     .filter((part): part is Part => !!part);
 
@@ -152,7 +163,29 @@ const FieldRow: FC<{ part: Part; refresh: () => void }> = ({ part, refresh }) =>
     return null;
 };
 
-type Card = { key: string; title: string; rows: Part[]; leads: string[]; errors: string[] };
+type Card = { key: string; title: string; rows: Part[]; leads: string[]; errors: string[]; tabs?: TabsPart };
+
+/** The tab control (D273, guides/tabs.md): the page's own tabs do the switching, so the fields and unsaved values follow as before. */
+const TabRail: FC<{ part: TabsPart; refresh: () => void }> = ({ part, refresh }) => {
+    const rail = useRef<HTMLDivElement>(null);
+    const choose = (index: number, focus: boolean) => {
+        part.tabs[index].node.click();
+        refresh();
+        if (focus) window.requestAnimationFrame(() => rail.current?.querySelectorAll<HTMLElement>('.tab')[index]?.focus());
+    };
+    const keyDown = (event: React.KeyboardEvent, index: number) => {
+        const count = part.tabs.length;
+        const moves = new Map<string, number>([['ArrowLeft', (index + count - 1) % count], ['ArrowRight', (index + 1) % count], ['Home', 0], ['End', count - 1]]);
+        const next = moves.get(getKeyName(event.nativeEvent));
+        if (next === undefined) return;
+        event.preventDefault();
+        event.stopPropagation();
+        choose(next, true);
+    };
+    return <div ref={rail} className='tabs' role='tablist' aria-label={part.label}>{part.tabs.map((tab, index) => <button key={tab.key} type='button' role='tab'
+        id={'jfds-' + tab.id} aria-selected={tab.selected} className={'tab focusable' + (tab.selected ? ' on' : '')}
+        onClick={() => choose(index, false)} onKeyDown={event => keyDown(event, index)}>{tab.label}</button>)}</div>;
+};
 
 const cardsOf = (parts: Part[], skipHeading: string): Card[] => {
     const cards: Card[] = [];
@@ -161,7 +194,8 @@ const cardsOf = (parts: Part[], skipHeading: string): Card[] => {
         if (part.kind === 'heading' || part.kind === 'button') continue;
         if (!cards.length) cards.push({ key: 'first', title: '', rows: [], leads: [], errors: [] });
         const card = cards[cards.length - 1];
-        if (part.kind === 'error') card.errors.push(part.text);
+        if (part.kind === 'tabs') card.tabs = part;
+        else if (part.kind === 'error') card.errors.push(part.text);
         else if (part.kind === 'lead') card.leads.push(part.text);
         else card.rows.push(part);
     }
@@ -244,7 +278,9 @@ export const PrefsPage: FC<{ view: HTMLElement }> = ({ view }) => {
             {card.title && (card !== cards[0] || card.title !== title) && <h2 className='sect2'>{card.title}</h2>}
             {card.errors.map(error => <p className='lead2' role='alert' key={error} style={{ color: 'var(--err)' }}>{error}</p>)}
             {card.leads.map(lead => <p className='lead2' key={lead}>{lead}</p>)}
-            {card.rows.length > 0 && <div className='scard'>{card.rows.map(part => <FieldRow key={part.key} part={part} refresh={refresh} />)}</div>}
+            {card.tabs && <TabRail part={card.tabs} refresh={refresh} />}
+            {card.rows.length > 0 && <div className='scard' {...(card.tabs ? { role: 'tabpanel', 'aria-labelledby': 'jfds-' + (card.tabs.tabs.find(tab => tab.selected)?.id ?? '') } : {})}>
+                {card.rows.map(part => <FieldRow key={part.key} part={part} refresh={refresh} />)}</div>}
         </React.Fragment>)}
         {buttons.length > headButtons.length && <div className='btnrow'>{buttons.filter(part => !headButtons.includes(part)).map(part => <Button key={part.key} kind={part.main ? 'main' : undefined} onClick={() => part.node.click()}>{part.label}</Button>)}</div>}
     </div></Root>;

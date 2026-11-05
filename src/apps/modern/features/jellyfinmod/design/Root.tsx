@@ -36,7 +36,7 @@ if (typeof document !== 'undefined') {
 const buttonFocus = (target: EventTarget | null, focusedOn?: Device) => {
     if (!(target instanceof HTMLElement)) return;
     const device = focusedOn !== 'tv' && document.documentElement.classList.contains('ds-pointer') ? undefined : focusedOn;
-    if (target.classList.contains('sw')) {
+    if (target.classList.contains('sw') || target.classList.contains('tab')) {
         target.classList.toggle('tvf', device === 'tv');
         return;
     }
