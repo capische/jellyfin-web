@@ -15,7 +15,8 @@ const glyphs: Record<string, string> = {
 
 export const paintCellDownload = (cell: HTMLElement, progress: DownloadProgress | null, link: DownloadMarkLink | null) => {
     const post = cell.querySelector<HTMLElement>('.post');
-    if (!post) return;
+    // A title page's cells draw their mark and bar with React from the hidden card; removing those nodes here blanks the page.
+    if (!post || cell.closest('.jfmod-dsTitleHost')) return;
     let mark = post.querySelector<HTMLElement>('[data-ds-download]');
     let bar = post.querySelector<HTMLElement>('[data-ds-progress]');
     cell.classList.toggle('ds-downloading', !!progress);
