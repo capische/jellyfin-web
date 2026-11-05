@@ -4,20 +4,20 @@
 //
 //   JELLYFINMOD_TEST_URL=http://<host>:18096/ JELLYFINMOD_BASE_PATH=/web-mod/ \
 //   JELLYFINMOD_EPISODES=desktop:<item>,mobile:<item>,tv1080:<item>,tv720:<item> \
-//   JELLYFINMOD_KEPT_EPISODE=<item> JELLYFINMOD_SERIES=<item> node episode-retention.mjs
+//   JELLYFINMOD_SERIES=<item> node episode-retention.mjs
 //
 // JELLYFINMOD_BROWSER=chromium|chrome   Playwright's bundled Chromium (default) or real Google Chrome
-// Each layout keeps a different disposable fixture episode, because Keep is one-way. TV layouts use the keyboard only:
-// arrow keys to reach Keep, Enter to press it and the History toggle, and the remote's Back key to leave the page.
+// Keep moved to each file's pin in the Video list (per-file Keep, 2026-10-12), which can be taken back: each layout keeps its
+// episode's first file, proves it on the server and after a reload, reads the file's History, and takes the Keep back.
+// TV layouts use the keyboard only: arrow keys to reach the pin, Enter to press it, and the remote's Back key to leave the page.
 // Signs in as oleksii with an empty password; no credential is read or printed. Exits non-zero on any failure.
 import { chromium } from 'playwright';
 
 const testUrl = new URL(process.env.JELLYFINMOD_TEST_URL ?? (() => { throw new Error('JELLYFINMOD_TEST_URL is required'); })());
-if (!['18096', '58096'].includes(testUrl.port)) throw new Error('The episode retention probe runs on the isolated test instance only');
+if (!['18096', '58096'].includes(testUrl.port) && !(testUrl.hostname === '127.0.0.1' && ['9096', '10096', '11096', '12096'].includes(testUrl.port))) throw new Error('The episode retention probe runs on the isolated test instance or the local pool only');
 const tier = process.env.JELLYFINMOD_BROWSER ?? 'chromium';
 const base = new URL(process.env.JELLYFINMOD_BASE_PATH ?? '/web-mod/', testUrl).href;
 const episodes = Object.fromEntries((process.env.JELLYFINMOD_EPISODES ?? '').split(',').filter(Boolean).map(pair => pair.split(':')));
-const keptEpisode = process.env.JELLYFINMOD_KEPT_EPISODE;
 const seriesItem = process.env.JELLYFINMOD_SERIES;
 
 const LAYOUTS = {
@@ -67,15 +67,36 @@ const openDetails = async (page, itemId) => {
     const selector = 'section[aria-label="JellyfinMod"][data-jfmod-entry-id]';
     await page.evaluate(([id, server]) => { location.hash = '#/details?id=' + id + '&serverId=' + server; }, [itemId, serverId]);
     await page.waitForFunction(id => location.hash.includes(id), itemId, { timeout: 15000 });
-    await page.waitForSelector(selector, { timeout: 30000 });
-    await page.waitForTimeout(800);
+    await page.waitForSelector(selector, { state: 'attached', timeout: 30000 });
+    await page.waitForTimeout(1500);
 };
 
-const keepButton = page => page.locator('.jfmod-nativeActions button', { hasText: /^(Keep|Kept|Keeping…)$/ });
-const activeIsKeep = page => page.evaluate(() => {
-    const el = document.activeElement;
-    return !!el && el.closest('.jfmod-nativeActions') !== null && /^(Keep|Kept|Keeping…)$/.test(el.textContent.trim());
-});
+const pin = page => page.locator('[data-jfmod-file-pin]').first();
+const pinFocused = page => page.evaluate(() => document.activeElement?.hasAttribute('data-jfmod-file-pin') ?? false);
+const openVideoList = async (page, tv) => {
+    const seg = page.locator('.jfds .gpk .seg.v').first();
+    if (await pin(page).count()) return;
+    if (tv) {
+        await seg.focus();
+        await page.keyboard.press('Enter');
+    } else {
+        await seg.click();
+    }
+    await pin(page).waitFor({ state: 'visible', timeout: 10000 });
+};
+/** The D-pad, from wherever the open list put focus, until the pin has it. */
+const reachPin = async page => {
+    for (let step = 0; step < 12 && !await pinFocused(page); step++) {
+        await page.keyboard.press(step < 2 ? 'ArrowDown' : 'ArrowRight');
+        await page.waitForTimeout(200);
+    }
+    return pinFocused(page);
+};
+const entryFacts = (page, entryId, episodeId) => page.evaluate(async ([entry, episode]) => {
+    const detail = await ApiClient.getJSON(ApiClient.getUrl('JellyfinMod/Entries/' + entry));
+    const row = detail.episodes.find(candidate => candidate.id === episode);
+    return { episode: row?.retentionPolicy, series: detail.entry.retentionPolicy, history: detail.history.map(event => ({ type: event.eventType, summary: event.summary, binding: event.bindingId })) };
+}, [entryId, episodeId]);
 
 /** The webOS remote's Back key: keyCode 461, sent through the DevTools protocol as the TV shell expects. */
 const pressRemoteBack = async page => {
@@ -104,110 +125,75 @@ for (const [name, layout] of Object.entries(LAYOUTS)) {
             await page.waitForFunction(() => { try { return !!ApiClient.getCurrentUserId(); } catch { return false; } }, undefined, { timeout: 30000 });
         }
 
-        // The series page keeps the series-level Keep and lists every episode's retention.
+        // The series page has no episode binding; Keep Series is a More-menu item (user, 2026-10-12), read and not pressed.
         if (seriesItem && name === 'desktop') {
             await openDetails(page, seriesItem);
             const section = page.locator('section[aria-label="JellyfinMod"]');
-            record(name, 'series page has no episode binding and offers series Keep',
-                !await section.getAttribute('data-jfmod-episode-id') && await keepButton(page).count() === 1);
-        }
-
-        if (keptEpisode && name === 'desktop') {
-            await openDetails(page, keptEpisode);
-            const pressed = await keepButton(page).getAttribute('aria-pressed');
-            const status = await page.locator('[data-jfmod-retention-status]').first().textContent();
-            record(name, 'an episode kept through the API shows Kept on its own page', pressed === 'true' && /Kept indefinitely/.test(status), { pressed, status });
+            await page.locator('.jfmod-dsTitleHost .actbar [data-ds-command~=btnMoreCommands]').first().click();
+            await page.waitForSelector('[data-ds-actionsheet]', { timeout: 10000 });
+            const items = await page.locator('[data-ds-actionsheet] .mi').allInnerTexts();
+            record(name, 'series page has no episode binding and offers Keep Series in More',
+                !await section.getAttribute('data-jfmod-episode-id') && items.some(text => /Keep Series/.test(text)), items);
+            await page.mouse.click(5, 450);
+            await page.waitForTimeout(500);
         }
 
         await openDetails(page, itemId);
         const section = page.locator('section[aria-label="JellyfinMod"]');
+        const entryId = await section.getAttribute('data-jfmod-entry-id');
         const episodeId = await section.getAttribute('data-jfmod-episode-id');
         record(name, 'episode page resolves its own tracked episode', !!episodeId, { episodeId });
-        const before = await keepButton(page).getAttribute('aria-pressed');
-        // JELLYFINMOD_ALLOW_KEPT=1 re-checks an episode an earlier run already kept (Keep is one-way).
-        const alreadyKept = before === 'true' && process.env.JELLYFINMOD_ALLOW_KEPT === '1';
-        record(name, alreadyKept ? 'episode was kept by an earlier run' : 'episode Keep starts unpressed',
-            before === 'false' || alreadyKept, { before });
-
-        if (alreadyKept && layout.tv) {
-            let reached = await activeIsKeep(page);
-            for (let step = 0; step < 40 && !reached; step++) {
-                await page.keyboard.press(await page.evaluate(() => !!document.activeElement?.closest('.jfmod-nativeActions')) ? 'ArrowRight' : 'ArrowDown');
-                await page.waitForTimeout(250);
-                reached = await activeIsKeep(page);
-            }
-            record(name, 'Keep is reachable by arrow keys', reached);
-        } else if (layout.tv) {
-            // Keyboard only: walk the page with the arrow keys until Keep has focus, then press Enter.
-            // Down until focus enters the mod's action row, then right along the row to Keep.
-            const inActions = () => page.evaluate(() => !!document.activeElement?.closest('.jfmod-nativeActions'));
-            let reached = await activeIsKeep(page);
-            for (let step = 0; step < 40 && !reached; step++) {
-                await page.keyboard.press(await inActions() ? 'ArrowRight' : 'ArrowDown');
-                await page.waitForTimeout(250);
-                reached = await activeIsKeep(page);
-            }
-            record(name, 'Keep is reachable by arrow keys', reached);
+        const start = await entryFacts(page, entryId, episodeId);
+        await openVideoList(page, layout.tv);
+        const before = await pin(page).getAttribute('aria-pressed');
+        record(name, 'the file\'s Keep starts unpressed', before === 'false', { before, label: await pin(page).getAttribute('aria-label') });
+        if (layout.tv) {
+            record(name, 'a pin is reachable by arrow keys', await reachPin(page));
+            await pin(page).focus();
             await page.keyboard.press('Enter');
         } else {
-            await keepButton(page).click();
+            await pin(page).click();
         }
-
-        await page.waitForFunction(() => {
-            const button = [...document.querySelectorAll('.jfmod-nativeActions button')].find(b => /^(Keep|Kept|Keeping…)$/.test(b.textContent.trim()));
-            return button?.getAttribute('aria-pressed') === 'true';
-        }, undefined, { timeout: 20000 });
-        if (!alreadyKept) {
-            const message = await page.locator('section[aria-label="JellyfinMod"] p[role=status]').textContent();
-            record(name, 'Keep keeps this episode and says so', /This episode will be kept/.test(message), { message });
-            if (layout.tv) record(name, 'focus stays on Keep after it succeeds', await activeIsKeep(page));
-        }
-
-        const kept = await page.evaluate(async ([entryId, id]) => {
-            const detail = await ApiClient.getJSON(ApiClient.getUrl('JellyfinMod/Entries/' + entryId)).catch(() => null);
-            if (!detail) return null;
-            return {
-                episode: detail.episodes.find(candidate => candidate.id === id)?.retentionPolicy,
-                series: detail.entry.retentionPolicy,
-                history: detail.history.filter(event => event.episodeId === id).map(event => event.summary)
-            };
-        }, [await section.getAttribute('data-jfmod-entry-id'), episodeId]);
-        if (kept) {
-            record(name, 'server records Keep on the episode only', kept.episode === 'never' && kept.series === 'inherit',
-                { episode: kept.episode, series: kept.series });
-        }
-
-        // History lists this episode's own events.
-        const toggle = page.locator('section[aria-label="JellyfinMod"] [aria-expanded]').last();
+        await page.waitForFunction(() => document.querySelector('[data-jfmod-file-pin]')?.getAttribute('aria-pressed') === 'true', undefined, { timeout: 20000 });
+        const message = await page.evaluate(() => [...document.querySelectorAll('.toast, [role=status], [aria-live]')].map(node => node.textContent));
+        record(name, 'Keep keeps this file and says so', message.some(text => /This file will be kept/.test(text)), { message });
+        if (layout.tv) record(name, 'focus stays on the pin after it succeeds', await pinFocused(page));
+        const kept = await entryFacts(page, entryId, episodeId);
+        const added = kept.history.slice(0, kept.history.length - start.history.length);
+        record(name, 'the server records Keep on the file only, not the episode or the series',
+            kept.episode === start.episode && kept.series === start.series && added.some(event => !!event.binding), { episode: kept.episode, series: kept.series, added });
+        const history = page.locator('[data-jfmod-file-history]').first();
         if (layout.tv) {
-            // From Keep, the way a viewer would: down first, then back along the action row and down from its start.
-            const onToggle = () => page.evaluate(() => !!document.activeElement?.hasAttribute('aria-expanded')
-                && /History/.test(document.activeElement.textContent));
-            const path = [];
-            let reachedToggle = false;
-            for (const [key, times] of [['ArrowDown', 3], ['ArrowUp', 3], ['ArrowLeft', 6], ['ArrowDown', 3]]) {
-                for (let step = 0; step < times && !reachedToggle; step++) {
-                    await page.keyboard.press(key);
-                    await page.waitForTimeout(250);
-                    path.push(key.replace('Arrow', ''));
-                    reachedToggle = await onToggle();
-                }
-                if (reachedToggle) break;
-            }
-            record(name, 'History toggle is reachable by arrow keys', reachedToggle, path.join(' '));
+            await history.focus();
             await page.keyboard.press('Enter');
         } else {
-            await toggle.click();
+            await history.click();
         }
-        await page.waitForTimeout(500);
-        const events = await page.locator('section[aria-label="JellyfinMod"] ol li').allTextContents();
-        // The page lists exactly the events the server attributes to this episode, its Keep among them.
-        const expected = kept?.history ?? [];
-        record(name, 'episode History lists exactly this episode\'s events', events.length === expected.length
-            && expected.every(summary => events.some(text => text.endsWith(summary)))
-            && events.some(text => /Kept S01E\d\d indefinitely/.test(text)), events);
+        await page.locator('.hpop').waitFor({ state: 'visible', timeout: 10000 });
+        const events = await page.locator('.hpop ol li').allTextContents();
+        record(name, 'the file\'s History lists its Keep', events.some(text => /kept|keep/i.test(text)), events.slice(0, 5));
+        if (layout.tv) await page.keyboard.press('Escape');
+        else await page.locator('.hpop .hh .rb').click();
+        await page.locator('.hpop').waitFor({ state: 'detached', timeout: 5000 });
+        // The Keep survives a reload, and comes off again.
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await page.waitForSelector('section[aria-label="JellyfinMod"]', { state: 'attached', timeout: 30000 });
+        await page.waitForTimeout(2000);
+        await openVideoList(page, layout.tv);
+        record(name, 'the Keep is still there after a reload', await pin(page).getAttribute('aria-pressed') === 'true');
+        if (layout.tv) {
+            await pin(page).focus();
+            await page.keyboard.press('Enter');
+        } else {
+            await pin(page).click();
+        }
+        await page.waitForFunction(() => document.querySelector('[data-jfmod-file-pin]')?.getAttribute('aria-pressed') === 'false', undefined, { timeout: 20000 });
+        const restored = await entryFacts(page, entryId, episodeId);
+        record(name, 'Stop Keeping restores the file', restored.episode === start.episode && restored.series === start.series && await pin(page).getAttribute('aria-pressed') === 'false', restored.history.slice(0, 2));
 
         if (layout.tv) {
+            await page.keyboard.press('Escape'); // closes the Video list
+            await page.waitForTimeout(400);
             await pressRemoteBack(page);
             await page.waitForTimeout(1500);
             const after = await page.evaluate(() => location.hash);
