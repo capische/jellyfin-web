@@ -4,7 +4,7 @@
 // stops its form scan while hidden and starts it again on show; upstream's sentence-case action labels read in Title Case on a
 // title page; Escape from the selection menu raises no unhandled rejection; a title row's round action has its 40 px target.
 //
-//   JELLYFINMOD_TEST_URL=http://127.0.0.1:<pool port>/  JELLYFINMOD_T7_MOVIE=<item id of a movie with a file>  JELLYFINMOD_T7_SEASON=<season item id>
+//   JELLYFINMOD_TEST_URL=http://127.0.0.1:<pool port>/  JELLYFINMOD_T7_MOVIE=<item id of an unplayed movie with a file>  JELLYFINMOD_T7_SEASON=<season item id>  JELLYFINMOD_T7_PLAYER=<item id with minutes of video>
 //   [JELLYFINMOD_BROWSER=chromium|chrome]
 import { chromium } from 'playwright';
 
@@ -14,7 +14,7 @@ const tier = process.env.JELLYFINMOD_BROWSER ?? 'chromium';
 let failures = 0;
 const record = (check, ok, detail) => {
     if (!ok) failures++;
-    console.log(`${ok ? 'PASS' : 'FAIL'} [${tier}] ${check}${detail === undefined ? '' : ' :: ' + JSON.stringify(detail).slice(0, 400)}`);
+    console.log(`${ok ? 'PASS' : 'FAIL'} [${tier}] ${check}${detail === undefined ? '' : ' :: ' + JSON.stringify(detail).slice(0, 900)}`);
 };
 const browser = await chromium.launch(tier === 'chrome' ? { channel: 'chrome' } : {});
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
@@ -113,16 +113,18 @@ const focusLook = () => page.evaluate(() => {
 const tabThrough = async (count, onMove) => {
     const looks = [];
     for (let index = 0; index < count; index++) {
+        if (onMove) await onMove(index);
         await page.keyboard.press('Tab');
         await page.waitForTimeout(60);
-        if (onMove) await onMove(index);
         const look = await focusLook();
         if (look?.design && look.visible) looks.push(look);
     }
     return looks;
 };
 const PRIMARY = 'rgb(0, 164, 220)';
-const ringed = look => look.outline === 'solid' && look.color === PRIMARY && Math.abs(look.width - 0.15 * look.em) < 0.8 && Math.abs(look.offset - 0.15 * look.em) < 0.8;
+// The player's rating button keeps upstream's paper-icon class, whose !important outline gives way to the same primary colour as a 0.135em shadow.
+const ringed = look => (look.outline === 'solid' && look.color === PRIMARY && Math.abs(look.width - 0.15 * look.em) < 0.8 && Math.abs(look.offset - 0.15 * look.em) < 0.8)
+    || (look.cls.includes('paper-icon-button-light') && look.shadow.startsWith(PRIMARY));
 await go('#/home', '.homePage:not(.hide)');
 await page.mouse.move(2, 2);
 let looks = await tabThrough(30);
@@ -132,14 +134,19 @@ await page.mouse.move(2, 2);
 looks = await tabThrough(30);
 const pills = looks.filter(look => /(^|\s)(dbtn|play)(\s|$)/.test(look.cls));
 record('a title page by Tab: no browser ring, and a pill\'s buttons draw the primary 0.15em ring 0.15em off', looks.every(look => look.outline !== 'auto') && pills.length > 0 && pills.every(ringed), pills.slice(0, 2));
+// A title long enough for the player to stay up (JELLYFINMOD_T7_PLAYER, minutes of real video): its round Pause and row of buttons.
+await go('#/details?id=' + process.env.JELLYFINMOD_T7_PLAYER, '.jfmod-dsTitleHost .actbar button');
 await page.locator('.page:not(.hide) .jfmod-dsTitleHost .actbar button', { hasText: /^(Play|Resume)/ }).first().click();
 await page.waitForFunction(() => location.hash.includes('/video'), undefined, { timeout: 30000 });
-await page.waitForTimeout(5000);
+await page.waitForSelector('button.play.round.btnPause', { state: 'attached', timeout: 30000 });
+await page.waitForTimeout(3000);
 await page.mouse.move(700, 500);
 await page.waitForTimeout(400);
-looks = await tabThrough(24, async index => page.mouse.move(700 + index, 500));
+// The bar shows while the pointer moves; the Tab order reaches it past the side menu's links.
+looks = await tabThrough(40, async index => page.mouse.move(700 + index, 500));
+const inPlayer = await page.evaluate(() => !!document.querySelector('button.play.round.btnPause')?.offsetParent);
 const osd = looks.filter(look => /(^|\s)(dbtn|play)(\s|$)/.test(look.cls));
-record('the player by Tab: no browser ring, and its buttons draw the primary ring', looks.every(look => look.outline !== 'auto') && osd.length > 0 && osd.every(ringed), { stops: looks.length, sample: osd.slice(0, 2) });
+record('the player by Tab: no browser ring, and its Pause and buttons draw the primary ring', inPlayer && looks.every(look => look.outline !== 'auto') && osd.some(look => look.cls.includes('btnPause')) && osd.every(ringed), { inPlayer, stops: looks.length, classes: osd.map(look => look.cls.split(' ').slice(0, 3).join('.')), others: looks.filter(look => look.outline === 'auto' || (osd.includes(look) && !ringed(look))) });
 await page.screenshot({ path: `${process.env.JELLYFINMOD_T7_SHOTS ?? '.'}/ds-t7-player-${tier}.png` }).catch(() => undefined);
 await page.goBack();
 await page.waitForTimeout(1500);
