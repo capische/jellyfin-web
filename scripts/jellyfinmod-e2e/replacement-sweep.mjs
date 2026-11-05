@@ -343,7 +343,7 @@ async function sweepLayout(name) {
     /** TV: back to Home through the header's Home button, by keys. */
     const tvHome = async () => {
         // Upstream hides the header's Home button on Home itself.
-        if (!await page.evaluate(() => location.hash.startsWith('#/home'))) await activate(page, cfg, { sel: ":is(.headerHomeButton, .tvbar button:is([title=\"Home\"],[data-tip=\"Home\"]))" });
+        if (!await page.evaluate(() => location.hash.startsWith('#/home'))) await activate(page, cfg, { sel: ":is(.headerHomeButton, .tvbar button:is([title=\"Home\"],[data-tip=\"Home\"],[aria-label=\"Home\"]))" });
         await poll(() => page.evaluate(() => ({ ok: location.hash.startsWith('#/home') && !!document.querySelector('.homePage:not(.hide) .sect') })), { timeout: 20000 });
         await sleep(2000);
     };
