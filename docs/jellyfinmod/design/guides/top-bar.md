@@ -18,7 +18,7 @@ links Favorites, Shows, Movies; other existing links follow them.
 
 - Plain pages: theme ground. Scrolled: card glass, behind @supports for backdrop-filter AND color-mix, otherwise solid paper.
   Dark/Apple TV keep their card-glass recipes. Light uses all five `lightGlass.scss` tokens, with no contrast step.
-- Sharp Home art: transparent with white ink and a black 61.8% top fade over 6.854em. TV bar stays transparent, never blurred.
+- Sharp Home art: transparent with white ink and a black 61.8% top fade over 6.854em. TV bar stays transparent, never blurred; its fade holds the 61.8% to 38.2% of its height, so the bar's icons keep 4.5:1 over a white hero (ds.t7, the user's brief).
 - Search: 29.03em, at most 42% of the toolbar, 2.618em high, 1.309em radius, .618em leading/1em trailing padding, 1.382em glyph.
   Its own glass is white 9%, blur 12px/saturate 180% (light black 6%); hover white 14%/light black 10%. Solid paper fallback.
   Active .135em primary ring; TV .236em, paper on plain ground and black 66% over art.
