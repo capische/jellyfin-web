@@ -954,7 +954,8 @@ async function checkFileless(page, layout, admin) {
         JSON.stringify(raised));
     await unfocus(page);
     await checkPickerOpens(page, layout, '.dlb .btn.main', 'download block Get a release');
-    // The More menu is the native page's; Back closes it and focus returns to ⋯.
+    // The More menu is the native page's; Back closes it and focus returns to ⋯. The walk starts at the pill: ⋯ is behind the block.
+    if (!isTv(layout) && !isMobile(layout)) await page.evaluate(sel => document.querySelector(`${sel} .jfmod-dsTitleHost .actbar .focusable`)?.focus(), PAGE);
     if (await activate(page, layout, '[data-ds-command~=btnMoreCommands]', 'file-less More')) {
         const menu = page.locator('[data-ds-actionsheet]');
         const opened = await menu.first().waitFor({ state: 'visible', timeout: 5000 }).then(() => true, () => false);
