@@ -62,6 +62,11 @@ export const mountDialog = (host: HTMLElement, children: ReactNode, close: () =>
         root.unmount();
         if (previous?.isConnected) focusManager.focus(previous);
         // The opener can go while the dialog is open (a grab replaces Get a Release): the D-pad must not fall to the top bar.
-        else if (layoutManager.tv) focusManager.autoFocus(document.querySelector('.mainAnimatedPage:not(.hide)'));
+        else if (layoutManager.tv) {
+            const page = document.querySelector<HTMLElement>('.mainAnimatedPage:not(.hide)');
+            const action = page?.querySelector<HTMLElement>('.actbar .focusable');
+            if (action) focusManager.focus(action);
+            else focusManager.autoFocus(page);
+        }
     }, { once: true });
 };
