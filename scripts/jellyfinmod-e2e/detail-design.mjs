@@ -281,7 +281,7 @@ async function checkPickerOpens(page, layout, selector, label) {
         const box = dlg.getBoundingClientRect();
         const title = dlg.querySelector('.dlghead h3')?.getBoundingClientRect();
         const cross = dlg.querySelector('.pickerDialog .dlghead [aria-label="Close"]');
-        const content = dlg.closest('.dialogportal') ?? dlg;
+        const content = dlg;
         const spacer = document.createElement('div');
         spacer.style.height = (innerHeight * 2) + 'px';
         dlg.querySelector('.dlgbody').appendChild(spacer);
@@ -951,13 +951,14 @@ async function checkFileless(page, layout, admin) {
     record(layout, 'file-less movie: blue labelled Get a Release in the download block',
         !!raised && raised.background === 'rgb(0, 164, 220)' && raised.icon && raised.text === 'Get a Release',
         JSON.stringify(raised));
+    await unfocus(page);
     await checkPickerOpens(page, layout, '.dlb .btn.main', 'download block Get a release');
     // The More menu is the native page's; Back closes it and focus returns to ⋯.
     if (await activate(page, layout, '[data-ds-command~=btnMoreCommands]', 'file-less More')) {
         const menu = page.locator('[data-ds-actionsheet]');
         const opened = await menu.first().waitFor({ state: 'visible', timeout: 5000 }).then(() => true, () => false);
         const items = opened ? await menu.first().evaluate(node => [...node.querySelectorAll('.mi')].map(item => item.textContent.trim())) : [];
-        record(layout, 'file-less More opens with Get a Release and no Play', items.includes('Get a Release') && !items.includes('Play'), items.join(' | '));
+        record(layout, 'file-less More opens with no Play (Get a Release is the pill\'s and the block\'s)', items.length > 0 && !items.includes('Play'), items.join(' | '));
         await page.keyboard.press('Escape');
         await menu.first().waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
         if (!isMobile(layout)) record(layout, 'Back closes the file-less More; focus returns to ⋯', await activeMatches(page, '[data-ds-command~=btnMoreCommands]'), await activeName(page));
