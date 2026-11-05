@@ -906,9 +906,10 @@ async function hoverCard(page, selector, waitForCentre) {
 
 /** Tab from the card's first focusable through it: what took focus inside the card, in order (play, get, other). */
 async function tabTrail(page, selector) {
-    const first = page.locator(`${selector} a, ${selector} button`).first();
-    if (!await first.count()) return [];
-    await first.focus();
+    // From the card itself, a tab stop, so the first control inside it is reached by a Tab and read like the others.
+    const card = page.locator(selector).first();
+    if (!await card.count()) return [];
+    await card.focus();
     const trail = [];
     for (let index = 0; index < 6; index++) {
         await page.keyboard.press('Tab');
