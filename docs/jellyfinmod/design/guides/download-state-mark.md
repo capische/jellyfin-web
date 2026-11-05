@@ -36,7 +36,7 @@ size, where there is room. The same component at three sizes, so the user learns
 | Size | Class | Box | Glyph | Arc stroke | Background |
 | --- | --- | --- | --- | --- | --- |
 | card | `.jfmod-dlmark--card` | 1.6em | 1em | 2.6 | glass ([card-glass.md](card-glass.md)); solid black 66 % on TV and without `backdrop-filter` |
-| row | `.jfmod-dlmark--row` | 2.5em; **2.7816em on `.listItem` rows** (glyph 1.6696em, upstream's round row button) | 1.4em | 2.2 | transparent, like upstream's round icons |
+| row | `.dm.row` | 2.5em; **2.7816em in a title page's `.acts`**, the box of the round buttons beside it (ds2.js `epRow`, ds.t7) | 1.4em | 2.2 | transparent, like the round icons; a failed mark in grey card glass |
 | page | `.jfmod-dlmark--page` | 4em | 2em; while downloading or stalled the **percent inside** instead (`.jfmod-dlmark-num`: 1.15em, 700, tabular; the `%` 0.6em at 85 %) | 2.4 | transparent |
 
 Arc SVG: `viewBox 0 0 36 36`, circle `r 15.9`, `pathLength 100`, `stroke-dashoffset = 100 − percent`, round caps, the
@@ -84,6 +84,8 @@ easing. Motion is transform and opacity only.
   in the ink at 85 % beneath the watched layer in the primary. Failed and finished are not drawn on a card.
 - **Rows:** the first round icon of the end slot, upstream's padding, nothing textual left of the icons. The figure goes on
   the meta line after the date (or, where the layout hides that line, as the row's last text line).
+- **A title page's row (`.ep`):** the disc in `.acts` at the buttons' 2.7816em, an indicator; the figure is the `.dlf` of the meta line (`ln2`):
+  600 in the text colour, `figs fail` for a failure's words, 75 % while queued or stalled, 55 % stale, the tooltip kept (ds.t7).
 - **Detail line** (`QueueStatusLine`): the 2.5em disc, then "In the download queue · 42% · 12 min left", then View queue.
 - **Queue page:** the State column holds **only the disc**, every state's words in its tip (P4.FU28): a download's family, the
   seeding disc for a seeding copy, the grey-glass bang for a blocked or failed import. The row keeps its bar (the one place the bar is
