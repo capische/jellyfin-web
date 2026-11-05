@@ -333,8 +333,9 @@ async function browserChecks(browser, layout, user, isAdmin, context) {
         await page.waitForSelector(card, { timeout: 30000 }).catch(() => {});
         await page.waitForTimeout(2000);
         const search = await page.evaluate(({ tmdb, id }) => ({
-            native: document.querySelectorAll(`.page:not(.hide) :is(.card:not(.dm), .cell)[data-id="${id}"]`).length,
-            fileless: document.querySelectorAll(`.page:not(.hide) [data-jfmod-entry-id][data-jfmod-tmdb-id="${tmdb}"]`).length
+            // A search cell links to the Jellyfin item it draws.
+            native: document.querySelectorAll(`.page:not(.hide) :is(.card:not(.dm), .cell)[data-id="${id}"], .page:not(.hide) a.cell[href*="id=${id}"]`).length,
+            fileless: document.querySelectorAll(`.page:not(.hide) [data-jfmod-entry-id][data-jfmod-tmdb-id="${tmdb}"]:not([href*="id=${id}"])`).length
         }), { tmdb: movieTmdb, id: stub.Id });
         record(label, 'search: the movie shows once, as its Jellyfin item', search.native === 1 && search.fileless === 0, search);
         await shot('search');
