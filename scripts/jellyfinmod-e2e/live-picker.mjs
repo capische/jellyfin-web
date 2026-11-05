@@ -28,17 +28,24 @@ try {
     if (tv) await setTvLayout(page);
     await page.evaluate(() => localStorage.removeItem('jfmod-releaseNames'));
     const detail = await api(page, 'GET', `JellyfinMod/Entries/${entryId}`);
-    await page.evaluate(id => { location.hash = '#/details?entryId=' + encodeURIComponent(id); }, entryId);
-    // A series picker offers seasons only (user, 2026-10-12): an episode is searched from its own row's Search Releases.
-    const searchSelector = episodeId ? `button[data-episode-id="${episodeId}"][aria-label^="Search releases"]` : null;
-    const search = searchSelector ? page.locator(searchSelector) : page.locator('button', { hasText: 'Get a Release' }).first();
+    // A series picker offers seasons only (user, 2026-10-12): an episode is searched from its own page's Get a Release, a
+    // placeholder's page where Jellyfin holds one, else the mod's page for an episode Jellyfin does not have.
+    const episode = episodeId ? detail.body?.episodes?.find(row => row.id === episodeId) : null;
+    if (episodeId && !episode) throw new Error('the entry has no such episode');
+    await page.evaluate(([id, row]) => {
+        let target = '#/details?entryId=' + encodeURIComponent(id);
+        if (row) target = row.jellyfinItemId ? '#/details?id=' + row.jellyfinItemId : `${target}&season=${row.seasonNumber}&episode=${row.episodeNumber}`;
+        location.hash = target;
+    }, [entryId, episode]);
+    const searchSelector = episodeId ? '.page:not(.hide) .jfds :is(.actbar [data-ds-command~=jfmod-getRelease], .dlb .act .btn.main)' : null;
+    const search = searchSelector ? page.locator(searchSelector).first() : page.locator('button', { hasText: 'Get a Release' }).first();
     await search.waitFor({ state: 'visible', timeout: 30000 });
     if (tv) {
         // Reach the action by keys only: record what has focus on open, then arrow along until Search releases has it.
         await page.waitForTimeout(1500);
         const onOpen = await page.evaluate(() => document.activeElement === document.body ? 'body' : (document.activeElement?.textContent ?? '').trim().slice(0, 30));
         const isSearch = () => page.evaluate(selector => document.activeElement?.tagName === 'BUTTON' && (selector ?
-            document.activeElement.matches(selector) : /Get a Release/i.test(document.activeElement.textContent ?? '')), searchSelector);
+            document.activeElement.matches(selector) : /Get a Release/i.test(document.activeElement.textContent ?? '') || document.activeElement.matches('[data-ds-command~=jfmod-getRelease]')), searchSelector);
         let reached = await isSearch();
         const path = [];
         for (let i = 0; i < 25 && !reached; i++) {
