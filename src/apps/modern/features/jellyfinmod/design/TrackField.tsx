@@ -116,7 +116,7 @@ export const TrackField: FC<{ kind: 'v' | 'a' | 's'; name: string; value: ReactN
                 toggle();
             }
         }}>
-        <span className='cap'>{name}{extra && ' · ' + extra}</span><span className='val'>{value}{enabled && <Icon name={open ? 'up' : 'down'} className='chev end' />}</span>
+        <span className='cap'>{name}{extra && ' · ' + extra}</span><span className='val'>{value}{enabled && <Icon name={open ? 'up' : 'down'} className={kind === 'v' ? 'chev' : 'chev end'} />}</span>
         {!stacked && sheet}
     </div>{stacked && sheet}</>;
 };

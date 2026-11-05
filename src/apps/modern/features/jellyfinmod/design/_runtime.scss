@@ -127,6 +127,15 @@
         margin: 0;
     }
 
+    /* The closed Video value's phone mark sits as in the list's rows, beside the resolution. */
+    .gpk .val .pm {
+        position: absolute;
+        top: 0.06em;
+        left: 100%;
+        margin-left: 0.03em;
+        opacity: 0.86;
+    }
+
     /* A TV has no glass to lean on: over bright art the fade holds its 61.8 % across the bar, so its icons keep 4.5:1, then fades. */
     &.layout-tv .hero2 .pic::after {
         background: linear-gradient(rgba(0, 0, 0, 0.618) 38.2%, rgba(0, 0, 0, 0));
