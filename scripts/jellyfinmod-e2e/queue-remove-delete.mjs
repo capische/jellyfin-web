@@ -75,7 +75,7 @@ async function openRemove(releaseTitle) {
     } else {
         const row = page.locator(layout === 'desktop' ? '.qrow' : '.qrow').filter({ hasText: releaseTitle }).first();
         await row.waitFor({ state: 'visible', timeout: 30000 });
-        await row.locator('.qrow .ib').click();
+        await row.locator('.ib[aria-label^="Actions"]').click();
     }
     const item = page.locator('[data-id="remove"]:visible').first();
     await item.waitFor({ state: 'visible', timeout: 10000 });

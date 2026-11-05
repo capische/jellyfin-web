@@ -30,12 +30,23 @@ export const mountDialog = (host: HTMLElement, children: ReactNode, close: () =>
     const previous = document.activeElement as HTMLElement | null;
     let closing = false;
     const key = (event: KeyboardEvent) => {
-        if (event.defaultPrevented || closing || !isTopDialog(host)) return;
+        if (event.defaultPrevented) return;
         const name = getKeyName(event);
+        if (closing) {
+            // A second Back during the close animation must not also go back in history.
+            if (isBackKey(name)) {
+                event.preventDefault();
+                event.stopPropagation();
+                event.stopImmediatePropagation();
+            }
+            return;
+        }
+        if (!isTopDialog(host)) return;
         if (isBackKey(name)) {
             event.preventDefault();
             event.stopPropagation();
             event.stopImmediatePropagation();
+            closing = true;
             close();
         } else if (menu && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(name)) {
             const items = focusManager.getFocusableElements(host);
@@ -58,7 +69,9 @@ export const mountDialog = (host: HTMLElement, children: ReactNode, close: () =>
         closing = true;
     }, { once: true });
     host.addEventListener('close', () => {
-        document.removeEventListener('keydown', key);
+        closing = true;
+        // These dialogs close at once: a double press of Back still means one Back.
+        setTimeout(() => document.removeEventListener('keydown', key), 200);
         root.unmount();
         if (previous?.isConnected) focusManager.focus(previous);
         // The opener can go while the dialog is open (a grab replaces Get a Release): the D-pad must not fall to the top bar.
