@@ -71,8 +71,9 @@ const openDetails = async (page, itemId) => {
     await page.waitForTimeout(1500);
 };
 
-const pin = page => page.locator('[data-jfmod-file-pin]').first();
-const pinFocused = page => page.evaluate(() => document.activeElement?.hasAttribute('data-jfmod-file-pin') ?? false);
+const pin = (page, binding) => page.locator(binding ? `[data-jfmod-file-pin="${binding}"]` : '[data-jfmod-file-pin]').first();
+const pinFocused = (page, binding) => page.evaluate(id => document.activeElement?.getAttribute('data-jfmod-file-pin') === id, binding);
+const sameId = (left, right) => !!left && !!right && left.replace(/-/g, '').toLowerCase() === right.replace(/-/g, '').toLowerCase();
 const openVideoList = async (page, tv) => {
     const seg = page.locator('.jfds .gpk .seg.v').first();
     if (await pin(page).count()) return;
@@ -85,18 +86,35 @@ const openVideoList = async (page, tv) => {
     await pin(page).waitFor({ state: 'visible', timeout: 10000 });
 };
 /** The D-pad, from wherever the open list put focus, until the pin has it. */
-const reachPin = async page => {
-    for (let step = 0; step < 12 && !await pinFocused(page); step++) {
+const reachPin = async (page, binding) => {
+    for (let step = 0; step < 12 && !await pinFocused(page, binding); step++) {
         await page.keyboard.press(step < 2 ? 'ArrowDown' : 'ArrowRight');
         await page.waitForTimeout(200);
     }
-    return pinFocused(page);
+    return pinFocused(page, binding);
 };
+/** What the server says: the episode's and series' policies, each file's Keep, and the whole history with its bindings. */
 const entryFacts = (page, entryId, episodeId) => page.evaluate(async ([entry, episode]) => {
     const detail = await ApiClient.getJSON(ApiClient.getUrl('JellyfinMod/Entries/' + entry));
     const row = detail.episodes.find(candidate => candidate.id === episode);
-    return { episode: row?.retentionPolicy, series: detail.entry.retentionPolicy, history: detail.history.map(event => ({ type: event.eventType, summary: event.summary, binding: event.bindingId })) };
+    return { episode: row?.retentionPolicy, series: detail.entry.retentionPolicy,
+        files: (row?.versions ?? []).map(version => ({ binding: version.bindingId, kept: version.kept === true })),
+        history: detail.history.map(event => ({ id: event.id, type: event.eventType, summary: event.summary, binding: event.bindingId, at: event.createdAt })) };
 }, [entryId, episodeId]);
+const fileOf = (facts, binding) => facts.files.find(file => sameId(file.binding, binding));
+const eventsOf = (facts, binding) => facts.history.filter(event => sameId(event.binding, binding));
+/** A file's complete history as the popover must list it: newest first, the same words as the page's own map. */
+const ACTION_WORDS = { grabbed: 'Grabbed', auto_grabbed: 'Grabbed', imported: 'Imported', version_kept: 'Kept', version_unkept: 'Stopped keeping', version_removed: 'Removed',
+    upgrade_replaced: 'Removed', reclaimed: 'Removed', pack_replaced: 'Replaced', pack_replace_refused: 'Not replaced', pack_file_skipped: 'Skipped', pack_episode_skipped: 'Skipped' };
+const expectedActions = (facts, binding) => eventsOf(facts, binding)
+    .slice()
+    .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+    .map(event => ACTION_WORDS[event.type] ?? event.summary.split(' ')[0] ?? event.type);
+/** Puts a file's Keep back through the API, for a probe that stopped between pressing Keep and Stop Keeping. */
+const setKept = (page, entryId, binding, kept) => page.evaluate(async ([entry, id, on]) => {
+    const url = ApiClient.getUrl('JellyfinMod/Entries/' + encodeURIComponent(entry) + '/Versions/' + encodeURIComponent(id) + '/Keep');
+    await ApiClient.ajax({ type: on ? 'POST' : 'DELETE', url });
+}, [entryId, binding, kept]);
 
 /** The webOS remote's Back key: keyCode 461, sent through the DevTools protocol as the TV shell expects. */
 const pressRemoteBack = async page => {
@@ -117,6 +135,8 @@ for (const [name, layout] of Object.entries(LAYOUTS)) {
     const page = await context.newPage();
     const errors = [];
     page.on('pageerror', error => errors.push(String(error.message).split('\n')[0]));
+    let entryId = null;
+    let protection = null;
     try {
         await signIn(page);
         if (layout.tv) {
@@ -140,29 +160,37 @@ for (const [name, layout] of Object.entries(LAYOUTS)) {
 
         await openDetails(page, itemId);
         const section = page.locator('section[aria-label="JellyfinMod"]');
-        const entryId = await section.getAttribute('data-jfmod-entry-id');
+        entryId = await section.getAttribute('data-jfmod-entry-id');
         const episodeId = await section.getAttribute('data-jfmod-episode-id');
         record(name, 'episode page resolves its own tracked episode', !!episodeId, { episodeId });
         const start = await entryFacts(page, entryId, episodeId);
         await openVideoList(page, layout.tv);
-        const before = await pin(page).getAttribute('aria-pressed');
-        record(name, 'the file\'s Keep starts unpressed', before === 'false', { before, label: await pin(page).getAttribute('aria-label') });
+        const binding = await pin(page).getAttribute('data-jfmod-file-pin');
+        const startFile = fileOf(start, binding);
+        const before = await pin(page, binding).getAttribute('aria-pressed');
+        // Stop here on anything but an unkept file: pressing the pin would change protection the probe did not set.
+        const startsClean = !!startFile && startFile.kept === false && before === 'false';
+        record(name, 'the file\'s Keep starts unpressed, on the page and on the server', startsClean, { binding, before, server: startFile ?? null, label: await pin(page, binding).getAttribute('aria-label') });
+        if (!startsClean) continue;
+        protection = { entryId, binding, kept: false };
         if (layout.tv) {
-            record(name, 'a pin is reachable by arrow keys', await reachPin(page));
-            await pin(page).focus();
+            record(name, 'a pin is reachable by arrow keys', await reachPin(page, binding));
+            await pin(page, binding).focus();
             await page.keyboard.press('Enter');
         } else {
-            await pin(page).click();
+            await pin(page, binding).click();
         }
-        await page.waitForFunction(() => document.querySelector('[data-jfmod-file-pin]')?.getAttribute('aria-pressed') === 'true', undefined, { timeout: 20000 });
+        await page.waitForFunction(id => document.querySelector(`[data-jfmod-file-pin="${id}"]`)?.getAttribute('aria-pressed') === 'true', binding, { timeout: 20000 });
         const message = await page.evaluate(() => [...document.querySelectorAll('.toast, [role=status], [aria-live]')].map(node => node.textContent));
         record(name, 'Keep keeps this file and says so', message.some(text => /This file will be kept/.test(text)), { message });
-        if (layout.tv) record(name, 'focus stays on the pin after it succeeds', await pinFocused(page));
+        if (layout.tv) record(name, 'focus stays on the pin after it succeeds', await pinFocused(page, binding));
         const kept = await entryFacts(page, entryId, episodeId);
-        const added = kept.history.slice(0, kept.history.length - start.history.length);
-        record(name, 'the server records Keep on the file only, not the episode or the series',
-            kept.episode === start.episode && kept.series === start.series && added.some(event => !!event.binding), { episode: kept.episode, series: kept.series, added });
-        const history = page.locator('[data-jfmod-file-history]').first();
+        const added = kept.history.filter(event => !start.history.some(earlier => earlier.id === event.id));
+        record(name, 'the server keeps this file only, not its other files, the episode or the series, and records it on this file',
+            fileOf(kept, binding)?.kept === true && kept.files.every(file => sameId(file.binding, binding) || file.kept === fileOf(start, file.binding)?.kept)
+            && kept.episode === start.episode && kept.series === start.series
+            && added.length === 1 && added[0].type === 'version_kept' && sameId(added[0].binding, binding), { episode: kept.episode, series: kept.series, files: kept.files, added });
+        const history = page.locator(`[data-jfmod-file-history="${binding}"]`);
         if (layout.tv) {
             await history.focus();
             await page.keyboard.press('Enter');
@@ -170,8 +198,10 @@ for (const [name, layout] of Object.entries(LAYOUTS)) {
             await history.click();
         }
         await page.locator('.hpop').waitFor({ state: 'visible', timeout: 10000 });
-        const events = await page.locator('.hpop ol li').allTextContents();
-        record(name, 'the file\'s History lists its Keep', events.some(text => /kept|keep/i.test(text)), events.slice(0, 5));
+        const shown = await page.locator('.hpop ol li [data-ds-history-action]').allTextContents();
+        const expected = expectedActions(kept, binding);
+        record(name, 'the file\'s History lists exactly this file\'s complete history, its Keep first',
+            shown.length === expected.length && shown.every((action, index) => action === expected[index]) && shown[0] === 'Kept', { shown, expected });
         if (layout.tv) await page.keyboard.press('Escape');
         else await page.locator('.hpop .hh .rb').click();
         await page.locator('.hpop').waitFor({ state: 'detached', timeout: 5000 });
@@ -180,16 +210,19 @@ for (const [name, layout] of Object.entries(LAYOUTS)) {
         await page.waitForSelector('section[aria-label="JellyfinMod"]', { state: 'attached', timeout: 30000 });
         await page.waitForTimeout(2000);
         await openVideoList(page, layout.tv);
-        record(name, 'the Keep is still there after a reload', await pin(page).getAttribute('aria-pressed') === 'true');
+        record(name, 'the Keep is still there after a reload', await pin(page, binding).getAttribute('aria-pressed') === 'true' && fileOf(await entryFacts(page, entryId, episodeId), binding)?.kept === true);
         if (layout.tv) {
-            await pin(page).focus();
+            await pin(page, binding).focus();
             await page.keyboard.press('Enter');
         } else {
-            await pin(page).click();
+            await pin(page, binding).click();
         }
-        await page.waitForFunction(() => document.querySelector('[data-jfmod-file-pin]')?.getAttribute('aria-pressed') === 'false', undefined, { timeout: 20000 });
+        await page.waitForFunction(id => document.querySelector(`[data-jfmod-file-pin="${id}"]`)?.getAttribute('aria-pressed') === 'false', binding, { timeout: 20000 });
         const restored = await entryFacts(page, entryId, episodeId);
-        record(name, 'Stop Keeping restores the file', restored.episode === start.episode && restored.series === start.series && await pin(page).getAttribute('aria-pressed') === 'false', restored.history.slice(0, 2));
+        record(name, 'Stop Keeping restores the file on the server, and only this file\'s history gained the event',
+            fileOf(restored, binding)?.kept === false && restored.episode === start.episode && restored.series === start.series
+            && restored.history.length === kept.history.length + 1 && sameId(restored.history.find(event => event.type === 'version_unkept')?.binding, binding)
+            && await pin(page, binding).getAttribute('aria-pressed') === 'false', eventsOf(restored, binding).slice(0, 2));
 
         if (layout.tv) {
             await page.keyboard.press('Escape'); // closes the Video list
@@ -204,6 +237,16 @@ for (const [name, layout] of Object.entries(LAYOUTS)) {
     } catch (error) {
         record(name, 'probe completed', false, String(error?.message ?? error).split('\n')[0]);
     } finally {
+        // Whatever stopped the probe, the file leaves it as it found it.
+        if (protection) {
+            const { binding, kept } = protection;
+            const now = await page.evaluate(([entry, id]) => ApiClient.getJSON(ApiClient.getUrl('JellyfinMod/Entries/' + entry)).then(detail => [...(detail.versions ?? []), ...detail.episodes.flatMap(row => row.versions ?? [])]
+                .find(version => version.bindingId === id)?.kept === true), [protection.entryId, binding]).catch(() => null);
+            if (now !== kept) {
+                await setKept(page, protection.entryId, binding, kept).then(() => record(name, 'the probe stopped mid-way and put the file\'s Keep back', false, { binding, kept }))
+                    .catch(error => record(name, 'the probe could not put the file\'s Keep back', false, { binding, kept, error: String(error?.message ?? error).split('\n')[0] }));
+            }
+        }
         await page.evaluate(() => localStorage.removeItem('layout')).catch(() => undefined);
         await context.close();
     }
