@@ -88,7 +88,9 @@ const openVideoList = async (page, tv) => {
 /** The D-pad, from wherever the open list put focus, until the pin has it. */
 const reachPin = async (page, binding) => {
     for (let step = 0; step < 12 && !await pinFocused(page, binding); step++) {
-        await page.keyboard.press(step < 2 ? 'ArrowDown' : 'ArrowRight');
+        // Across the pin's row; down the list only until focus is in that row (a file of two starts on the other row or this one).
+        const inRow = await page.evaluate(id => !!document.activeElement?.closest('.vrow')?.querySelector(`[data-jfmod-file-pin="${id}"]`), binding);
+        await page.keyboard.press(inRow ? 'ArrowRight' : 'ArrowDown');
         await page.waitForTimeout(200);
     }
     return pinFocused(page, binding);

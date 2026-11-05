@@ -40,6 +40,7 @@ await page.goto(new URL('/web/', origin).href, { waitUntil: 'domcontentloaded' }
 await page.waitForFunction(() => { try { return !!ApiClient.getCurrentUserId() || /login|selectuser|selectserver/.test(location.hash); } catch { return false; } }, undefined, { timeout: 30000 });
 if (!await page.evaluate(() => { try { return !!ApiClient.getCurrentUserId(); } catch { return false; } })) {
     const field = page.locator('#txtManualName');
+    await Promise.race([field.waitFor({ state: 'visible', timeout: 15000 }), page.locator('.btnManual').first().waitFor({ state: 'attached', timeout: 15000 })]);
     if (!await field.isVisible().catch(() => false)) await page.locator('.btnManual').first().evaluate(node => node.click());
     await field.waitFor({ state: 'visible', timeout: 15000 });
     await page.waitForTimeout(800);
