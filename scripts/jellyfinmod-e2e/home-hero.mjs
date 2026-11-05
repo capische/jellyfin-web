@@ -509,6 +509,8 @@ try {
     if (only.includes('a')) {
         await playFromDetails(page, EPISODE);
         record('a', 'The episode as the server has it after a few seconds of play', 'INFO', (await userData(page, EPISODE)).UserData);
+        // A few seconds is under the server's minimum resume mark, so no position stays: the play sets the date, this the position.
+        await writeUserData(page, EPISODE, { PlaybackPositionTicks: Math.round(episode.RunTimeTicks * 0.3) });
         await goHome(page);
         const hero = await waitHero(page, state => state.episode !== null && state.title === episode.SeriesName && state.rowIds.length > 0, 'the episode hero');
         record('a', 'Hero shows the series of the partly watched episode', hero.title === episode.SeriesName, hero);
@@ -561,6 +563,7 @@ try {
     if (only.includes('b')) {
         await restore(page, episode);
         await playFromDetails(page, MOVIE);
+        await writeUserData(page, MOVIE, { PlaybackPositionTicks: Math.round(movie.RunTimeTicks * 0.3) });
         const saved = (await userData(page, MOVIE)).UserData;
         await goHome(page);
         const hero = await waitHero(page, state => state.title === movie.Name && state.rowIds.length > 0, 'the movie hero');
@@ -576,6 +579,8 @@ try {
             nowPlaying: now.NowPlayingItem.Id, savedSeconds: Math.round(saved.PlaybackPositionTicks / 1e7), positionSeconds: Math.round(position / 1e7)
         });
         await stop(page);
+        // Three more seconds is again under the resume mark: the stop cleared the position, which this puts back.
+        await writeUserData(page, MOVIE, { PlaybackPositionTicks: saved.PlaybackPositionTicks });
         // The invalidation on its own, with no navigation: a user-data change pushed by the server while Home stays
         // open must move the hero. Writing the movie's old state back makes it older than the rest again.
         await goHome(page);

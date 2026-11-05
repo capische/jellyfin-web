@@ -237,7 +237,7 @@ async function live() {
         await page.waitForSelector('.pickerDialog .rels .rel', { timeout: 120000 });
         // The search answers indexer by indexer: wait for the wanted row.
         const id = await until(() => page.evaluate(raw => {
-            const item = [...document.querySelectorAll('.pickerDialog .rel')].find(node => node.textContent.includes(raw));
+            const item = [...document.querySelectorAll('.pickerDialog .rel')].find(node => node.dataset.dsReleaseTitle === raw);
             return item?.querySelector('[data-jfmod-release-add]')?.getAttribute('data-jfmod-release-add') ?? null;
         }, title), { timeout: 150000, every: 1000, label: 'the picker row ' + title }).catch(() => null);
         if (!id) throw new Error('the picker lists no row named ' + title);
