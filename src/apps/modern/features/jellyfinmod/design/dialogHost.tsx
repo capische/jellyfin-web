@@ -2,6 +2,7 @@ import React, { type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import focusManager from 'components/focusManager';
+import layoutManager from 'components/layoutManager';
 import { getKeyName } from 'scripts/keyboardNavigation';
 import { isBackKey } from '../shell/dpadModals';
 import { Root } from './Root';
@@ -60,5 +61,7 @@ export const mountDialog = (host: HTMLElement, children: ReactNode, close: () =>
         document.removeEventListener('keydown', key);
         root.unmount();
         if (previous?.isConnected) focusManager.focus(previous);
+        // The opener can go while the dialog is open (a grab replaces Get a Release): the D-pad must not fall to the top bar.
+        else if (layoutManager.tv) focusManager.autoFocus(document.querySelector('.mainAnimatedPage:not(.hide)'));
     }, { once: true });
 };
