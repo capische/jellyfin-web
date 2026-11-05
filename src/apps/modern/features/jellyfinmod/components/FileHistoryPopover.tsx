@@ -33,19 +33,36 @@ const FileHistoryPopover: FC<FileHistoryPopoverProps> = ({ anchor, version, hist
             if (!ref.current?.contains(event.target as Node) && !anchor.contains(event.target as Node)) onClose();
         };
 
+        const navigate = (direction: string) => {
+            const popup = ref.current;
+            if (!popup || !['up', 'down', 'left', 'right'].includes(direction)) return false;
+            if (direction === 'up' || direction === 'down') popup.scrollTop += popup.clientHeight * 0.618 * (direction === 'down' ? 1 : -1);
+            return true;
+        };
         const key = (event: KeyboardEvent) => {
-            if (!isBackKey(getKeyName(event)) || event.defaultPrevented) return;
-            event.preventDefault();
-            event.stopPropagation();
-            onClose();
+            if (event.defaultPrevented) return;
+            const name = getKeyName(event);
+            const direction = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' }[name];
+            if (direction && navigate(direction) || name === 'Tab') {
+                event.preventDefault();
+                event.stopPropagation();
+            } else if (isBackKey(name)) {
+                event.preventDefault();
+                event.stopPropagation();
+                onClose();
+            }
         };
         const command = (event: Event) => {
-            if ((event as CustomEvent<{ command?: string }>).detail?.command !== 'back' || event.defaultPrevented) return;
-            event.preventDefault();
-            event.stopPropagation();
-            onClose();
+            if (event.defaultPrevented) return;
+            const name = (event as CustomEvent<{ command?: string }>).detail?.command ?? '';
+            if (navigate(name) || name === 'back') {
+                event.preventDefault();
+                event.stopPropagation();
+                if (name === 'back') onClose();
+            }
         };
         place();
+        focusManager.pushScope(ref.current);
         focusManager.autoFocus(ref.current);
 
         window.addEventListener('resize', place);
@@ -54,6 +71,7 @@ const FileHistoryPopover: FC<FileHistoryPopoverProps> = ({ anchor, version, hist
         inputManager.on(window, command);
 
         return () => {
+            focusManager.popScope();
             window.removeEventListener('resize', place);
             document.removeEventListener('pointerdown', outside);
             window.removeEventListener('keydown', key, true);
@@ -64,7 +82,7 @@ const FileHistoryPopover: FC<FileHistoryPopoverProps> = ({ anchor, version, hist
     }, [anchor, version, onClose]);
     if (!anchor || !version) return null;
     const lines = fileHistory(history, version.bindingId);
-    return createPortal(<Root className='menuportal'><div ref={ref} className='hpop historyportal' role='dialog' aria-label='History of this file'>
+    return createPortal(<Root className='menuportal'><div ref={ref} className='hpop historyportal focuscontainer' role='dialog' aria-label='History of this file'>
         <div className='hh'>{fileTitle(version)}<button type='button' className='rb focusable' aria-label='Close' onClick={onClose}><Icon name='x' /></button></div>
         {lines.length ? <ol>{lines.map(line => <li key={line.id}><b><time dateTime={line.dateTime}>{line.date}</time></b>{' · '}<span data-ds-history-action=''>{line.action}</span>{line.detail && <> · {line.detail}</>}</li>)}</ol> :
             <p>No events recorded for this file.</p>}

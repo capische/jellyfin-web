@@ -1,5 +1,7 @@
 # Poster card
 
+**Review fixes (2026-11-04), built, not accepted:** More's Select eligibility and handler recognize `.jfds .cell[data-id]` as well as upstream `.card`, using the existing multiselect controller. Only the Primary Movies/Shows grid uses the fixed three-line caption: its View Settings omits Show Title, Show Year and Enable Card Layout. List, Thumb, Banner and the other image types render through upstream ItemsView with their original controls/settings.
+
 **dsF sweep (2026-11-04), built, not accepted:** every user page now draws `cell`, so `cardDesign.scss` is deleted. A computer window under 600 px takes the phone's page (2 posters a row). `SectionContainer` draws `sect/rowt/rowx` on painted pages, so Suggestions, Genres and Upcoming rows match. Row and pill have no Info: the card or row itself opens the title.
 
 **dsD (2026-11-04), built, not accepted:** title-page cards and person rows now draw source `cell > tile > post`,

@@ -48,9 +48,10 @@ const result = await build({
         import EpisodeWindowDialog from '${source}/components/EpisodeWindowDialog';
         import {paintDownloadMark} from '${source}/components/DownloadStateMark';
         import {Root} from '${source}/design/Root';
+        import focusManager from '${repo}/src/components/focusManager';
         const client=new QueryClient({defaultOptions:{queries:{retry:false},mutations:{retry:false}}});
         const root=createRoot(document.getElementById('app'));
-        window.ui={queue(){flushSync(()=>root.render(React.createElement(QueryClientProvider,{client},React.createElement(QueuePage))));},
+        window.ui={down(){focusManager.moveDown(document.activeElement)},up(){focusManager.moveUp(document.activeElement)},queue(){flushSync(()=>root.render(React.createElement(QueryClientProvider,{client},React.createElement(QueuePage))));},
             picker(intent){client.clear();flushSync(()=>root.render(React.createElement(QueryClientProvider,{client},React.createElement(ReleasePicker,{api:window.client,entryId:'entry',mediaType:'movie',episodes:[],title:'The Matrix (1999)',intent,close:()=>window.ui.clear()}))));},
             clear(){flushSync(()=>root.render(null));},
             remove(row){window.removed=null;removeWithDialog(window.client,row).then(value=>window.removed=value);},
@@ -160,9 +161,36 @@ try {
         const sizes=await page.locator('.dm').evaluateAll(nodes=>nodes.map(n=>[n.offsetWidth,n.offsetHeight]));assert.ok(sizes.every(([w,h])=>w>0&&w===h));
         await page.evaluate(()=>document.documentElement.dataset.theme='light');await page.locator('.jfds[data-theme="light"]').waitFor();
         await page.evaluate(()=>document.documentElement.dataset.theme='dark');
-        await page.evaluate(()=>ui.picker('addVersion'));await page.locator('.rel').first().waitFor();
+        await page.evaluate(device=>{if(device==='tv'&&!search.candidates.some(x=>x.releaseId==='next'))search.candidates.splice(1,0,{...candidate,releaseId:'next',score:869});ui.picker('addVersion')},device);await page.locator('.rel').first().waitFor();
         if(device==='phone')assert.equal(await page.locator('.rel').first().locator(':scope > .rl').count(),3);
         const openClient=page.locator('.pickerDialog [aria-label="Open Transmission"]');if(device!=='tv')await openClient.waitFor();await page.waitForTimeout(100);assert.equal(await openClient.count(),device==='tv'?0:1,'Open Transmission is in the picker except on the TV');if(device!=='tv')assert.equal(await openClient.getAttribute('data-tip'),'Open Transmission');
+        if(device==='tv'){
+            const row=page.locator('[data-jfmod-release-row="release"]');
+            await row.focus();await row.press('ArrowRight');
+            assert.equal(await page.locator('[data-jfmod-release-add="release"]').evaluate(n=>n===document.activeElement),true);
+            await page.keyboard.press('ArrowRight');
+            assert.equal(await page.locator('[data-jfmod-release-replace="release"]').evaluate(n=>n===document.activeElement),true);
+            await page.keyboard.press('ArrowLeft');await page.keyboard.press('ArrowLeft');
+            assert.equal(await row.evaluate(n=>n===document.activeElement),true);
+            await page.locator('.rejt').click();const rejected=page.locator('[data-jfmod-release-row="rejected"]');await rejected.waitFor();
+            await rejected.focus();await rejected.press('ArrowRight');await page.keyboard.press('Enter');
+            await page.locator('[data-ds-dialog]:not(.pickerDialog)').waitFor();
+            await page.getByRole('button',{name:'Cancel',exact:true}).click();
+            const next=page.locator('[data-jfmod-release-row=next]');
+            await next.focus();await page.evaluate(()=>ui.up());
+            assert.equal(await row.evaluate(n=>n===document.activeElement),true,'real focus manager arrives on row');
+            await row.press('ArrowRight');await page.evaluate(()=>ui.down());
+            assert.equal(await next.evaluate(n=>n===document.activeElement),true,'Down from action reaches next row');
+            await rejected.focus();
+            await page.evaluate(()=>{operation={...operation,state:'pending',active:true};document.activeElement.dispatchEvent(new CustomEvent('command',{bubbles:true,cancelable:true,detail:{command:'right'}}))});
+            assert.equal(await page.locator('[data-jfmod-release-add="rejected"]').evaluate(n=>n===document.activeElement),true);
+            await row.focus();await row.press('ArrowRight');await page.keyboard.press('Enter');
+            await page.locator('[data-jfmod-release-x="release"]').waitFor();
+            await row.focus();await row.press('ArrowRight');
+            assert.equal(await page.locator('[data-jfmod-release-x="release"]').evaluate(n=>n===document.activeElement),true);
+            const before=await page.evaluate(()=>writes.filter(x=>x.url.endsWith('/Cancel')).length);
+            await page.keyboard.press('Enter');await page.waitForFunction(before=>writes.filter(x=>x.url.endsWith('/Cancel')).length>before,before);
+        }
         const actions=await page.locator('.ract').first().evaluate(n=>[...n.children].map(c=>c.getBoundingClientRect().toJSON()));
         assert.ok(actions[0].right<=actions[1].left+1,'Add and Replace remain beside each other');
         if(process.env.DS_SHOTS&&['computer','phone'].includes(device))await page.screenshot({path:process.env.DS_SHOTS+'/'+device+'-picker.png'});

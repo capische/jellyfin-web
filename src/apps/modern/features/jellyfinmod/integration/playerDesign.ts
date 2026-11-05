@@ -25,7 +25,10 @@ export const paintPlayer = (view: HTMLElement) => {
     const facts = view.querySelector('.jfmod-osdFacts');
     // Upstream pads Ends At with spaces for its own layout; here it follows the facts after a dot.
     const endsAt = view.querySelector('.endsAtText');
+    const originalTitle = view.querySelector('.osdTitle');
+    const titleContainer = view.querySelector('.osdMainTextContainer');
     const title = () => {
+        titleContainer?.classList.toggle('jfmod-empty', !originalTitle?.textContent?.trim());
         const ends = endsAt?.textContent ?? '';
         if (endsAt && ends !== ends.trim()) endsAt.textContent = ends.trim();
         if (name) name.textContent = (pageTitle?.textContent ?? '').replace(/ \(\d{4}\)$/, '');
@@ -37,6 +40,7 @@ export const paintPlayer = (view: HTMLElement) => {
     };
     const titles = new MutationObserver(title);
     if (pageTitle) titles.observe(pageTitle, { childList: true, characterData: true, subtree: true });
+    if (originalTitle) titles.observe(originalTitle, { childList: true, characterData: true, subtree: true });
     if (endsAt) titles.observe(endsAt, { childList: true });
     title();
 

@@ -8,6 +8,7 @@ import { Root } from './Root';
 type Part =
     | { kind: 'heading'; key: string; text: string }
     | { kind: 'lead'; key: string; text: string }
+    | { kind: 'error'; key: string; text: string }
     | { kind: 'select'; key: string; node: HTMLSelectElement; label: string; desc: string; value: string; disabled: boolean; options: { value: string; label: string }[] }
     | { kind: 'check'; key: string; node: HTMLInputElement; label: string; desc: string; checked: boolean; disabled: boolean }
     | { kind: 'input'; key: string; node: HTMLInputElement | HTMLTextAreaElement; label: string; desc: string; value: string; type: string; disabled: boolean }
@@ -78,6 +79,7 @@ const fieldPart = (node: HTMLSelectElement | HTMLInputElement | HTMLTextAreaElem
 
 const partOf = (node: HTMLElement, view: HTMLElement): Part | null => {
     if (node.parentElement?.closest('.listItem') || !shownIn(node, view)) return null;
+    if (node.matches('.quickConnectError')) return { kind: 'error', key: keyOf(node), text: clean(node) };
     if (node.matches('.listItem')) return itemPart(node, view);
     if (node.matches('h1, h2, h3, legend, p')) return textPart(node);
     if (node.matches('select, input, textarea')) return fieldPart(node as HTMLSelectElement);
@@ -87,14 +89,21 @@ const partOf = (node: HTMLElement, view: HTMLElement): Part | null => {
 /** Everything the page's controller shows, in order. Nothing is read twice or kept: the form stays the only state. */
 const readParts = (view: HTMLElement): Part[] => Array.from(view.children)
     .filter(child => !child.classList.contains('jfmod-dsPrefsHost'))
-    .flatMap(top => Array.from(top.querySelectorAll<HTMLElement>('h1, h2, h3, legend, p, select, input, textarea, button, .listItem')))
+    .flatMap(top => Array.from(top.querySelectorAll<HTMLElement>('h1, h2, h3, legend, p, select, input, textarea, button, .listItem, .quickConnectError')))
     .map(node => partOf(node, view))
     .filter((part): part is Part => !!part);
 
 /** The value goes through the element's own setter, so a React-controlled input and a legacy one both see the event. */
 const setValue = (node: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement, value: string) => {
-    const owner = Object.getPrototypeOf(node) as object;
-    Object.getOwnPropertyDescriptor(owner, 'value')?.set?.call(node, value);
+    let owner = Object.getPrototypeOf(node) as object | null;
+    while (owner) {
+        const setter = Object.getOwnPropertyDescriptor(owner, 'value')?.set;
+        if (setter) {
+            setter.call(node, value);
+            break;
+        }
+        owner = Object.getPrototypeOf(owner) as object | null;
+    }
     node.dispatchEvent(new Event('input', { bubbles: true }));
     node.dispatchEvent(new Event('change', { bubbles: true }));
 };
@@ -143,16 +152,17 @@ const FieldRow: FC<{ part: Part; refresh: () => void }> = ({ part, refresh }) =>
     return null;
 };
 
-type Card = { key: string; title: string; rows: Part[]; leads: string[] };
+type Card = { key: string; title: string; rows: Part[]; leads: string[]; errors: string[] };
 
 const cardsOf = (parts: Part[], skipHeading: string): Card[] => {
     const cards: Card[] = [];
     for (const part of parts) {
-        if (part.kind === 'heading' && part.text !== skipHeading) cards.push({ key: part.key, title: part.text, rows: [], leads: [] });
+        if (part.kind === 'heading' && part.text !== skipHeading) cards.push({ key: part.key, title: part.text, rows: [], leads: [], errors: [] });
         if (part.kind === 'heading' || part.kind === 'button') continue;
-        if (!cards.length) cards.push({ key: 'first', title: '', rows: [], leads: [] });
+        if (!cards.length) cards.push({ key: 'first', title: '', rows: [], leads: [], errors: [] });
         const card = cards[cards.length - 1];
-        if (part.kind === 'lead') card.leads.push(part.text);
+        if (part.kind === 'error') card.errors.push(part.text);
+        else if (part.kind === 'lead') card.leads.push(part.text);
         else card.rows.push(part);
     }
     return cards;
@@ -160,6 +170,24 @@ const cardsOf = (parts: Part[], skipHeading: string): Card[] => {
 
 /** ds.js prefs-form, prefs-profile and prefs-quick, painted from the page's own hidden form (Preferences' controllers stay as they are). */
 export const PrefsPage: FC<{ view: HTMLElement }> = ({ view }) => {
+    const [validation, setValidation] = useState('');
+    useEffect(() => {
+        const invalid = (event: Event) => {
+            const field = event.target;
+            if (!(field instanceof HTMLInputElement || field instanceof HTMLSelectElement || field instanceof HTMLTextAreaElement)) return;
+            event.preventDefault();
+            setValidation(field.validationMessage);
+        };
+        const clear = () => setValidation('');
+        view.addEventListener('invalid', invalid, true);
+        view.addEventListener('input', clear);
+        view.addEventListener('change', clear);
+        return () => {
+            view.removeEventListener('invalid', invalid, true);
+            view.removeEventListener('input', clear);
+            view.removeEventListener('change', clear);
+        };
+    }, [view]);
     const [parts, setParts] = useState<Part[]>(() => readParts(view));
     const refresh = useCallback(() => setParts(previous => {
         const next = readParts(view);
@@ -194,8 +222,10 @@ export const PrefsPage: FC<{ view: HTMLElement }> = ({ view }) => {
         {isProfile ? <div className='mhead'><span className='avatar2'>{image ? <img src={image} alt='' /> : <Icon name='person' />}</span><span className='nm'>{name}</span>
             <span style={{ flex: '1 1 auto' }} />{headButtons.map(part => <Button key={part.key} onClick={() => part.node.click()}>{part.label}</Button>)}</div> :
             title && <h1 className='ptitle'>{title}</h1>}
+        {validation && <p className='lead2' role='alert' style={{ color: 'var(--err)' }}>{validation}</p>}
         {cards.map(card => <React.Fragment key={card.key}>
             {card.title && (card !== cards[0] || card.title !== title) && <h2 className='sect2'>{card.title}</h2>}
+            {card.errors.map(error => <p className='lead2' role='alert' key={error} style={{ color: 'var(--err)' }}>{error}</p>)}
             {card.leads.map(lead => <p className='lead2' key={lead}>{lead}</p>)}
             {card.rows.length > 0 && <div className='scard'>{card.rows.map(part => <FieldRow key={part.key} part={part} refresh={refresh} />)}</div>}
         </React.Fragment>)}

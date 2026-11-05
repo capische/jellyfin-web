@@ -1,5 +1,7 @@
 # Sign-in
 
+**Review fixes (2026-11-04), built, not accepted:** dismissing Quick Connect stops its poll and clears the sign-in guard. Polling failure, authentication completion and leaving also dispose it; late responses after dismissal cannot sign in. Reopening works immediately, and repeated taps while initiation is pending start only one session.
+
 **Status:** dsB, approved mockup D221–D224 and the user's 2026-11-04 native-markup instruction; built, not accepted.
 Code: `design/SignIn.tsx`, `routes/SignInPage.tsx`, `integration/signInActions.js`. [Complete CSS/behavior inventory](../dsB.md).
 

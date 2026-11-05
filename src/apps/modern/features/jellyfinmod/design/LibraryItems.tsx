@@ -22,7 +22,7 @@ export const LibraryItems: FC = () => {
         return () => window.removeEventListener('resize', resize);
     }, []);
     const reset = useCallback(() => setViewSettings?.(previous => ({ ...previous, StartIndex: 0, Filters: undefined, Alphabet: undefined })), [setViewSettings]);
-    if (viewSettings?.ViewMode === ViewMode.ListView) return <ItemsView />;
+    if (viewSettings?.ViewMode === ViewMode.ListView || (viewSettings?.ImageType ?? ImageType.Primary) !== ImageType.Primary) return <ItemsView />;
     const combined = browseResult?.data && (browseResult.data.hasCatalogEntries || viewSettings?.Filters?.FileStates?.length || viewSettings?.Filters?.RetentionDueWithinDays) ?
         browseResult.data : undefined;
     const rows: BrowseRow[] = combined?.items ?? (itemsResult?.data?.Items ?? []).map(nativeItem => ({ kind: 'native', nativeItem }));

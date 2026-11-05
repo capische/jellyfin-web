@@ -1,6 +1,6 @@
 # Top bar and search
 
-**dsF sweep (2026-11-04), built, not accepted:** a computer window under 600 px takes the phone's bar. The TV bar shows the page's title on Queue, Search and Preferences. On the TV the hero holds the page's top, so the bar stays on screen. The TV bar has a heart for Favorites, which replaces the header's retained Home and Favorites tabs; the mockup has no place for those tabs and they sat over the search field.
+**dsF sweep (2026-11-04), built, not accepted:** a computer window under 600 px takes the phone's bar. The TV bar shows the page's title on Queue, Search and Preferences. The retained header tabs are hidden only while `html.jfmod-chrome.layout-tv` is active; upstream interfaces keep their tabs. On the TV the hero holds the page's top, so the bar stays on screen. The TV bar has a heart for Favorites, which replaces the header's retained Home and Favorites tabs; the mockup has no place for those tabs and they sat over the search field.
 
 **dsB (2026-11-04), built, not accepted:** The phone Search field is now the source `sfield > .in` with a real input. TV alphabet buttons and grid focus use the existing query/navigation path; the bar Down target follows native cells. The shell bar stays the one bar; Home art and browse ground reserve its exact source height. [Full CSS adapters](../dsB.md).
 
