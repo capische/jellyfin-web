@@ -127,6 +127,36 @@
         margin: 0;
     }
 
+    /* Row arrows: the library toolbar's pill on the title line, above the posters; a computer only (title-pages.md). */
+    &:not(html) .emby-scrollbuttons {
+        top: 2.165em;
+
+        right: 3.3%;
+
+        min-width: 0;
+
+        min-height: 0;
+
+        padding: 0;
+    }
+
+    &:not(html):not(.dev-phone) .emby-scrollbuttons .actbar {
+        margin: 0;
+
+        padding: 0.236em;
+    }
+
+    .emby-scrollbuttons .dbtn {
+        width: 2.618em;
+
+        height: 2.618em;
+    }
+
+    &.dev-tablet .emby-scrollbuttons,
+    &.dev-phone .emby-scrollbuttons {
+        display: none;
+    }
+
     .capt .ln {
         height: 1.618em;
     }
@@ -597,7 +627,6 @@
     &:not(.onart) .bar:not(.glassbar) {
         background: var(--ground);
     }
-
 }
 
 /* ds.css's .hero2 .bar and .hero2 .barsearch: here the bar is not inside the hero, so Home's shell stands for it. */

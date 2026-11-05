@@ -63,7 +63,7 @@ section heading (on the TV its scroller's frame is pulled instead, because that 
 stay whole). The cells are direct children of upstream's row, so its scroll buttons and the TV's focus walk them.
 
 Every browse row is upstream's scroller with upstream's arrows, Seasons included (user, 2026-11-03, D252: "Add arrows"; Seasons is the
-one row the template gives none, so it gets the markup of the template's other rows): on a computer ‹ and › sit on the heading's line and
+one row the template gives none, so it gets the markup of the template's other rows): on a computer ‹ and › sit on the heading's line in the small pill of [title-pages.md](title-pages.md), and
 are hidden while the row fits; the phone scrolls by touch and the TV by focus, with no arrows. The computer's Seasons row sits beside the
 poster, so its frame takes the 1em pull-out and clips, and a scrolled row never slides over the poster. A person without a portrait shows the person icon on upstream's default card background.
 
