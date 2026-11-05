@@ -883,7 +883,7 @@ async function hoverCard(page, selector, waitForCentre) {
     // Inside the cover, away from the centre's icon and the corner's mark.
     await page.mouse.move(box.x + box.width * 0.2, box.y + box.height * 0.3);
     if (waitForCentre) {
-        await page.waitForSelector(`${selector} .disc[data-ds-primary-action=get], ${selector} .disc[data-ds-primary-action=get]`,
+        await page.waitForSelector(`${selector} .disc:is([data-ds-primary-action=get], [data-ds-action=get])`,
             { timeout: 10000 }).catch(() => {});
     }
     await page.waitForTimeout(waitForCentre ? 600 : 2500);
@@ -891,15 +891,15 @@ async function hoverCard(page, selector, waitForCentre) {
         const node = document.querySelector(sel);
         const shown = el => !!el && !el.hidden && getComputedStyle(el).display !== 'none' && el.getBoundingClientRect().width > 0
             && Number(getComputedStyle(el.closest('.post') ?? el).opacity) > 0.5;
-        const play = [...node.querySelectorAll('.disc[data-ds-primary-action=play]')].some(shown);
-        const centre = [...node.querySelectorAll('.disc[data-ds-primary-action=get], .disc[data-ds-primary-action=get]')].find(shown);
+        const play = [...node.querySelectorAll('.disc:is([data-ds-primary-action=play], [aria-label=Play])')].some(shown);
+        const centre = [...node.querySelectorAll('.disc:is([data-ds-primary-action=get], [data-ds-action=get])')].find(shown);
         const frame = node.querySelector('.post').getBoundingClientRect();
         const at = centre?.getBoundingClientRect();
         return {
-            play, centre: !!centre, title: centre?.getAttribute('title') ?? null, icon: !!centre?.querySelector('.cloud_download'),
+            play, centre: !!centre, title: centre?.getAttribute('aria-label') ?? null, icon: !!centre?.querySelector('svg'),
             centred: !!at && Math.abs(at.left + at.width / 2 - (frame.left + frame.width / 2)) <= 3
                 && Math.abs(at.top + at.height / 2 - (frame.top + frame.height / 2)) <= 3,
-            bottom: [...node.querySelectorAll('.hmenu [data-ds-command~=jfmod-getRelease]')].some(shown)
+            bottom: [...node.querySelectorAll('.hmenu [data-ds-action=get]')].some(shown)
         };
     }, selector);
 }
@@ -957,8 +957,8 @@ async function checkCardHovers(page, label, { layout, tv, admin, canDownload, up
             }, [idOf(empty.season), 'empty']);
             const sel = '.page:not(.hide) .cell[data-jfmod-test="empty"]';
             const hover = await hoverCard(page, sel, canDownload);
-            record(label, `upstream Season ${empty.season} card (no episode on disk): ${canDownload ? 'hovering shows Get a Release in the centre where Play was (cloud_download), no second cloud in the bottom row' : 'hovering shows neither Play nor Get a Release'}, no Play`,
-                !!hover && !hover.play && hover.centre === canDownload && !hover.bottom && (!canDownload || (hover.centred && hover.icon && hover.title === 'Get a Release')), hover);
+            record(label, `upstream Season ${empty.season} card (no episode on disk): ${canDownload ? 'hovering shows Get a Release in the centre where Play was, and in the pill as the mockup draws it' : 'hovering shows neither Play nor Get a Release'}, no Play`,
+                !!hover && !hover.play && hover.centre === canDownload && hover.bottom === canDownload && (!canDownload || (hover.centred && hover.icon && hover.title === 'Get a Release')), hover);
             await page.screenshot({ path: `${process.env.JELLYFINMOD_SHOTS ?? '.'}/mse-${tier}-${label.split(',')[0]}-${admin ? 'admin' : 'user'}-empty-season-hover.png` }).catch(() => {});
             if (canDownload && hover?.centre) {
                 const trail = await tabTrail(page, sel);
@@ -1004,7 +1004,7 @@ async function checkCardHovers(page, label, { layout, tv, admin, canDownload, up
             nofile: card.hasAttribute('data-jfmod-nofile'),
             play: [...card.querySelectorAll('.disc[data-ds-primary-action=play]')]
                 .some(el => getComputedStyle(el).display !== 'none' && el.getBoundingClientRect().width > 0),
-            centre: !!card.querySelector('.disc[data-ds-primary-action=get], .disc[data-ds-primary-action=get]'),
+            centre: !!card.querySelector('.disc:is([data-ds-primary-action=get], [data-ds-action=get])'),
             stops: [...card.querySelectorAll('button, a, [tabindex]')].filter(el => el.tabIndex >= 0 && el.getBoundingClientRect().width > 0).length
         })));
         const flagged = facts.filter(fact => fact.nofile);
@@ -1443,8 +1443,8 @@ async function run(browser, layout, user, admin) {
                 { title: card.title, line2: card.line2, lines: card.lineCount, countLines: card.countLines });
             if (!words || !card.line2Look) continue;
             const line = card.line2Look;
-            record(label, `${what}: the line is a DIV.ln.ln.d.lnCentered holding a BDI, right under the title`,
-                line.tag === 'DIV' && line.classes === 'cardText cardText-secondary cardTextCentered' && line.child === 'BDI'
+            record(label, `${what}: the line is the mockup's second caption line, right under the title`,
+                line.tag === 'DIV' && line.classes.split(' ').sort().join(' ') === 'd ln'
                     && Math.abs(line.top - card.titleLook.bottom) <= 2, { line, title: card.titleLook });
             if (modLook) {
                 const keys = ['tag', 'classes', 'child', 'fontSize', 'lineHeight', 'fontWeight', 'fontFamily', 'color', 'textAlign', 'padding', 'height'];
@@ -1581,8 +1581,8 @@ async function run(browser, layout, user, admin) {
             const card = page.locator(`.page:not(.hide) [data-jfmod-tmdb-id="${movie.entry.tmdbId}"]`).first();
             await card.waitFor({ state: 'attached', timeout: 30000 }).catch(() => {});
             const mark = await card.evaluate(node => {
-                const found = node.querySelector('[data-ds-state-kind]');
-                return found ? { kind: found.dataset.dsStateKind === 'not-downloaded' ? 'none' : found.dataset.dsStateKind, tag: found.tagName, title: found.getAttribute('title'),
+                const found = node.querySelector('[data-ds-state-kind], .mark[title="Not Downloaded"]');
+                return found ? { kind: !found.dataset.dsStateKind || found.dataset.dsStateKind === 'not-downloaded' ? 'none' : found.dataset.dsStateKind, tag: found.tagName, title: found.getAttribute('title'),
                     cursor: getComputedStyle(found).cursor, tabIndex: found.tabIndex } : null;
             }).catch(() => null);
             await checkMark(page, label, `${movie.entry.title} search card`, mark);
@@ -1590,9 +1590,9 @@ async function run(browser, layout, user, admin) {
                 const selector = `.page:not(.hide) [data-jfmod-tmdb-id="${movie.entry.tmdbId}"]`;
                 const hover = await hoverCard(page, selector, canDownload);
                 record(label, `${movie.entry.title} search card (no file): ${canDownload ? 'hovering shows Get a Release in the centre' : 'hovering shows no Get a Release'}, no Play`,
-                    !!hover && !hover.play && hover.centre === canDownload && !hover.bottom, hover);
+                    !!hover && !hover.play && hover.centre === canDownload && hover.bottom === canDownload, hover);
                 if (canDownload && hover?.centre) {
-                    await pickerOpens(page, label, `${movie.entry.title} search card's centre Get a Release`, page.locator(`${selector} .disc[data-ds-primary-action=get]`));
+                    await pickerOpens(page, label, `${movie.entry.title} search card's centre Get a Release`, page.locator(`${selector} .disc:is([data-ds-primary-action=get], [data-ds-action=get])`));
                 }
             }
         }
