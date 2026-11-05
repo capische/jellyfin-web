@@ -23,7 +23,7 @@ import { writeFileSync } from 'node:fs';
 import { chromium } from 'playwright';
 
 const testUrl = new URL(process.env.JELLYFINMOD_TEST_URL ?? 'http://127.0.0.1:28096/');
-if (!['18096', '28096', '58096'].includes(testUrl.port) && !(testUrl.hostname === '127.0.0.1' && ['10096', '11096', '12096'].includes(testUrl.port))) throw new Error('The sweep runs only against an isolated instance (18096, 28096 or the local 58096)');
+if (!['18096', '28096', '58096'].includes(testUrl.port) && !(testUrl.hostname === '127.0.0.1' && ['9096', '10096', '11096', '12096'].includes(testUrl.port))) throw new Error('The sweep runs only against an isolated instance (18096, 28096 or the local 58096)');
 const tier = process.env.JELLYFINMOD_BROWSER ?? 'chromium';
 const base = new URL('/web/', testUrl).href;
 const testUser = process.env.JELLYFINMOD_TEST_USER ?? 'oleksii';
@@ -386,7 +386,7 @@ async function sweepLayout(name) {
     };
 
     const DETAIL = { hash: '^#/details\\?', selector: '#itemDetailPage:not(.hide) .itemName, .page:not(.hide) .jfmod-dsTitleHost h1, .page:not(.hide) .detailPagePrimaryContainer h1, .page:not(.hide) .jfmod-entryDetailsRoot h1' };
-    const GRID = ".page:not(.hide) .itemsContainer :is(.card:not(.dm), .cell), main .itemsContainer :is(.card:not(.dm), .cell), .page:not(.hide) :is(.card:not(.dm), .cell), main :is(.card:not(.dm), .cell), .page:not(.hide) .noItemsMessage, main .noItemsMessage, main .MuiTypography-root";
+    const GRID = ".page:not(.hide) .itemsContainer :is(.card:not(.dm), .cell), main .itemsContainer :is(.card:not(.dm), .cell), .page:not(.hide) :is(.card:not(.dm), .cell), main :is(.card:not(.dm), .cell), .page:not(.hide) .noItemsMessage, main .noItemsMessage, main .MuiTypography-root, .page:not(.hide) .empty, main .empty";
 
     // ---- sign in (setup, not a row) and the layout
     await page.goto(base, { waitUntil: 'domcontentloaded' });
@@ -414,7 +414,8 @@ async function sweepLayout(name) {
         try {
             await activate(page, cfg, { sel: 'button[aria-controls="library-view-menu"]' });
             await sleep(800);
-            tabs = await viewTabs();
+            // The phone's menu also carries the pager; those two entries are not tabs of the library.
+            tabs = (await viewTabs()).filter(tab => !/^(Previous|Next) Page$/.test(tab));
             if (cfg.tv) await press(page, 'Escape'); else await page.keyboard.press('Escape');
             await sleep(600);
         } catch (error) { record(name, `${label} tabs menu`, 'NOT VERIFIED', cfg.tv ? keys : shell, { error: error.message.slice(0, 200) }); }
@@ -466,12 +467,18 @@ async function sweepLayout(name) {
 
     const titlePattern = '^\\s*' + playTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     let played = null;
-    const before = { userData: null };
+    const before = { userData: null, versions: {} };
     await row('Movie detail from search', (cfg.tv ? keys : shell) + ': search result card', async () => {
         await activate(page, cfg, { sel: ":is(.card:not(.dm), .cell)", text: titlePattern, scope: '.page:not(.hide) :is(.verticalSection:not(.jfmod-discovery), .sect, .searchgrid), main :is(.verticalSection:not(.jfmod-discovery), .sect, .searchgrid)' });
         await poll(() => page.evaluate(() => ({ ok: /details\?id=/.test(location.hash) })));
         played = new URLSearchParams((await hash(page)).split('?')[1]).get('id');
-        before.userData = (await api('GET', `Users/${userId}/Items/${played}`)).body?.UserData ?? null;
+        // A title with several versions keeps user data per version: the page may play another copy than the one it opened
+        // (a phone's preferred copy), so every copy is snapshotted and put back.
+        const item = (await api('GET', `Users/${userId}/Items/${played}`)).body;
+        before.userData = item?.UserData ?? null;
+        for (const source of item?.MediaSources ?? []) {
+            before.versions[source.Id] = (await api('GET', `Users/${userId}/Items/${source.Id}`)).body?.UserData ?? null;
+        }
     }, DETAIL);
 
     if (played) {
@@ -499,16 +506,30 @@ async function sweepLayout(name) {
             results.at(-1).reason = "Playwright's bundled Chromium has no H.264/AAC decoding (REVIEW.md browser tiers); Chrome carries this row";
             console.log('  -> SKIP on the bundled Chromium: no proprietary codecs');
         }
-        // Put the title's user data back exactly (playing moves LastPlayedDate and may store a position).
+        // Put the title's user data back exactly (playing moves LastPlayedDate and may store a position; a clip under the
+        // server's minimum resume length also marks its copy played). The POST cannot clear a LastPlayedDate, so a copy
+        // that had none is first unmarked, the only call that clears it. Every copy is compared, and the title as the page reads it.
         if (before.userData) {
-            const u = before.userData;
-            const restored = await api('POST', `UserItems/${played}/UserData?userId=${userId}`, {
-                Played: !!u.Played, PlayCount: u.PlayCount ?? 0, IsFavorite: !!u.IsFavorite, PlaybackPositionTicks: u.PlaybackPositionTicks ?? 0,
-                LastPlayedDate: u.LastPlayedDate ?? null, Rating: u.Rating ?? null, Likes: u.Likes ?? null
-            });
-            const after = (await api('GET', `Users/${userId}/Items/${played}`)).body?.UserData ?? {};
-            const same = ['Played', 'PlayCount', 'IsFavorite', 'PlaybackPositionTicks', 'LastPlayedDate'].every(k => (after[k] ?? null) === (u[k] ?? null));
-            record(name, 'played title user data restored', same ? 'PASS' : 'FAIL', 'api', { status: restored.status, same });
+            const versions = Object.keys(before.versions).length ? before.versions : { [played]: before.userData };
+            const statuses = [];
+            for (const [id, u] of Object.entries(versions)) {
+                if (!u) continue;
+                if (!u.LastPlayedDate) await api('DELETE', `UserPlayedItems/${id}?userId=${userId}`);
+                statuses.push((await api('POST', `UserItems/${id}/UserData?userId=${userId}`, {
+                    Played: !!u.Played, PlayCount: u.PlayCount ?? 0, IsFavorite: !!u.IsFavorite, PlaybackPositionTicks: u.PlaybackPositionTicks ?? 0,
+                    LastPlayedDate: u.LastPlayedDate ?? null, Rating: u.Rating ?? null, Likes: u.Likes ?? null
+                })).status);
+            }
+            const differs = {};
+            for (const [id, u] of [...Object.entries(versions), ['title', before.userData]]) {
+                if (!u) continue;
+                const after = (await api('GET', `Users/${userId}/Items/${id === 'title' ? played : id}`)).body?.UserData ?? {};
+                for (const key of ['Played', 'PlayCount', 'IsFavorite', 'PlaybackPositionTicks', 'LastPlayedDate']) {
+                    if ((after[key] ?? null) !== (u[key] ?? null)) differs[`${id.slice(0, 6)} ${key}`] = [u[key] ?? null, after[key] ?? null];
+                }
+            }
+            const same = Object.keys(differs).length === 0;
+            record(name, 'played title user data restored', same ? 'PASS' : 'FAIL', 'api', { statuses, versions: Object.keys(versions).length, same, differs });
         }
     }
 
