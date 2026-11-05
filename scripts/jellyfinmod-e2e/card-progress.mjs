@@ -17,11 +17,11 @@
 //   - rows (native and mod season page rows, the pack's episodes each with their own figure, the library list rows): the disc
 //     (2.5em, transparent) as the first round icon of the end slot, NO bar, no figure left of the icons, the figure on the meta
 //     line after the date (`42% · 12 min left`, `42% · 6 min left`, `Queued`, `Importing…`, `Stalled · 30%`, `Failed · …`; treatment B, P4.FU15: all in the text colour at 600, queued and stalled at 75 %) and
-//     in the disc's tooltip; a failure on a row with Not Downloaded takes that mark (a red bang, an indicator since P1.FU19: no
-//     button or, since P1.FU22, the administrator's button disabled; no focus stop, no "search again"), never both; a failure without one is the red bang disc; the light scheme's
+//     in the disc's tooltip; a failure on a row with Not Downloaded takes that mark (the rulebook's bang in grey card glass, an indicator: no
+//     button or, since P1.FU22, the administrator's button disabled; no focus stop, no "search again"), never both; the light scheme's
 //     colours; P1.FU19: the row disc has the box and glyph of upstream's round row buttons beside it (the heart, More), and no
 //     disc changes under the mouse (cards, rows, the picker's added row; the added row's X keeps its hover);
-//   - the episode detail line: the disc and `In the download queue · 42% · 6 min left · View queue`;
+//   - an episode page with a file: the pack's own file as the pending entry under the track strip (D9), its disc and `42% · 6 min left`;
 //   - the Queue page: the disc in each row's state cell, its progress bar kept;
 //   - the release picker's added row: the disc in the Add slot, the X kept, the figure on the marks line, no bar;
 //   - reduced motion: the arrow and the importing arc rest;
@@ -60,12 +60,11 @@ const LAYOUTS = {
 };
 // P4.FU8: no amber. A card's bar is white at 85 %; a row's disc and meta figure read as the upstream neighbours beside them
 // (`refColour` in rowStates), so no literal is asserted for them.
-const BAR_DARK = 'rgba(255, 255, 255, 0.85)';
 const WHITE = 'rgb(255, 255, 255)';
-const RED_DARK = 'rgb(255, 90, 79)';
+const INK_LIGHT = 'rgba(0, 0, 0, 0.87)';
 const RED_LIGHT = 'rgb(198, 40, 40)';
 const META_FAILED_DARK = 'rgb(255, 123, 114)';
-const END_SLOT = '.jfmod-rowMarkHost, .jfmod-missingRowEnd, .jfmod-mark--row, .listViewUserDataButtons, .listItemButton';
+const DOWNLOAD_MARK = '.dm:not(.not-downloaded):not(.unaired)';
 
 const results = [];
 const record = (label, check, pass, detail) => {
@@ -145,34 +144,36 @@ const packEpisode = (episode, own) => ({ episodeId: episode.id, seasonNumber: ep
     reason: own.reason ?? null, progress: own.progress ?? null, sizeBytes: own.sizeBytes ?? null });
 
 /** A card's download: its bar, its disc and where the disc sits beside upstream's indicators. */
-const cardState = (page, selector) => page.evaluate(sel => {
+const cardState = (page, selector) => page.evaluate(([sel, mark]) => {
     const card = [...document.querySelectorAll(sel)].find(node => !node.closest('.hide'));
     if (!card) return null;
     const frame = card.querySelector(":is(.cardScalable, .post)") ?? card;
-    const bar = frame.querySelector(":is(.jfmod-dlCardBar, [data-ds-progress])");
-    const fill = bar?.querySelector(":is(.jfmod-dlBar-fill, [data-ds-progress] > i)");
-    const disc = frame.querySelector(":is(.dm, [data-ds-download])");
-    const pill = frame.querySelector(":is(.countIndicator, .pill2:not(.tick))");
-    const indicators = frame.querySelector(":is(.cardIndicators, .pill2)");
-    const none = frame.querySelector(":is(.jfmod-mark--none, .mark:is([title=\"Not Downloaded\"],[data-tip=\"Not Downloaded\"]))");
+    const bar = frame.querySelector('[data-ds-progress]');
+    const fill = bar?.querySelector('i.dl');
+    const disc = frame.querySelector(mark);
+    const titled = disc?.closest('[data-ds-download]') ?? disc;
+    const pill = frame.querySelector('.pill2:not(.tick)');
+    const indicators = frame.querySelector('.pill2');
+    const none = frame.querySelector('.dm.not-downloaded');
     const fontSize = parseFloat(getComputedStyle(frame).fontSize);
     const discBox = (disc?.closest('.cmark') ?? disc)?.getBoundingClientRect();
-    const arc = disc?.querySelector(":is(.arc .val, .arc .turn, .dm .val, .dm .turn)");
+    const arc = disc?.querySelector('.arc .val, .arc .turn');
     const pillBefore = pill ? getComputedStyle(pill, '::before').content : null;
     return {
         bar: !!bar,
         percent: fill ? parseFloat(fill.style.width) : null,
         colour: fill ? getComputedStyle(fill).backgroundColor : null,
+        barOpacity: fill ? getComputedStyle(fill).opacity : null,
         heightEm: bar ? Math.round(bar.getBoundingClientRect().height / fontSize * 100) / 100 : null,
         atBottom: bar ? Math.abs(bar.getBoundingClientRect().bottom - frame.getBoundingClientRect().bottom) < 1.5 : false,
         disc: disc ? {
-            kind: disc.getAttribute('data-jfmod-kind'), card: !!disc.closest('.cmark') || disc.classList.contains('card') || disc.classList.contains('jfmod-dlmark--card'), title: disc.title,
+            kind: disc.getAttribute('data-jfmod-kind') ?? titled.getAttribute('data-jfmod-kind'), card: disc.classList.contains('card'), title: titled.title || disc.title, newVersion: disc.classList.contains('new-version'),
             colour: getComputedStyle(disc).color, background: getComputedStyle(disc.closest('.cmark') ?? disc).backgroundColor, backdrop: getComputedStyle(disc.closest('.cmark') ?? disc).backdropFilter,
             arcColour: arc ? getComputedStyle(arc).stroke : null,
             sizeEm: Math.round(discBox.width / fontSize * 100) / 100, visible: discBox.width > 0,
-            glyphAnimation: getComputedStyle(disc.querySelector(":is(.glyph, .dm .glyph)")).animationName.replace(/^jfds-dmbob$/, 'jfmod-dlmarkBob'),
-            arcAnimation: disc.querySelector('.arc, .dm .turn') ? getComputedStyle(disc.querySelector('.arc, .dm .turn')).animationName.replace(/^jfds-dmspin$/, 'jfmod-dlmarkSpin') : null,
-            arc: arc ? { offset: disc.hasAttribute('data-ds-download') && !arc.classList.contains('turn') ? 100 - parseFloat(arc.getAttribute('stroke-dasharray')) : parseFloat(getComputedStyle(arc).strokeDashoffset), dash: arc.getAttribute('stroke-dasharray'),
+            glyphAnimation: getComputedStyle(disc.querySelector('.glyph')).animationName.replace(/^jfds-dmbob$/, 'jfmod-dlmarkBob'),
+            arcAnimation: disc.querySelector('.arc .turn') ? getComputedStyle(disc.querySelector('.arc .turn')).animationName.replace(/^jfds-dmspin$/, 'jfmod-dlmarkSpin') : null,
+            arc: arc ? { percent: arc.classList.contains('turn') ? null : parseFloat(arc.getAttribute('stroke-dasharray')), dash: arc.getAttribute('stroke-dasharray'),
                 opacity: getComputedStyle(arc).opacity } : null,
             // On the card's frame since 8a2599fb4c (above the hover veil), drawn just left of upstream's cluster: the first of the
             // indicators as one sees them, at the same height, within half an em.
@@ -188,60 +189,55 @@ const cardState = (page, selector) => page.evaluate(sel => {
         // Upstream's own pill: the number alone, no arrow drawn into it; the disc to its left.
         pill: pill ? { text: pill.textContent.trim(), arrow: !!pill.querySelector("svg, :is(.dm, [data-ds-download])") || (pillBefore !== 'none' && pillBefore !== 'normal'),
             discLeft: !!discBox && discBox.right <= pill.getBoundingClientRect().left + 1 } : null,
-        tick: !!frame.querySelector(":is(.playedIndicator, .pill2.tick)"),
+        tick: !!frame.querySelector('.pill2.tick'),
         noneShown: !!none && getComputedStyle(none).display !== 'none',
         upstreamBarHidden: [...frame.querySelectorAll('.itemProgressBar, .itemLinearProgress')].every(node => getComputedStyle(node).visibility === 'hidden')
     };
-}, selector);
+}, [selector, DOWNLOAD_MARK]);
 
-/** The rows that show a download: the disc and where it sits, the meta figure and where it sits, no bar, a failure's button. */
-const rowStates = page => page.evaluate(endSlot => [...document.querySelectorAll('.page:not(.hide) :is(.jfmod-dlRow, .jfmod-dsTitleHost .ep:has(.dm:not(.not-downloaded)))')].map(row => {
-    const disc = row.querySelector(":is(.dm, [data-ds-download])");
-    const meta = row.querySelector('.jfmod-dlMeta');
-    const cloud = row.querySelector(":is(.jfmod-mark--none, .mark:is([title=\"Not Downloaded\"],[data-tip=\"Not Downloaded\"]))");
+/**
+ * The rows that show a download: the title pages' painted `.ep` rows and the library's list rows. The disc and where it sits, the
+ * meta figure and where it sits, no bar, no Not Downloaded beside a download or a failure.
+ */
+const rowStates = page => page.evaluate(mark => [...document.querySelectorAll('.page:not(.hide) .jfmod-dsTitleHost .ep, .page:not(.hide) .itemsContainer .jfmod-dlRow')].filter(row => row.getBoundingClientRect().width > 0 && (row.querySelector(mark) || row.querySelector('.dlf, .jfmod-dlMeta'))).map(row => {
+    const painted = row.matches('.ep');
+    const disc = row.querySelector(mark);
+    const meta = painted ? row.querySelector('.ln2 .dlf') : row.querySelector('.jfmod-dlMeta');
+    const slot = painted ? row.querySelector('.acts') : disc?.parentElement;
+    const host = disc?.closest('.acts > *');
+    const cloud = row.querySelector('.dm.not-downloaded, [data-ds-action="get"]');
     const font = parseFloat(getComputedStyle(row).fontSize);
-    const siblings = disc ? [...disc.parentElement.children] : [];
-    const at = siblings.indexOf(disc);
-    const before = cloud ? getComputedStyle(cloud, '::before') : null;
-    // The colours the mod's pieces must equal: upstream's round row icon beside the disc (else the end slot's own colour), and
-    // the line's own secondary text beside the figure (else its parent's).
-    const neighbour = disc ? [...disc.parentElement.children].find(node => node !== disc && node.matches('.paper-icon-button-light, .listItemButton')) : null;
-    const text = meta ? [...meta.parentElement.children].find(node => node !== meta && !node.classList.contains('jfmod-dlMeta')
-        && node.textContent.trim() && (node.className === meta.className.replace(/ ?jfmod-dlMeta\S*/g, '') || node.matches('.mediaInfoItem'))) : null;
+    // The colours the mod's pieces must equal: the row's round icon beside the disc, and the line's own secondary text beside the figure.
+    const neighbour = slot ? [...slot.children].find(node => node !== host && node.matches('.ib, .paper-icon-button-light, .listItemButton')) : null;
+    const text = meta ? [...meta.parentElement.children].find(node => node !== meta && node.textContent.trim() && !node.matches('.dlf, .jfmod-dlMeta')) : null;
+    const arc = disc?.querySelector('.arc .val');
+    const first = host ?? disc;
     return {
-        refIcon: disc ? getComputedStyle(neighbour ?? disc.parentElement).color : null,
+        refIcon: slot ? getComputedStyle(neighbour ?? slot).color : null,
         refText: meta ? getComputedStyle(text ?? meta.parentElement).color : null,
-        // The theme's full text colour (`--jf-palette-text-primary`), read through a probe.
-        refPrimary: (probe => { document.body.appendChild(probe); const colour = getComputedStyle(probe).color; probe.remove(); return colour; })(
-            Object.assign(document.createElement('i'), { style: 'color: var(--jf-palette-text-primary, #fff)' })),
+        // The theme's full text colour: the row's own title (the `--text` both are drawn in).
+        refPrimary: (node => (node ? getComputedStyle(node).color : null))(row.querySelector('.nm')),
         id: row.getAttribute('data-id') ?? row.getAttribute('data-jfmod-episode-id'),
         disc: disc ? {
-            kind: disc.getAttribute('data-jfmod-kind'), row: disc.classList.contains('jfmod-dlmark--row'), title: disc.title,
-            colour: getComputedStyle(disc).color, background: getComputedStyle(disc).backgroundColor,
+            kind: disc.getAttribute('data-jfmod-kind'), row: disc.classList.contains('row'), title: disc.title || host?.getAttribute('data-tip'),
+            colour: getComputedStyle(disc).color, background: getComputedStyle(disc).backgroundColor, backdrop: getComputedStyle(disc).backdropFilter,
             sizeEm: Math.round(disc.getBoundingClientRect().width / font * 100) / 100,
-            // The first round icon of the end slot: nothing of the slot before it, the slot (or nothing) after it.
-            firstOfEnd: !siblings.slice(0, at).some(node => node.matches(endSlot)) && (at === siblings.length - 1 || siblings[at + 1].matches(endSlot)),
+            // The first round icon of the end slot.
+            firstOfEnd: !!slot && !([...slot.children].slice(0, [...slot.children].indexOf(first)).some(node => node.matches('.ib, .listViewUserDataButtons, .listItemButton, .paper-icon-button-light'))),
             atEnd: disc.getBoundingClientRect().left > row.getBoundingClientRect().left + row.getBoundingClientRect().width * 0.5,
-            arcOffset: disc.querySelector(":is(.arc .val, .arc .turn, .dm .val, .dm .turn)") ? parseFloat(getComputedStyle(disc.querySelector(":is(.arc .val, .arc .turn, .dm .val, .dm .turn)")).strokeDashoffset) : null
+            arcPercent: arc ? parseFloat(arc.getAttribute('stroke-dasharray')) : null
         } : null,
         meta: meta ? {
-            text: meta.textContent, title: meta.title, colour: getComputedStyle(meta).color, weight: getComputedStyle(meta).fontWeight,
+            text: meta.textContent, title: meta.title || row.querySelector('.dlf[title]')?.title, colour: getComputedStyle(meta).color, weight: getComputedStyle(meta).fontWeight,
             opacity: getComputedStyle(meta).opacity, family: getComputedStyle(meta).fontFamily, tabular: getComputedStyle(meta).fontVariantNumeric,
-            where: (meta.parentElement.matches('.listItemMediaInfo, .jfmod-missingMeta') && 'meta line')
-                || (meta.parentElement.classList.contains('listItemBody') && 'last line') || 'elsewhere',
-            visible: meta.getBoundingClientRect().width > 0, ellipsis: getComputedStyle(meta).textOverflow
+            where: (meta.parentElement.matches('.ln2, .listItemMediaInfo') && 'meta line') || (meta.parentElement.classList.contains('listItemBody') && 'last line') || 'elsewhere',
+            visible: meta.getBoundingClientRect().width > 0
         } : null,
-        bars: row.querySelectorAll('.jfmod-dlBar, .jfmod-dlRowBar').length,
+        bars: row.querySelectorAll('.jfmod-dlBar, .jfmod-dlRowBar, .acts .prog').length,
         oldFigure: row.querySelectorAll('.jfmod-dlRowFigure, .jfmod-dlFigure').length,
-        failedButton: cloud && row.classList.contains('jfmod-dlRow--failed') ? {
-            shown: getComputedStyle(cloud).display !== 'none', button: cloud.tagName === 'BUTTON', disabled: cloud.disabled === true, title: cloud.title, tabIndex: cloud.tabIndex,
-            cursor: getComputedStyle(cloud).cursor,
-            glyphHidden: getComputedStyle(cloud.querySelector('.jfmod-markGlyph')).display === 'none',
-            bang: /svg/.test(before.backgroundImage) && before.width !== '0px', bangColour: /%23ff5a4f/.test(before.backgroundImage) ? 'dark' : /%23c62828/.test(before.backgroundImage) ? 'light' : null
-        } : null,
-        noneShown: !!cloud && getComputedStyle(cloud).display !== 'none'
+        noneShown: !!cloud && cloud.getBoundingClientRect().width > 0
     };
-}), END_SLOT);
+}), DOWNLOAD_MARK);
 
 const findRow = (rows, ...ids) => rows.find(row => ids.some(id => id && (row.id ?? '').replace(/-/g, '').toLowerCase() === id.replace(/-/g, '').toLowerCase()));
 
@@ -260,7 +256,7 @@ async function checkInert(page, label, what, locator, holder = false) {
     const read = () => locator.first().evaluate((node, props) => {
         const own = getComputedStyle(node);
         const veil = getComputedStyle(node, '::before');
-        const titled = (node.getAttribute('title') ?? node.getAttribute('data-tip')) ?? node.querySelector(':is([title],[data-tip])')?.getAttribute('title');
+        const titled = (node.getAttribute('title') ?? node.getAttribute('data-tip')) ?? node.querySelector(':is([title],[data-tip])')?.getAttribute('title') ?? node.closest('[data-tip]')?.getAttribute('data-tip');
         return { styles: props.map(prop => own[prop]).join(' | '), veil: `${veil.content} ${veil.opacity} ${veil.backgroundColor}`,
             cursor: own.cursor, title: titled, tag: node.tagName, tabIndex: node.tabIndex, disabled: node.disabled === true };
     }, INERT_PROPS);
@@ -316,7 +312,7 @@ async function run(browser, layout) {
         const seriesId = detail.entry.jellyfinItemId;
         if (!seriesId) throw new Error('the series entry has no Jellyfin item');
         await go(page, `#/details?id=${seriesId}`);
-        await page.waitForSelector(".page:not(.hide) .jfmod-dsTitleHost :is(.card:not(.dm), .cell)", { timeout: 30000 });
+        await page.waitForSelector('.page:not(.hide) .jfmod-dsTitleHost .cell', { timeout: 30000 });
         await page.waitForTimeout(2500);
         detail = await apiGet(page, 'JellyfinMod/Entries/' + seriesEntryId);
         const seasons = await page.evaluate(async id => (await ApiClient.getSeasons(id, { userId: ApiClient.getCurrentUserId() })).Items
@@ -382,20 +378,20 @@ async function run(browser, layout) {
         reads.length = 0;
         await go(page, '#/home');
         await go(page, `#/details?id=${seriesId}`);
-        await page.waitForSelector(".page:not(.hide) .jfmod-dsTitleHost :is(.card:not(.dm), .cell)", { timeout: 30000 });
-        await page.waitForFunction(id => !!document.querySelector(`.page:not(.hide) :is(.card:not(.dm), .cell)[data-id="${id}"] :is(.dm, [data-ds-download])`), native.id, { timeout: 20000 })
+        await page.waitForSelector('.page:not(.hide) .jfmod-dsTitleHost .cell', { timeout: 30000 });
+        await page.waitForFunction(([id, mark]) => !!document.querySelector(`.page:not(.hide) .jfmod-dsTitleHost .cell[data-id="${id}"] ${mark}`), [native.id, DOWNLOAD_MARK], { timeout: 20000 })
             .catch(() => {});
         await page.waitForTimeout(1000);
         const opened = reads.length;
-        const nativeCard = `.page:not(.hide) .jfmod-dsTitleHost :is(.card:not(.dm), .cell)[data-id="${native.id}"]`;
+        const nativeCard = `.page:not(.hide) .jfmod-dsTitleHost .cell[data-id="${native.id}"]`;
         const season = await cardState(page, nativeCard);
         record(label, `Season ${native.number} card: the white 85 % bar at the poster's bottom, ${seasonMean}% (the mean of its episodes on their way), 0.28em`,
-            !!season?.bar && season.atBottom && Math.abs(season.percent - seasonMean) <= 1 && season.colour === BAR_DARK
+            !!season?.bar && season.atBottom && Math.abs(season.percent - seasonMean) <= 1 && season.colour === WHITE && season.barOpacity === '0.85'
             && Math.abs(season.heightEm - 0.28) < 0.03 && season.upstreamBarHidden, season);
         record(label, `Season ${native.number} card: the 1.6em disc top right, the arrow bobbing, the white arc at ${seasonMean}%`,
             season?.disc?.card && season.disc.kind === 'downloading' && Math.abs(season.disc.sizeEm - 1.6) < 0.05 && season.disc.topRight
             && season.disc.colour === WHITE && season.disc.arcColour === WHITE && season.disc.glyphAnimation === 'jfmod-dlmarkBob'
-            && Math.abs((season.disc.arc?.offset ?? -1) - (100 - seasonMean)) <= 1, season?.disc);
+            && Math.abs((season.disc.arc?.percent ?? -1) - seasonMean) <= 1, season?.disc);
         // P4.FU7: the top bar's glass (a tinted ground over a blur) on the computer and the phone, the solid black 66 % on the TV.
         const filter = season?.disc?.backdrop ?? '';
         if (layout === 'tv1080') {
@@ -407,7 +403,7 @@ async function run(browser, layout) {
                 && /brightness\(0\.85\)/.test(filter) && /[,/] 0\.12\)$/.test(season?.disc?.background ?? ''), season?.disc);
         }
         record(label, `Season ${native.number} card: the tooltip is the figure ("${seasonTooltip}")`, season?.disc?.title === seasonTooltip, season?.disc?.title);
-        if (layout === 'desktop') await checkInert(page, label, `Season ${native.number} card's download disc`, page.locator(`${nativeCard} :is(.dm, [data-ds-download])`));
+        if (layout === 'desktop') await checkInert(page, label, `Season ${native.number} card's download disc`, page.locator(`${nativeCard} ${DOWNLOAD_MARK}`));
         if (season?.pill) {
             record(label, `Season ${native.number} card: two icons, the disc first of upstream's indicators and left of the plain count pill (no arrow in it)`,
                 season.disc?.firstIndicator === true && season.pill.discLeft && !season.pill.arrow && /^\d+$/.test(season.pill.text), season.pill);
@@ -415,15 +411,15 @@ async function run(browser, layout) {
             record(label, `Season ${native.number} card: the disc first of upstream's indicators (no count pill on this card)`,
                 season?.disc?.firstIndicator !== false, { tick: season?.tick, firstIndicator: season?.disc?.firstIndicator });
         }
-        const others = await page.evaluate(id => [...document.querySelectorAll(".page:not(.hide) .jfmod-dsTitleHost :is(.card:not(.dm), .cell)[data-id]")]
-            .filter(card => card.getAttribute('data-id') !== id && !card.classList.contains('jfmod-missingCard'))
-            .map(card => !!card.querySelector(":is(.jfmod-dlCardBar, [data-ds-progress]), :is(.dm, [data-ds-download])")), native.id);
+        const others = await page.evaluate(([id, mark, season]) => [...document.querySelectorAll('.page:not(.hide) .jfmod-dsTitleHost [data-ds-section*="childrencollapsible" i] .cell[data-id]')]
+            .filter(card => card.getAttribute('data-id') !== id && card.getAttribute('data-ds-season') !== season)
+            .map(card => !!card.querySelector(`[data-ds-progress], ${mark}`)), [native.id, DOWNLOAD_MARK, String(missingSeason)]);
         record(label, 'the other upstream season cards show no download', others.every(shown => !shown), others);
         await page.locator(nativeCard).scrollIntoViewIfNeeded().catch(() => {});
         await shotOf(page.locator(nativeCard), 'card-season-two-icons');
         await shot('series-page');
         if (missingSeason !== undefined) {
-            const missingCard = `.page:not(.hide) .jfmod-missingCard[data-jfmod-season="${missingSeason}"]`;
+            const missingCard = `.page:not(.hide) .jfmod-dsTitleHost .cell[data-jfmod-season="${missingSeason}"]`;
             const pack = await cardState(page, missingCard);
             record(label, `missing Season ${missingSeason} card with a pack: the disc alone in the corner, a 60% bar, Not Downloaded hidden (never both)`,
                 !!pack?.disc?.visible && pack.disc.kind === 'downloading' && pack.disc.topRight && Math.abs(pack.percent - 60) <= 1 && !pack.noneShown
@@ -452,7 +448,7 @@ async function run(browser, layout) {
         const serverId = await page.evaluate(() => ApiClient.serverId());
         if (missingSeason !== undefined) {
             await go(page, `#/details?entryId=${encodeURIComponent(entry.id)}&serverId=${encodeURIComponent(serverId)}&season=${missingSeason}`);
-            await page.waitForFunction(count => document.querySelectorAll('.page:not(.hide) .jfmod-dlRow').length >= count, packExpected.length,
+            await page.waitForFunction(([count, mark]) => document.querySelectorAll(`.page:not(.hide) .jfmod-dsTitleHost .ep ${mark}`).length >= count, [packExpected.length, DOWNLOAD_MARK],
                 { timeout: 30000 }).catch(() => {});
             await page.waitForTimeout(800);
             const packRows = await rowStates(page);
@@ -460,9 +456,8 @@ async function run(browser, layout) {
             for (const expected of packExpected) {
                 const row = findRow(packRows, expected.episode.id);
                 const failed = expected.kind === 'failed';
-                const discOk = failed ? !row?.disc && row?.failedButton?.shown && row.failedButton.bang && row.failedButton.glyphHidden :
-                    row?.disc?.kind === expected.kind && row.disc.firstOfEnd && row.disc.atEnd && !row.noneShown;
-                record(label, `pack Season ${missingSeason} E${expected.episode.episodeNumber}: its own "${expected.meta}" on the meta line, the ${failed ? 'red bang on Not Downloaded' : expected.kind + ' disc'}, no bar`,
+                const discOk = row?.disc?.kind === expected.kind && row.disc.firstOfEnd && row.disc.atEnd && !row.noneShown;
+                record(label, `pack Season ${missingSeason} E${expected.episode.episodeNumber}: its own "${expected.meta}" on the meta line, the ${failed ? 'grey-glass bang in place of Not Downloaded' : expected.kind + ' disc'}, no bar`,
                     !!row && row.meta?.text === expected.meta && row.meta.where !== 'elsewhere' && row.bars === 0 && row.oldFigure === 0 && !!discOk, row);
             }
         } else {
@@ -472,11 +467,11 @@ async function run(browser, layout) {
         // ---- The native season page's rows (native and mod rows).
         await go(page, `#/details?id=${native.id}`);
         await page.waitForSelector('.page:not(.hide) .jfmod-dsTitleHost .ep', { timeout: 30000 });
-        await page.waitForFunction(count => document.querySelectorAll('.page:not(.hide) .jfmod-dlRow').length >= count, SEASON.length,
+        await page.waitForFunction(([count, mark]) => document.querySelectorAll(`.page:not(.hide) .jfmod-dsTitleHost .ep ${mark}`).length >= count, [SEASON.length, DOWNLOAD_MARK],
             { timeout: 20000 }).catch(() => {});
         await page.waitForTimeout(1000);
         const rows = await rowStates(page);
-        await page.locator('.page:not(.hide) .jfmod-dlRow').first().scrollIntoViewIfNeeded().catch(() => {});
+        await page.locator('.page:not(.hide) .jfmod-dsTitleHost .ep').first().scrollIntoViewIfNeeded().catch(() => {});
         await shot('rows-season-dark', true);
         const itemOf = new Map((await page.evaluate(async ([seriesItem, seasonItem]) => (await ApiClient.getEpisodes(seriesItem,
             { seasonId: seasonItem, userId: ApiClient.getCurrentUserId() })).Items.map(item => [item.IndexNumber, item.Id]),
@@ -485,19 +480,15 @@ async function run(browser, layout) {
             const episode = inSeason[index];
             const row = findRow(rows, itemOf.get(episode.episodeNumber), episode.id);
             const kind = row?.id && itemOf.get(episode.episodeNumber) && row.id.replace(/-/g, '') === itemOf.get(episode.episodeNumber).replace(/-/g, '') ? 'native' : 'mod';
-            let discOk;
-            if (expected.kind === 'failed' && row?.failedButton) {
-                discOk = !row.disc && row.failedButton.shown && row.failedButton.bang && row.failedButton.bangColour === 'dark'
-                    && row.failedButton.title === expected.tooltip && (!row.failedButton.button || row.failedButton.disabled)
-                    // The TV layout hides the pointer on its buttons (`cursor: none`).
-                    && (row.failedButton.tabIndex < 0 || row.failedButton.disabled) && (row.failedButton.cursor === 'default' || (tv && row.failedButton.cursor === 'none'));
-            } else {
-                discOk = row?.disc?.row && row.disc.kind === expected.kind && Math.abs(row.disc.sizeEm - 2.78) < 0.05 && row.disc.firstOfEnd
-                    && row.disc.atEnd && row.disc.title === expected.tooltip && row.disc.background === 'rgba(0, 0, 0, 0)' && !row.noneShown
-                    && row.disc.colour === (expected.kind === 'failed' ? RED_DARK : row.refIcon)
-                    && (expected.percent === undefined || Math.abs(row.disc.arcOffset - (100 - expected.percent)) <= 1);
-            }
-            record(label, `season page E${episode.episodeNumber} (${kind} row): ${expected.kind === 'failed' && row?.failedButton ? 'the red bang takes Not Downloaded, an indicator' : 'the ' + expected.kind + ' disc (2.78em) first in the end slot'}, "${expected.meta}" on the meta line, no bar, no figure left of the icons`,
+            // The heart's box (user 2026-10-13: "the same size as info and fav and heart icons"; the mockup's 2.7816em). A failure
+            // is the rulebook's grey card glass with the ink's bang, no longer red; every other disc is transparent in the row's icon colour.
+            const failed = expected.kind === 'failed';
+            const discOk = row?.disc?.row && row.disc.kind === expected.kind && Math.abs(row.disc.sizeEm - 2.78) < 0.05 && row.disc.firstOfEnd
+                && row.disc.atEnd && row.disc.title === expected.tooltip && !row.noneShown
+                && (failed ? row.disc.colour === WHITE && (tv ? ['rgba(0, 0, 0, 0.66)', 'rgb(32, 32, 32)'].includes(row.disc.background) : /[,/] 0\.12\)$/.test(row.disc.background) && /blur\(12px\)/.test(row.disc.backdrop))
+                    : row.disc.background === 'rgba(0, 0, 0, 0)' && row.disc.colour === row.refIcon)
+                && (expected.percent === undefined || Math.abs(row.disc.arcPercent - expected.percent) <= 1);
+            record(label, `season page E${episode.episodeNumber} (${kind} row): ${expected.kind === 'failed' ? 'the grey-glass bang (2.78em) takes Not Downloaded, an indicator, first in the end slot' : 'the ' + expected.kind + ' disc (2.78em) first in the end slot'}, "${expected.meta}" on the meta line, no bar, no figure left of the icons`,
                 !!row && !!discOk && row.meta?.text === expected.meta && row.meta.where !== 'elsewhere' && row.meta.visible && row.bars === 0
                 && row.oldFigure === 0 && /tabular-nums/.test(row.meta.tabular ?? '')
                 // Treatment B (P4.FU15): every state's text is the full text colour at 600 in Inter, queued and stalled at 75 %.
@@ -516,30 +507,29 @@ async function run(browser, layout) {
         const lightDownloading = light.find(row => row.meta?.text === '42% · 12 min left');
         const lightStalled = light.find(row => row.meta?.text === 'Stalled · 30%');
         const lightFailed = light.find(row => row.meta?.text?.startsWith('Failed · '));
-        record(label, 'light scheme: the figure is the text colour at 600 and the disc the upstream row icons\' (neither amber), a failure #c62828',
+        record(label, 'light scheme: the figure is the text colour at 600 and the disc the row icons\' (neither amber), a failure\'s words #c62828 and its bang the glass ink',
             lightDownloading?.meta?.colour === lightDownloading?.refPrimary && lightDownloading?.meta?.weight === '600' && lightDownloading?.disc?.colour === lightDownloading?.refIcon
             && !/255, 179/.test(lightDownloading?.disc?.colour ?? '') && lightDownloading?.meta?.colour !== 'rgb(154, 103, 0)'
             && (!lightStalled || lightStalled.meta.colour === lightStalled.refPrimary)
-            && (!lightFailed || lightFailed.meta.colour === RED_LIGHT) && (!lightFailed?.failedButton || lightFailed.failedButton.bangColour === 'light')
-            && (!lightFailed?.disc || lightFailed.disc.colour === RED_LIGHT), { lightDownloading, lightStalled, lightFailed });
+            && (!lightFailed || lightFailed.meta.colour === RED_LIGHT) && (!lightFailed?.disc || lightFailed.disc.colour === (tv ? WHITE : INK_LIGHT)), { lightDownloading, lightStalled, lightFailed });
         await page.evaluate(() => document.documentElement.setAttribute('data-theme', window.jfmodTheme ?? 'dark'));
 
         // P1.FU19: the row disc is upstream's round row button's size (user 2026-10-13: "make the episode [state icon] the same
         // size as info and fav and heart icons"); no disc or failure mark changes under the mouse, and the failure is no stop.
-        const size = await page.evaluate(() => {
+        const size = await page.evaluate(mark => {
             const box = node => { const rect = node.getBoundingClientRect(); return { w: rect.width, h: rect.height, cy: rect.top + rect.height / 2 }; };
-            const row = [...document.querySelectorAll('.page:not(.hide) .jfmod-dsTitleHost .ep')].find(candidate => candidate.querySelector(":is(.dm, [data-ds-download])"));
-            const disc = row?.querySelector(":is(.dm, [data-ds-download])");
-            const heart = [...document.querySelectorAll('.page:not(.hide) .jfmod-dsTitleHost .ep .acts .ib')].find(button => button.getBoundingClientRect().width > 0);
+            const row = [...document.querySelectorAll('.page:not(.hide) .jfmod-dsTitleHost .ep')].find(candidate => candidate.querySelector(`.acts ${mark}`));
+            const disc = row?.querySelector(`.acts ${mark}`);
+            const heart = [...(row?.querySelectorAll('.acts .ib') ?? [])].find(button => !button.querySelector('.dm') && button.getBoundingClientRect().width > 0);
             const font = disc ? parseFloat(getComputedStyle(disc).fontSize) : 0;
-            return disc ? { disc: box(disc), glyph: box(disc.querySelector(":is(.glyph, .dm .glyph)")), font,
-                heart: heart ? { box: box(heart), glyph: box(heart.querySelector('.material-icons, svg')), cy: box(heart).cy } : null } : null;
-        });
+            return disc ? { disc: box(disc), glyph: box(disc.querySelector('.glyph')), font, heart: heart ? { box: box(heart), cy: box(heart).cy } : null } : null;
+        }, DOWNLOAD_MARK);
         if (size) {
             const near = (a, b) => Math.abs(a - b) <= 0.6;
-            const expectedBox = size.heart ? size.heart.box.w : size.font * (1.6695652173913 + 1.112);
-            const expectedGlyph = size.heart ? size.heart.glyph.w : size.font * 1.6695652173913;
-            record(label, `season page row disc: the box and glyph of upstream's round row buttons${size.heart ? ' (measured on the row\'s heart, More or info), centred on the same line' : ' (upstream\'s formula; upstream draws no round buttons on TV rows)'}`,
+            const expectedBox = size.heart ? size.heart.box.w : size.font * 2.7816;
+            // The mockup's glyph inside the heart's box (ds.css `.dm.row > svg.glyph`).
+            const expectedGlyph = size.font * 1.4;
+            record(label, `season page row disc: the box of the row's round buttons${size.heart ? ' (measured on the row\'s heart, More or info), centred on the same line' : ' (the mockup\'s 2.7816em)'}, the mockup's 1.4em glyph`,
                 near(size.disc.w, expectedBox) && near(size.disc.h, expectedBox) && near(size.glyph.w, expectedGlyph) && near(size.glyph.h, expectedGlyph)
                 && (!size.heart || Math.abs(size.disc.cy - size.heart.cy) <= 1.5), { ...size, expectedBox, expectedGlyph });
             await shotOf(page.locator('.page:not(.hide) .jfmod-dsTitleHost .ep').first(), 'row-disc-size');
@@ -547,28 +537,33 @@ async function run(browser, layout) {
             record(label, 'season page row disc size', 'NOT VERIFIED', 'no row with a disc');
         }
         if (layout === 'desktop') {
-            await checkInert(page, label, 'a season page row\'s download disc', page.locator(".page:not(.hide) .jfmod-dsTitleHost .ep :is(.dm, [data-ds-download])"));
-            await checkInert(page, label, 'a failed row\'s red bang', page.locator(".page:not(.hide) .jfmod-dlRow--failed :is(.jfmod-mark--none, .mark:is([title=\"Not Downloaded\"],[data-tip=\"Not Downloaded\"]))"));
+            await checkInert(page, label, 'a season page row\'s download disc', page.locator(`.page:not(.hide) .jfmod-dsTitleHost .ep .acts ${DOWNLOAD_MARK}:not(.failed)`));
+            await checkInert(page, label, 'a failed row\'s grey-glass bang', page.locator('.page:not(.hide) .jfmod-dsTitleHost .ep .acts .dm.failed'));
         }
 
-        // ---- The episode detail line: E[1]'s own file of the pack.
+        // ---- The episode page of E[1], which holds a file: its pack's own file as the pending entry under the track strip (D9), no line.
         const packedItem = inSeason[1] && itemOf.get(inSeason[1].episodeNumber);
         if (packedItem) {
+            const heldPack = queueRow(entry, { state: 'downloading', progress: 0.5, etaSeconds: 3900, downloadRateBytes: 2000000,
+                pack: { scope: 'season', label: `Season ${native.number} pack`, mode: 'add',
+                    episodes: [{ ...packEpisode(inSeason[1], { importState: 'waiting', progress: 0.42, sizeBytes: 1200000000 }), held: true }] } });
+            setItems([...seasonItems.filter(item => !item.pack), heldPack]);
             await go(page, `#/details?id=${packedItem}`);
-            await page.waitForSelector('.page:not(.hide) [data-jfmod-queue-status]', { timeout: 20000 }).catch(() => {});
+            await page.waitForSelector('.page:not(.hide) .pend', { timeout: 20000 }).catch(() => {});
             await page.waitForTimeout(800);
             const line = await page.evaluate(() => {
-                const node = document.querySelector('.page:not(.hide) [data-jfmod-queue-status]');
-                const disc = node?.querySelector(":is(.dm, [data-ds-download])");
-                return node ? { text: node.textContent.replace(/\s+/g, ' ').trim(), disc: disc?.getAttribute('data-jfmod-kind') ?? null,
-                    discFirst: node.firstElementChild === disc, title: disc?.title ?? null, link: !!node.querySelector('a[href="#/catalog/queue"]') } : null;
+                const node = document.querySelector('.page:not(.hide) .pend');
+                const disc = node?.querySelector('.dm');
+                return { line: !!document.querySelector('.page:not(.hide) [data-jfmod-queue-status]'), pending: node ? { text: node.textContent.replace(/\s+/g, ' ').trim(),
+                    disc: disc?.getAttribute('data-jfmod-kind') ?? null, plus: !!disc?.classList.contains('new-version'), discFirst: node.firstElementChild === disc || node.firstElementChild?.contains(disc), title: disc?.title ?? null } : null };
             });
-            record(label, 'episode detail line: the disc, then "In the download queue · 42% · 6 min left · View queue"',
-                line?.disc === 'downloading' && line.discFirst && line.text === 'In the download queue · 42% · 6 min left · View queue' && line.link, line);
-            await page.locator('.page:not(.hide) [data-jfmod-queue-status]').scrollIntoViewIfNeeded().catch(() => {});
-            await shotOf(page.locator('.page:not(.hide) [data-jfmod-queue-status]'), 'detail-line');
+            record(label, 'an episode page with a file: the pack\'s own file as the pending entry, its + disc first and "42% · 6 min left", no download line',
+                !line.line && line.pending?.disc === 'downloading' && line.pending.plus && line.pending.discFirst && line.pending.text.includes('42% · 6 min left'), line);
+            await page.locator('.page:not(.hide) .pend').scrollIntoViewIfNeeded().catch(() => {});
+            await shotOf(page.locator('.page:not(.hide) .pend'), 'pending-entry');
+            setItems([...seasonItems, ...packItems, ...movieDownloading()]);
         } else {
-            record(label, 'the episode detail line', 'NOT VERIFIED', 'the season\'s second episode has no Jellyfin item');
+            record(label, 'the episode page\'s pending entry', 'NOT VERIFIED', 'the season\'s second episode has no Jellyfin item');
         }
 
         // ---- The release picker's added row: the disc in the Add slot, the X kept, the figure, no bar.
@@ -583,7 +578,7 @@ async function run(browser, layout) {
                 found.grab = { ...found.grab, activeOperationId: opId };
                 return found;
             };
-            const op = { id: opId, state: 'accepted', active: false, cancellable: false, entryId: entry.id, episodeId: inSeason[0].id,
+            const op = { id: opId, state: 'accepted', active: true, cancellable: false, entryId: entry.id, episodeId: inSeason[0].id,
                 releaseTitle: searchAnswer().candidates[2].rawTitle, indexerName: 'TorrentGalaxy', quality: '1080p', size: 4.6e9, infoHash: hash, score: 820,
                 seedRatio: null, seedMinutes: null, holdUntil: now(), createdAt: now(), updatedAt: now(), submittedAt: now(), acceptedAt: now(),
                 cancelledAt: null, failureCode: null, message: '', openUrl: null, scope: 'episode', mode: 'add' };
@@ -611,14 +606,14 @@ async function run(browser, layout) {
                 await checkInert(page, label, 'release picker\'s added row: the Add slot holding the disc', page.locator('.pickerDialog .rel[data-ds-added] [data-jfmod-release-add]'), true);
                 const x = page.locator('.pickerDialog .rel[data-ds-added] [data-jfmod-release-x]');
                 if (await x.count()) {
-                    const veil = () => x.first().evaluate(node => getComputedStyle(node, '::before').opacity);
+                    const veil = () => x.first().evaluate(node => getComputedStyle(node).backgroundColor);
                     await page.mouse.move(1, 1);
                     await page.waitForTimeout(300);
                     const atRest = await veil();
                     await x.first().hover();
                     await page.waitForTimeout(400);
                     const hovered = await veil();
-                    record(label, 'release picker\'s added row: the X keeps its hover veil', atRest === '0' && Number(hovered) > 0, { atRest, hovered });
+                    record(label, 'release picker\'s added row: the X keeps its hover fill', atRest === 'rgba(0, 0, 0, 0)' && hovered !== atRest, { atRest, hovered });
                     await page.mouse.move(1, 1);
                 }
             }
@@ -657,20 +652,21 @@ async function run(browser, layout) {
             await go(page, `#/movies?topParentId=${moviesView.id}`);
             await page.waitForSelector(movieCard, { timeout: 30000 }).catch(() => {});
             const STATES = [
-                { kind: 'downloading', rows: movieDownloading(), title: 'Downloading · 25% · 5 min left', glyph: 'jfmod-dlmarkBob' },
+                // The fixture's row is a new version of a film already on disk: the + rests, the arc carries the motion (D12).
+                { kind: 'downloading', rows: movieDownloading(), title: 'New version · 25% · 5 min left', newVersion: true },
                 { kind: 'queued', rows: movieRow('queued'), title: 'Queued' },
                 { kind: 'importing', rows: movieRow('scanning', { progress: 1 }), title: 'Importing…', arc: 'jfmod-dlmarkSpin' },
                 { kind: 'stalled', rows: movieRow('stalled', { progress: 0.3 }), title: 'Stalled at 30%', dim: true }
             ];
             for (const state of STATES) {
                 setItems(state.rows);
-                await page.waitForFunction(([sel, kind]) => document.querySelector(sel + " :is(.dm, [data-ds-download])")?.getAttribute('data-jfmod-kind') === kind,
+                await page.waitForFunction(([sel, kind]) => document.querySelector(sel + ' [data-ds-download]')?.getAttribute('data-jfmod-kind') === kind,
                     [movieCard, state.kind], { timeout: 12000 }).catch(() => {});
                 await page.waitForTimeout(500);
                 const card = await cardState(page, movieCard);
                 record(label, `film card ${state.kind}: the ${state.kind} disc top right, tooltip "${state.title}", the bar`,
                     card?.disc?.kind === state.kind && card.disc.topRight && card.disc.title === state.title && card.bar
-                    && (!state.glyph || card.disc.glyphAnimation === state.glyph) && (!state.arc || card.disc.arcAnimation === state.arc)
+                    && (!state.newVersion || (card.disc.newVersion && card.disc.glyphAnimation === 'none')) && (!state.arc || card.disc.arcAnimation === state.arc)
                     && (!state.dim || card.disc.arc?.opacity === '0.55') && (state.kind !== 'queued' || !card.disc.arc), card?.disc);
                 await page.locator(movieCard).scrollIntoViewIfNeeded().catch(() => {});
                 await shotOf(page.locator(movieCard), `card-film-${state.kind}`);
@@ -682,8 +678,8 @@ async function run(browser, layout) {
                     await shotOf(page.locator(movieCard), 'card-film-downloading-light');
                     await page.evaluate(() => document.documentElement.setAttribute('data-theme', window.jfmodTheme ?? 'dark'));
                     record(label, 'film card, light scheme: the bar is the dark text at 85 %, the disc and arc the dark text (the TV\'s solid disc stays white), no amber',
-                        lightCard?.colour === 'rgba(0, 0, 0, 0.85)' && (tv ? lightCard.disc?.colour === WHITE : lightCard.disc?.colour === 'rgb(0, 0, 0)' && lightCard.disc.arcColour === 'rgb(0, 0, 0)'),
-                        { bar: lightCard?.colour, disc: lightCard?.disc?.colour, arc: lightCard?.disc?.arcColour });
+                        lightCard?.colour === INK_LIGHT && lightCard.barOpacity === '0.85' && (tv ? lightCard.disc?.colour === WHITE : lightCard.disc?.colour === INK_LIGHT && lightCard.disc.arcColour === INK_LIGHT),
+                        { bar: lightCard?.colour, barOpacity: lightCard?.barOpacity, disc: lightCard?.disc?.colour, arc: lightCard?.disc?.arcColour });
                 }
                 if (state.kind === 'importing') {
                     await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -694,7 +690,7 @@ async function run(browser, layout) {
                 }
             }
             setItems(movieRow('failed', { progress: 0.1, message: 'The torrent contains no video file.' }));
-            await page.waitForFunction(sel => !document.querySelector(sel + " :is(.dm, [data-ds-download])"), movieCard, { timeout: 12000 }).catch(() => {});
+            await page.waitForFunction(sel => !document.querySelector(sel + ' [data-ds-download]'), movieCard, { timeout: 12000 }).catch(() => {});
             const failedCard = await cardState(page, movieCard);
             record(label, 'film card with a failed download: nothing drawn on the card', !failedCard?.disc && !failedCard?.bar, failedCard);
 
@@ -712,15 +708,15 @@ async function run(browser, layout) {
             await page.waitForTimeout(800);
             const listRows = await rowStates(page);
             const failedList = findRow(listRows, movie.jellyfinItemId);
-            record(label, 'library list row (a film on disk) with a failed download: the red bang disc first in the end slot, "Failed · …" after its meta, no bar',
-                failedList?.disc?.kind === 'failed' && failedList.disc.colour === RED_DARK && failedList.disc.firstOfEnd && failedList.bars === 0
-                && failedList.meta?.text === 'Failed · The torrent contains no video file.' && failedList.meta.where !== 'elsewhere' && !failedList.failedButton, failedList);
+            record(label, 'library list row (a film on disk) with a failed download: the grey-glass bang first in the end slot, "Failed · …" after its meta, no bar',
+                failedList?.disc?.kind === 'failed' && failedList.disc.colour === WHITE && failedList.disc.firstOfEnd && failedList.bars === 0
+                && failedList.meta?.text === 'Failed · The torrent contains no video file.' && failedList.meta.where !== 'elsewhere', failedList);
             await page.locator(movieListRow).scrollIntoViewIfNeeded().catch(() => {});
             await shotOf(page.locator(movieListRow), 'row-list-failed');
             await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'light'));
             await page.waitForTimeout(300);
             const failedLight = findRow(await rowStates(page), movie.jellyfinItemId);
-            record(label, 'light scheme: the failed disc is #c62828', failedLight?.disc?.colour === RED_LIGHT, failedLight?.disc);
+            record(label, 'light scheme: the failed disc is the glass ink, its words #c62828', failedLight?.disc?.colour === (tv ? WHITE : INK_LIGHT) && failedLight?.meta?.colour === RED_LIGHT, failedLight);
             await shotOf(page.locator(movieListRow), 'row-list-failed-light');
             await page.evaluate(() => document.documentElement.setAttribute('data-theme', window.jfmodTheme ?? 'dark'));
         } else {
@@ -750,30 +746,30 @@ async function run(browser, layout) {
 
         // ---- The series' card in search and in its library grid; Home's Next Up when it shows one of the season's episodes.
         await go(page, `#/search?query=${encodeURIComponent(entry.title)}`);
-        await page.waitForFunction(id => !!document.querySelector(`.page:not(.hide) :is(.card:not(.dm), .cell)[data-id="${id}"] :is(.dm, [data-ds-download])`), seriesId, { timeout: 30000 })
+        await page.waitForFunction(([id, mark]) => !!document.querySelector(`.page:not(.hide) .cell[data-jfmod-entry-id="${id}"] ${mark}`), [entry.id, DOWNLOAD_MARK], { timeout: 30000 })
             .catch(() => {});
-        const seriesCard = await cardState(page, `.page:not(.hide) :is(.card:not(.dm), .cell)[data-id="${seriesId}"]`);
-        await shotOf(page.locator(`.page:not(.hide) :is(.card:not(.dm), .cell)[data-id="${seriesId}"]`), 'card-series-search');
+        const seriesCard = await cardState(page, `.page:not(.hide) .cell[data-jfmod-entry-id="${entry.id}"]`);
+        await shotOf(page.locator(`.page:not(.hide) .cell[data-jfmod-entry-id="${entry.id}"]`), 'card-series-search');
         record(label, 'search: the series card shows the bar and the downloading disc (two icons beside a count pill), the figure in its tooltip',
-            !!seriesCard?.bar && seriesCard.colour === BAR_DARK && seriesCard.disc?.kind === 'downloading' && seriesCard.disc.title.startsWith('Downloading · ')
+            !!seriesCard?.bar && seriesCard.colour === WHITE && seriesCard.barOpacity === '0.85' && seriesCard.disc?.kind === 'downloading' && seriesCard.disc.title.startsWith('Downloading · ')
             && (!seriesCard.pill || (seriesCard.pill.discLeft && !seriesCard.pill.arrow)), seriesCard);
         // The series page's own Next Up first, then Home's rows.
         const episodeIds = [...itemOf.values()];
         await go(page, `#/details?id=${seriesId}`);
         await page.waitForTimeout(2500);
-        if (!await page.evaluate(ids => ids.some(id => document.querySelector(`.page:not(.hide) :is(.card:not(.dm), .cell)[data-type="Episode"][data-id="${id}"]`)), episodeIds)) {
+        if (!await page.evaluate(ids => ids.some(id => document.querySelector(`.page:not(.hide) .cell[data-type="Episode"][data-id="${id}"]`)), episodeIds)) {
             await go(page, '#/home');
         }
-        await page.waitForFunction(ids => ids.some(id => document.querySelector(`.page:not(.hide) :is(.card:not(.dm), .cell)[data-id="${id}"] :is(.dm, [data-ds-download])`)), episodeIds,
+        await page.waitForFunction(([ids, mark]) => ids.some(id => document.querySelector(`.page:not(.hide) .cell[data-id="${id}"] ${mark}`)), [episodeIds, DOWNLOAD_MARK],
             { timeout: 15000 }).catch(() => {});
         const nextUp = await page.evaluate(ids => {
-            const card = [...document.querySelectorAll(".page:not(.hide) :is(.card:not(.dm), .cell)[data-type=\"Episode\"]")].find(node => ids.includes(node.getAttribute('data-id')));
+            const card = [...document.querySelectorAll('.page:not(.hide) .cell[data-type="Episode"]')].find(node => ids.includes(node.getAttribute('data-id')));
             return card ? { id: card.getAttribute('data-id'), landscape: card.classList.contains('w') || /backdrop|overflowBackdrop|thumb/i.test(card.className) } : null;
         }, episodeIds);
         if (nextUp) {
-            const view = await cardState(page, `.page:not(.hide) :is(.card:not(.dm), .cell)[data-type="Episode"][data-id="${nextUp.id}"]`);
+            const view = await cardState(page, `.page:not(.hide) .cell[data-type="Episode"][data-id="${nextUp.id}"]`);
             record(label, 'a landscape Next Up episode card (series page or Home) shows its download disc, the figure in its tooltip', !!view?.disc?.visible && view.disc.topRight && view.disc.title.startsWith('Downloading · ') && !!view.bar, { nextUp, disc: view?.disc });
-            await shotOf(page.locator(`.page:not(.hide) :is(.card:not(.dm), .cell)[data-type="Episode"][data-id="${nextUp.id}"]`), 'card-next-up');
+            await shotOf(page.locator(`.page:not(.hide) .cell[data-type="Episode"][data-id="${nextUp.id}"]`), 'card-next-up');
         } else {
             record(label, 'a Next Up card with a download', 'NOT VERIFIED', 'neither the series page nor Home shows one of the season\'s episodes');
         }
@@ -784,7 +780,7 @@ async function run(browser, layout) {
         await page.waitForTimeout(2000);
         const quietFrom = reads.length;
         await page.waitForTimeout(16000);
-        const left = await page.evaluate(() => document.querySelectorAll(".jfmod-dlCard, .jfmod-dlRow, :is(.dm, [data-ds-download]), .jfmod-dlMeta").length);
+        const left = await page.evaluate(mark => document.querySelectorAll(`.jfmod-dlCard, .jfmod-dlRow, ${mark}, [data-ds-download], [data-ds-progress], .jfmod-dlMeta`).length, DOWNLOAD_MARK);
         record(label, 'nothing on its way: every mark is gone and the queue is not polled', left === 0 && reads.length - quietFrom <= 1,
             { left, readsIn16s: reads.length - quietFrom });
         record(label, 'no page errors', errors.length === 0, errors.slice(0, 3));
