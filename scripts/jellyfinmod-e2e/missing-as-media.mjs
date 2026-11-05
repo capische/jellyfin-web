@@ -285,7 +285,7 @@ async function browserChecks(browser, layout, user, isAdmin, context, api) {
         // The stub's row on its season page.
         await go(page, `#/details?id=${stub.SeasonId}`);
         const rowSelector = `.page:not(.hide) #listChildrenCollapsible .listItem[data-id="${stub.Id}"]`;
-        await page.waitForSelector(`${rowSelector}[data-jfmod-placeholder] :is(.jfmod-mark--none, .mark:is([title="Not Downloaded"],[data-tip="Not Downloaded"]))`, { timeout: 30000 }).catch(() => {});
+        await page.waitForSelector(`${rowSelector}[data-jfmod-placeholder] :is(.jfmod-mark--none, [data-ds-state-kind="not-downloaded"], .mark:is([title="Not Downloaded"],[data-tip="Not Downloaded"]))`, { timeout: 30000 }).catch(() => {});
         await page.evaluate(`window.isShown = ${visible}`);
         // Upstream's own row buttons differ by layout (the phone and the TV draw fewer): the placeholder's row has the ones a
         // real episode's row has.
@@ -299,12 +299,12 @@ async function browserChecks(browser, layout, user, isAdmin, context, api) {
         const row = await page.evaluate(selector => {
             const node = document.querySelector(selector);
             if (!node) return null;
-            const mark = node.querySelector(":is(.jfmod-mark--none, .mark:is([title=\"Not Downloaded\"],[data-tip=\"Not Downloaded\"]))");
+            const mark = node.querySelector(":is(.jfmod-mark--none, [data-ds-state-kind=\"not-downloaded\"], .mark:is([title=\"Not Downloaded\"],[data-tip=\"Not Downloaded\"]))");
             return {
                 placeholder: node.hasAttribute('data-jfmod-placeholder'),
                 mark: !!mark && window.isShown(mark), button: mark?.tagName === 'BUTTON', label: mark?.getAttribute('aria-label'),
                 play: [...node.querySelectorAll('.listItemImageButton')].some(window.isShown),
-                endsAt: [...node.querySelectorAll('.endsAt')].some(window.isShown)
+                endsAt: /Ends at/.test(node.innerText)
             };
         }, rowSelector);
         const sameButtons = !!realButtons && !!stubButtons && realButtons.every(name => stubButtons.includes(name));
@@ -340,7 +340,7 @@ async function browserChecks(browser, layout, user, isAdmin, context, api) {
                 if (!node) return null;
                 return {
                     noFile: node.hasAttribute('data-jfmod-nofile') || node.hasAttribute('data-jfmod-empty'),
-                    mark: !!node.querySelector(":is(.jfmod-mark--none, .mark:is([title=\"Not Downloaded\"],[data-tip=\"Not Downloaded\"]))"),
+                    mark: !!node.querySelector(":is(.jfmod-mark--none, [data-ds-state-kind=\"not-downloaded\"], .mark:is([title=\"Not Downloaded\"],[data-tip=\"Not Downloaded\"]))"),
                     play: [...node.querySelectorAll(":is(.cardOverlayButton, .pi, .disc)[data-action=\"play\"], :is(.cardOverlayButton, .pi, .disc)[data-action=\"resume\"]")].some(window.isShown),
                     centre: [...node.querySelectorAll(":is(.jfmod-cardGet, [data-ds-action=\"get\"]):is(.cardOverlayFab-primary, .disc)")].some(window.isShown)
                 };

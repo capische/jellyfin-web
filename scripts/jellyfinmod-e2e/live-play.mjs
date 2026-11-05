@@ -22,7 +22,7 @@ for (const layout of layouts) {
         await play.waitFor({ state: 'visible', timeout: 30000 });
         await page.waitForTimeout(1500);
         if (layout.startsWith('tv')) {
-            const focused = await page.evaluate(() => document.activeElement?.classList.contains('btnPlay') ?? false);
+            const focused = await page.evaluate(() => document.activeElement?.getAttribute('data-ds-command')?.split(' ').includes('btnPlay') ?? false);
             record(label, 'TV: Play has focus on the detail page', focused);
             if (!focused) await play.focus();
             await page.keyboard.press('Enter');

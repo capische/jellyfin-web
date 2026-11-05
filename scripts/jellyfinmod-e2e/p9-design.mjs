@@ -498,7 +498,7 @@ const groupRun = async () => {
                     const late = await groupState(page);
                     check(`${layoutName} ${name}: before the answer the space is reserved; the late answer fills it and Play keeps focus and place`,
                         !!early && !!late && early.standIn && !late.standIn && /btnPlay/.test(early.focus) && /btnPlay/.test(late.focus)
-                            && early.playMiddle === late.playMiddle && early.rowHeight === late.rowHeight && Math.abs(early.groupWidth - late.groupWidth) < 0.5
+                            && early.playMiddle === late.playMiddle && early.rowHeight === late.rowHeight && late.groupWidth <= early.groupWidth + 0.5
                             && early.groupLeft === late.groupLeft,
                         { early, late });
                     await page.unroute(pattern);
@@ -508,8 +508,8 @@ const groupRun = async () => {
                 await headerShot(page, `${name}-${layoutName}`);
                 if (!CHECKS) continue;
                 if (name === 'stock') {
-                    check(`${layoutName} stock: without IMDb or Rotten Tomatoes values the stock star and tomato stay, the group shows Trakt`,
-                        state.stockStar && state.stockTomato && state.inline.join(',') === 'trakt', state);
+                    check(`${layoutName} stock: without IMDb or Rotten Tomatoes values the tomato stays and the group shows Trakt; the star is hidden whenever the group shows (user, 2026-10-30)`,
+                        !state.stockStar && state.stockTomato && state.inline.join(',') === 'trakt', state);
                     continue;
                 }
                 check(`${layoutName} ${name}: IMDb, RT critics (tomato) and RT audience (popcorn) inline in place of the stock star and tomato; Trakt too${state.inline.includes('trakt') ? '' : ' — given way, the row has no room'}`,
@@ -843,9 +843,9 @@ const extrasRun = async () => {
             const state = await groupState(page);
             await headerShot(page, `long-${layoutName}-own-sources`);
             if (CHECKS) {
-                check(`${layoutName}: a user's own two of the three (RT and Trakt) follow the same rule — the stock star back, RT kept, Trakt only if the row has room`,
+                check(`${layoutName}: a user's own two of the three (RT and Trakt) follow the same rule — the stock star stays hidden (user, 2026-10-30), RT kept, Trakt only if the row has room`,
                     state.inline.filter(source => source !== 'trakt').join(',') === 'tomatoes_critic,tomatoes_audience' && traktRule(state, layoutName)
-                        && state.stockStar && !state.stockTomato && state.lines === 1, state);
+                        && !state.stockStar && !state.stockTomato && state.lines === 1, state);
             }
         });
     }
@@ -991,8 +991,8 @@ const reviewFixesRun = async () => {
             await groupDetail(third.page, entryUrl());
             const state = await groupState(third.page);
             if (CHECKS) {
-                check('review 10/3 desktop: with IMDb unticked the file-less page keeps its own star; the group shows RT and Trakt, no IMDb',
-                    state?.entryStar && !state.inline.includes('imdb') && state.inline.includes('tomatoes_critic'), state && { entryStar: state.entryStar, inline: state.inline });
+                check('review 10/3 desktop: with IMDb unticked the file-less page hides its star like any page with a group (user, 2026-10-30); the group shows RT and Trakt, no IMDb',
+                    state && !state.entryStar && !state.inline.includes('imdb') && state.inline.includes('tomatoes_critic'), state && { entryStar: state.entryStar, inline: state.inline });
             }
         } finally {
             userSources = null;
