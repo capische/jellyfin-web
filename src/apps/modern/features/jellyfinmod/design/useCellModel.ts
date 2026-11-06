@@ -45,7 +45,7 @@ const visibleRating = (rating: Rating | null | undefined) => rating && isKnownSc
 export const useCellModel = (row: BrowseRow, options: CardOptions, alwaysShowCountdown = false) => {
     const item: ItemDto | undefined = row.kind === 'native' ? row.nativeItem : undefined;
     const entry = row.entry;
-    const { api } = useApi();
+    const { api, user } = useApi();
     const queryClient = useQueryClient();
     const played = useTogglePlayedMutation();
     const favorite = useToggleFavoriteMutation();
@@ -93,7 +93,9 @@ export const useCellModel = (row: BrowseRow, options: CardOptions, alwaysShowCou
         try {
             if (kind === 'played') await played.mutateAsync({ itemId: item.Id, isPlayed: !!item.UserData?.Played });
             else await favorite.mutateAsync({ itemId: item.Id, isFavorite: !!item.UserData?.IsFavorite });
-            await queryClient.invalidateQueries({ queryKey: options.queryKey, type: 'all', refetchType: 'active' });
+            // The caller's key and the user's own feeds the rows are drawn from (Resume, Next Up, Latest): a played episode's
+            // card gives way to its series' next one, and the icons change, at once rather than when the server's push comes.
+            await Promise.all([options.queryKey, ['User', user?.Id]].map(queryKey => queryClient.invalidateQueries({ queryKey, type: 'all', refetchType: 'active' })));
         } catch (error) { console.error(error); }
     };
     const menu = (event: MouseEvent<HTMLElement>) => {
