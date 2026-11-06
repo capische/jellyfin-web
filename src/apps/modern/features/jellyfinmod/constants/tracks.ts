@@ -107,6 +107,27 @@ const trimChars = (text: string, chars: string) => {
     return text.slice(start, end);
 };
 
+const CLOSERS = new Map([[')', '('], [']', '['], ['}', '{']]);
+
+/** `text` without brackets that lost their partner when known words were cut: "576 kbps)" → "576 kbps". */
+const dropUnmatched = (text: string) => {
+    const unmatched = new Set<number>();
+    const open: number[] = [];
+    for (let index = 0; index < text.length; index++) {
+        const char = text[index];
+        if ('([{'.includes(char)) open.push(index);
+        else if (CLOSERS.has(char)) {
+            if (open.length && text[open[open.length - 1]] === CLOSERS.get(char)) {
+                open.pop();
+            } else {
+                unmatched.add(index);
+            }
+        }
+    }
+    for (const index of open) unmatched.add(index);
+    return [...text.split('')].filter((_, index) => !unmatched.has(index)).join('').replace(/\s{2,}/g, ' ');
+};
+
 /**
  * The words a title adds to what the row shows (D81), from its start and its end only: "Дубляж Мосфильм" → "Мосфильм",
  * "Дубляж (Blu-ray CEE)" → "Blu-ray CEE", "MVO (LostFilm)" → "LostFilm"; a phrase whose first word is not a known one stays
@@ -117,12 +138,15 @@ export const trackExtraWords = (stream: MediaStream): string => {
     for (const word of CJK_KNOWN) title = title.split(word).join(' ');
     const tokens = title.split(/\s+/).filter(Boolean);
     const known = (word: string) => {
-        const bare = trimChars(word.toLowerCase(), '[](){}-_,;:/|.');
+        const bare = trimChars(word.toLowerCase(), '[](){}-_,;:/|.+');
         return bare === '' || KNOWN.has(bare) || (bare.length <= 3 && /^[a-z]+$/.test(bare) && /^\[.*\]$/.test(word));
     };
     while (tokens.length && known(tokens[0])) tokens.shift();
     // A known word after a negation stays with it: "English (not forced)" adds "not forced", not "not".
     const negated = () => tokens.length > 1 && NEGATIONS.has(trimChars(tokens[tokens.length - 2].toLowerCase(), '[](){}-_,;:/|.'));
     while (tokens.length && known(tokens[tokens.length - 1]) && !negated()) tokens.pop();
-    return trimChars(tokens.join(' '), '[](){}-–,;: ');
+    const words = trimChars(dropUnmatched(tokens.join(' ')), '-–,;:+ ');
+    // A phrase wholly in one pair of brackets loses them: "(Blu-ray CEE)" → "Blu-ray CEE".
+    const inner = words.slice(1, -1);
+    return CLOSERS.get(words[words.length - 1]) === words[0] && dropUnmatched(inner) === inner ? inner.trim() : words;
 };

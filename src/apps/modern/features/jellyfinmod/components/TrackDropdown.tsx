@@ -117,7 +117,7 @@ const TrackText: FC<{ stream: MediaStream; names: Record<string, string> | undef
         <TrackLanguage language={language} modifier={trackModifier(stream)} />
         <span className='marks'>
             {stream.Type === 'Audio' && <DesignMediaMarks parsed={streamMarks(stream)} />}
-            {format && <span className='mk tag'>{format}</span>}
+            {format && <span className='mk tag'><span>{format}</span></span>}
         </span>
         {role && <RoleMark role={role} />}
     </>;
