@@ -1,0 +1,44 @@
+/* Keep the source recipes; only the runtime geometry changes. Base 1em, as in the component guides. */
+.jfds {
+    .jfmod-cardActions {
+        width: auto;
+        height: auto;
+        margin-left: 0;
+        padding: 0.09em 0.236em;
+        transform: translateX(-50%);
+    }
+
+    /* Clip each bar against the whole poster radius, without clipping the pill's tooltips or the outer focus ring.
+       The 0.28em track is the existing approved progress thickness, not a new spacing step. */
+    .jfmod-posterCell .post > .prog {
+        top: 0;
+        height: auto;
+        overflow: hidden;
+        pointer-events: none;
+        background: none;
+        border-radius: inherit;
+
+        &::before {
+            position: absolute;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            height: 0.28em;
+            content: '';
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        > i {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 0.28em;
+        }
+    }
+
+    /* An inline span's line box can be shorter than the mark/value stack it contains. */
+    .jfmod-ratingsAnchor {
+        display: inline-flex;
+        vertical-align: middle;
+    }
+}
