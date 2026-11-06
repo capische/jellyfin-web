@@ -802,6 +802,12 @@ h2.sect2 { margin: 1.618em 0 0.618em; font-size: 1.236em; font-weight: 600; line
 &:not(html)[data-theme='light'] .barsearch:hover { background: rgba(0, 0, 0, 0.1); }
 .hero2 .barsearch, &:not(html)[data-theme='light'] .hero2 .barsearch { background: rgba(255, 255, 255, 0.09); color: rgba(255, 255, 255, 0.854); }
 &.dev-tablet .barsearch { position: static; transform: none; flex: 1 1 auto; width: auto; max-width: none; min-width: 0; margin: 0 1em; }
+/* A computer window too narrow for the centred field beside the links (under 1180 px) has it follow them, 1.618em clear, 11.09em
+   wide (its 2.618em height × φ³); on focus it grows to 29.03em at most, never over a link or an icon (the user, 2026-11-07). */
+@media (max-width: 1179px) {
+    &.dev-computer .barsearch { position: static; transform: none; flex: 0 1 11.09em; width: 11.09em; max-width: none; min-width: 0; margin: 0 1.618em; transition: flex-basis var(--d1) var(--ease), width var(--d1) var(--ease); }
+    &.dev-computer .barsearch:focus-within { flex: 1 1 29.03em; width: auto; max-width: 29.03em; }
+}
 &.dev-tablet .bar .spacer { display: none; }
 &.dev-tablet .bar .name { display: none; }
 &.layout-tv .barsearch { background: var(--paper); -webkit-backdrop-filter: none; backdrop-filter: none; color: var(--text-70); }
