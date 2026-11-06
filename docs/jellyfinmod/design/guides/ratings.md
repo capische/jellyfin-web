@@ -1,9 +1,15 @@
 # Ratings: the group, its popup and the card rating
 
+**Dropdown geometry fix (2026-11-05, user brief), built, not accepted:** `design/Ratings.tsx` uses
+`.jfmod-ratingsAnchor` (`design/cardRatings.scss`), an inline flex box enclosing the full mark/value stack. The existing
+centred popup's `top: 100%` now starts below that full box, with its `0.382em` gap (1em base, φ⁻²) and existing caret,
+for one or several marks and all layouts. Neither the group, its marks nor its popup rows carry a native `title` tooltip;
+each row retains the full source/value/votes/provenance/staleness text in `aria-label` and hidden provenance text.
+
 **dsD (2026-11-04), built, not accepted:** native and entry title pages now use `design/Ratings.tsx` source
 `rgwrap/rgroup/ritem/rmenu/rrow`, with the existing RatingIcon marks and all RatingsGroup source/scale/reserve/late-answer/focus/
 Back logic. Hidden stand-ins reserve their real maximum values; a fallback reserves the widest enabled rating, never their sum,
-and is excluded from TV focus. Stale values retain .55 opacity and provenance remains in titles and accessible hidden text.
+and is excluded from TV focus. Stale values retain .55 opacity and provenance remains in accessible labels and hidden text.
 `RatingsPreferencesPage.tsx` uses source settings cards/switches/fields with its existing save/reorder/reset/service-state hooks.
 The deleted `ratingsPreferences.scss` and title restyling do not style these surfaces. [Current CSS inventory and limits](../dsD.md).
 
@@ -78,7 +84,8 @@ scale (`8.1`, `91%`, `4.1`).
   mark, value and votes, so a single source's popup never clips its value); a row never widens it.
 - Paper `#202020`, ink `rgba(255,255,255,.87)`, `0.2em` radius, padding `0.45em 0.6em`, shadow `0 .2em .9em rgba(0,0,0,.6)`,
   `86 %` text, fixed above the page (z-index 1100), never wider or taller than the screen (scrolls inside).
-- Where a value came from and when ("via MDBList, as of …") is the row's `title` and hidden text for a screen reader.
+- Where a value came from and when ("via MDBList, as of …") is in the row's accessible label and hidden text for a screen reader,
+  without a native `title` tooltip over the dropdown.
 - **Opens** on hover on a computer, a tap on a phone, OK on a TV. **Closes** on leaving, Escape, a tap elsewhere, or Back on the
   TV (Back closes only the popup; Back with no popup leaves the page).
 
