@@ -3,7 +3,8 @@ import { createContext, type ReactNode, useCallback, useLayoutEffect, useRef, us
 import './rowMotion.scss';
 
 type Refresh = () => Promise<unknown>;
-export const RowRefreshContext = createContext<(refresh: Refresh) => Promise<void>>(async refresh => {
+/** `leaving`: the native item id an action is about to take out of the row (a card marked watched), which starts to leave at once. */
+export const RowRefreshContext = createContext<(refresh: Refresh, leaving?: string) => Promise<void>>(async refresh => {
     await refresh();
 });
 
@@ -27,12 +28,15 @@ export const useRowMotion = (children: ReactNode, ids?: string[], ready = true) 
     const failed = useRef(false);
     const mounted = useRef(false);
     const focus = useRef<{ id: string; index: number }>();
+    // Cards that started to leave on the click, and when, so the swap waits only for what is left of their fade.
+    const early = useRef(new Map<string, number>());
 
     const clear = useCallback(() => {
         clearTimeout(timer.current);
         if (!root.current) return;
         cellsIn(root.current).forEach(cell => {
             cell.classList.remove('jfmod-rowLeave', 'jfmod-rowMove', 'jfmod-rowEnter');
+            early.current.delete(cell.dataset.id!);
             cell.style.removeProperty('transform');
             cell.style.removeProperty('opacity');
         });
@@ -46,7 +50,7 @@ export const useRowMotion = (children: ReactNode, ids?: string[], ready = true) 
         };
     }, [clear]);
 
-    const refresh = useCallback(async (reload: Refresh) => {
+    const refresh = useCallback(async (reload: Refresh, leaving?: string) => {
         // First look: computer only. TV and reduced motion keep the existing instant update.
         if (!ids || !root.current?.closest('.dev-computer') || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
             await reload();
@@ -57,6 +61,12 @@ export const useRowMotion = (children: ReactNode, ids?: string[], ready = true) 
             failed.current = false;
             setSnapshot({ children: incoming.current, phase: 'waiting' });
         }
+        // The server's next row can take seconds (Next Up); the card the click takes out leaves now rather than then.
+        const cell = leaving ? cellsIn(root.current).find(value => value.dataset.id === leaving) : undefined;
+        if (cell && leaving) {
+            early.current.set(leaving, Date.now());
+            cell.classList.add('jfmod-rowLeave');
+        }
         pending.current++;
         try {
             await reload();
@@ -66,8 +76,12 @@ export const useRowMotion = (children: ReactNode, ids?: string[], ready = true) 
         } finally {
             pending.current--;
             if (mounted.current && !pending.current) {
-                if (failed.current) setSnapshot(null);
-                else setSnapshot(previous => previous && { ...previous, phase: 'ready' });
+                if (failed.current) {
+                    clear();
+                    setSnapshot(null);
+                } else {
+                    setSnapshot(previous => previous && { ...previous, phase: 'ready' });
+                }
             }
         }
     }, [ids, clear]);
@@ -79,10 +93,13 @@ export const useRowMotion = (children: ReactNode, ids?: string[], ready = true) 
             const old = cellsIn(element);
             const next = new Set(ids);
             if (old.map(cell => cell.dataset.id).join(',') === ids?.join(',')) {
+                // A card that started to leave but stays (the row still holds it) comes back.
+                clear();
                 setSnapshot(null);
                 return;
             }
             if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                clear();
                 setSnapshot(null);
                 return;
             }
@@ -90,6 +107,13 @@ export const useRowMotion = (children: ReactNode, ids?: string[], ready = true) 
             const focused = old.findIndex(cell => cell.contains(document.activeElement));
             focus.current = focused >= 0 ? { id: old[focused].dataset.id!, index: focused } : undefined;
             const leaving = old.filter(cell => !next.has(cell.dataset.id!));
+            // A card that started to leave on the click but stays comes back.
+            old.filter(cell => next.has(cell.dataset.id!)).forEach(cell => {
+                cell.classList.remove('jfmod-rowLeave');
+                early.current.delete(cell.dataset.id!);
+            });
+            const leaveFor = duration(element, '--d1', 236);
+            const started = Math.min(Date.now(), ...leaving.map(cell => early.current.get(cell.dataset.id!) ?? Date.now()));
             leaving.forEach(cell => {
                 // Chromium 79 has no inert: remove each outgoing card and its pill from keyboard navigation.
                 cell.tabIndex = -1;
@@ -101,7 +125,7 @@ export const useRowMotion = (children: ReactNode, ids?: string[], ready = true) 
             const swap = () => setSnapshot({ children: incoming.current, phase: 'move' });
             if (leaving.length) {
                 setSnapshot(previous => previous && { ...previous, phase: 'leave' });
-                timer.current = setTimeout(swap, duration(element, '--d1', 236));
+                timer.current = setTimeout(swap, Math.max(0, leaveFor - (Date.now() - started)));
             } else {
                 swap();
             }

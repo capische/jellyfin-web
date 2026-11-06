@@ -852,6 +852,9 @@ h2.sect2 { margin: 1.618em 0 0.618em; font-size: 1.236em; font-weight: 600; line
 .actbar .play:hover .g, .actbar .play.sim-hover .g { transform: scale(1.146); }
 .actbar .play:active, .actbar .play.sim-press { transform: scale(0.96); }
 .dbtn:active, .rb:active, .hmenu .pi:active, &:not(html) .btn:active { transform: scale(0.96); }
+/* The pill sits on a fractional pixel, and a press that starts and ends a transform snaps its icon 1 px aside and back (the user,
+   2026-11-07): while the pill shows, its buttons keep their own layer, so the press only scales. */
+&.dev-computer .cell:hover .hmenu .pi, &.dev-tablet .cell:hover .hmenu .pi, .cell.lit .hmenu .pi { will-change: transform; }
 .dbtn:active, .rb:active, .hmenu .pi:active, &:not(html) .btn:active, .actbar .play:active, .actbar .play.sim-press, &.dev-computer .cell .disc:active, &.dev-tablet .cell .disc:active, .cell .disc.sim-press { transition-duration: var(--d0); }
 .playerblack { position: relative; background: #000; }
 /* The spinner (D231): upstream's markup and motion, from loading.scss, one golden step smaller. Size 6.18 % of the screen height (upstream 10 %). Arc and track both 0.21em, upstream's arc. */
