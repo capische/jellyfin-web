@@ -2433,6 +2433,12 @@ of the end state and the merge are still to come.
 - **Also the same as beta:** Dashboard's Libraries and Playback groups are not reached by Down on a TV (focus goes to the user menu
   and on to Devices), and the Dashboard's plugin page logs a 404 for `/Packages/JellyfinMod` where no plugin repository is set.
 
+## D290 — row motion (2026-11-06)
+
+**Computer Continue Watching built (not accepted).** The approved leave/FLIP/enter sequence and reduced motion are the first-look
+slice; see [poster-card.md](design/guides/poster-card.md). No deployment or live user-data mutation in this worktree. Other rows,
+TV timing/key cancellation/focus handoff, the full layout matrix and physical webOS verification follow the user's first look.
+
 ## ds.t7 — the last round before the merge (2026-11-05)
 
 **Built (not accepted); all live checks run, awaiting the user's merge.** Both lines carry the same product delta (stubs on bravo,

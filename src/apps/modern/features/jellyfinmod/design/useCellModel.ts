@@ -1,7 +1,7 @@
 import type { Rating } from '../types/ratings';
 import { useInFlightMenu } from '../components/EntryCard';
 import { daysUntilReclaim, retentionDeadline } from '../constants/fileState';
-import { type MouseEvent, useState } from 'react';
+import { type MouseEvent, useContext, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getCardImageUrl } from 'components/cardbuilder/utils/url';
 import { CardShape } from 'components/cardbuilder/utils/shape';
@@ -23,6 +23,7 @@ import actionsheet from 'components/actionSheet/actionSheet';
 import { QUEUE_ROUTE } from '../constants/queue';
 import { useShownUserData } from './useShownUserData';
 import { usePlayedAction } from '../hooks/usePlayedAction';
+import { RowRefreshContext } from './useRowMotion';
 
 const cellShape = (item: ItemDto | undefined, options: CardOptions) => {
     if (item?.Type === 'Person') return 'c';
@@ -45,15 +46,24 @@ const captionOf = (item: ItemDto | undefined, title: string, year: string | numb
 
 const visibleRating = (rating: Rating | null | undefined) => rating && isKnownScale(rating.scale) ? rating : null;
 
+const savedFlag = (saved: { item: ItemDto; value: boolean } | undefined, item: ItemDto | undefined, fallback: boolean) =>
+    saved && saved.item === item ? saved.value : fallback;
+
 export const useCellModel = (row: BrowseRow, options: CardOptions, alwaysShowCountdown = false) => {
     const item: ItemDto | undefined = row.kind === 'native' ? row.nativeItem : undefined;
     const entry = row.entry;
     const { api, user } = useApi();
     const queryClient = useQueryClient();
+    const refreshRow = useContext(RowRefreshContext);
     const played = useTogglePlayedMutation();
     const runPlayed = usePlayedAction();
     const favorite = useToggleFavoriteMutation();
-    const shown = useShownUserData(item?.UserData?.Played, item?.UserData?.IsFavorite);
+    const [savedPlayed, setSavedPlayed] = useState<{ item: ItemDto; value: boolean }>();
+    const [savedFavorite, setSavedFavorite] = useState<{ item: ItemDto; value: boolean }>();
+    // A held outgoing card acknowledges the save; a new server DTO takes ownership again. Before the save answers, the click's
+    // own state shows (useShownUserData), as on the title page.
+    const shown = useShownUserData(savedFlag(savedPlayed, item, !!item?.UserData?.Played),
+        savedFlag(savedFavorite, item, !!item?.UserData?.IsFavorite));
     const empty = useCardHasNoFile(item?.Id);
     const release = useCardRelease(item?.Id, item?.Type);
     const entryGet = useEntryDownload(entry ?? undefined, !!entry);
@@ -98,13 +108,19 @@ export const useCellModel = (row: BrowseRow, options: CardOptions, alwaysShowCou
         const itemId = item.Id;
         const isPlayed = shown.played;
         const isFavorite = shown.favorite;
+        const reload = () => Promise.all([options.queryKey, ['User', user?.Id]].map(queryKey => queryClient.invalidateQueries({ queryKey, type: 'all', refetchType: 'active' }, { throwOnError: true })));
         const change = async () => {
             shown.show(kind, kind === 'played' ? !isPlayed : !isFavorite);
-            if (kind === 'played') await played.mutateAsync({ itemId, isPlayed });
-            else await favorite.mutateAsync({ itemId, isFavorite });
+            if (kind === 'played') {
+                await played.mutateAsync({ itemId, isPlayed });
+                setSavedPlayed({ item, value: !isPlayed });
+            } else {
+                await favorite.mutateAsync({ itemId, isFavorite });
+                setSavedFavorite({ item, value: !isFavorite });
+            }
             // The caller's key and the user's own feeds the rows are drawn from (Resume, Next Up, Latest): a played episode's
             // card gives way to its series' next one, and the icons change, at once rather than when the server's push comes.
-            await Promise.all([options.queryKey, ['User', user?.Id]].map(queryKey => queryClient.invalidateQueries({ queryKey, type: 'all', refetchType: 'active' })));
+            await refreshRow(reload);
         };
         try {
             if (kind === 'played') await runPlayed({ ...item, UserData: { ...item.UserData, Played: isPlayed } }, change);
