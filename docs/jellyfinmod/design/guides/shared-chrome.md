@@ -1,6 +1,8 @@
 # Shared chrome
 
-**Review fixes (2026-11-04), built, not accepted:** the legacy header is exempt from inline hiding on `/video`, leaving Back, Cast and SyncPlay under the player's existing visibility classes. TV header-tab hiding is limited to `html.jfmod-chrome.layout-tv`. The native seek thumb retains upstream's `show-focus` growth. The player integration mirrors the original `.osdTitle` empty state to `.jfmod-empty` on its container, replacing `:has()` for older Safari/webOS without changing playback.
+**The player's one bar (ds.t7, 2026-11-06), built, not accepted:** on a computer, tablet or phone the player has one top bar, upstream's video page's own (Back, then SyncPlay and Cast at the right, as the mockup draws it); its title is hidden, as the legacy header's was, because the controls carry it (`.jfmod-osdName`). The legacy header stays hidden there, as upstream hides it in the modern layout: its `/video` exemption from inline hiding drew a second bar under the first (the user's report). The TV keeps the legacy header in the player, its toolbar exempt on `/video`.
+
+**Review fixes (2026-11-04), built, not accepted:** the legacy header's toolbar is exempt from inline hiding on `/video` (the header itself only on the TV since ds.t7), leaving Back, Cast and SyncPlay under the player's existing visibility classes. TV header-tab hiding is limited to `html.jfmod-chrome.layout-tv`. The native seek thumb retains upstream's `show-focus` growth. The player integration mirrors the original `.osdTitle` empty state to `.jfmod-empty` on its container, replacing `:has()` for older Safari/webOS without changing playback.
 
 **dsF sweep (2026-11-04), built, not accepted:** dialogs are top-aligned as in the mockup (`dscrim`), not centred, so a picker does not jump when results arrive. Focus rings are for keys and the TV, not clicks. The player and Preferences own their markup: see [dsF.md](../dsF.md).
 

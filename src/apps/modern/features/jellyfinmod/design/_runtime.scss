@@ -1562,7 +1562,9 @@
     .upnext .st { min-height: 5em; }
 }
 
-.osdHeader .pageTitle { display: none; }
+/* The player's one bar is the mockup's: Back, SyncPlay and Cast. The title is in the controls (.jfmod-osdName). */
+.osdHeader .pageTitle,
+.osdHeader .videoOsd-appBar > .MuiTypography-root { display: none; }
 
 /* A real button in the mockup's icon span; phones have no hover, so a tapped disclosure must not stay lit. */
 .jfds .ib { padding: 0; }
