@@ -120,7 +120,7 @@ export const useCellModel = (row: BrowseRow, options: CardOptions, alwaysShowCou
             }
             // The caller's key and the user's own feeds the rows are drawn from (Resume, Next Up, Latest): a played episode's
             // card gives way to its series' next one, and the icons change, at once rather than when the server's push comes.
-            await refreshRow(reload);
+            await refreshRow(reload, kind === 'played' && !isPlayed ? itemId : undefined);
         };
         try {
             if (kind === 'played') await runPlayed({ ...item, UserData: { ...item.UserData, Played: isPlayed } }, change);
