@@ -20,7 +20,7 @@ closed disclosure buttons, with a decorative Material chevron rotating .382s (.1
 its setup wizard, `shell/sharedChrome.scss` draws all labelled buttons as 2.7816em pills (1.3908em corners), side padding
 1.618em, 1em Title Case labels. Main: primary/white 700, hover #19b4ea. Other: transparent/.09em neutral outline/600,
 hover 12% tint. Destroy: #c62828/white 600, hover #d84343. Disabled labelled buttons: no fill, hairline, 61.8% ink.
-Keyboard focus: .15em primary ring .15em off the pill, on `.btn`, the action pill's and the player's `.dbtn` and `.play` and a link; a round `.ib` and a card's `.disc` draw the card pill's .135em ring (ds.t7, built, not accepted). Nothing the design draws shows the browser's own ring. TV: .16em ink ring, 1.08 growth, other filled primary; destroy stays red.
+Keyboard focus: .15em primary ring .15em off the pill, on `.btn`, the action pill's and the player's `.dbtn` and `.play` and a link; a round `.ib` and a card's `.disc` draw the card pill's .135em ring (ds.t7, built, not accepted). Nothing the design draws shows the browser's own ring. A click never leaves a ring, even after a key press: on a computer the rings show only until the next pointer press (`.ds-pointer`, set on pointer down and cleared on a key; the user, 2026-11-06). TV: .16em ink ring, 1.08 growth, other filled primary; destroy stays red.
 Press .96/.146s, tint .236s; instant focus on TV and no press transform with reduced motion. Row actions retain their existing
 40px sizes and glyph state; TV uses the white double ring (.12em paper gap + .16em white = .28em outer shadow), no scaling,
 including the Video row's History/Keep/Remove. Refused actions keep their focus stop. The removal dialog's safe outcome is

@@ -67,6 +67,7 @@ scale (`8.1`, `91%`, `4.1`).
 - **Stale** values (older than the refresh window) are dimmed (`.jfmod-groupItem-stale`).
 - **TV:** one focus stop reached by Up from the buttons; first focus stays on Play. Focused: `rgba(255,255,255,.18)` fill and a
   `0.12em` `#00a4dc` outline, `0.1em` offset. Touch: `3em` minimum height.
+- **Computer focus (D282, user, 2026-11-06):** pointer clicks leave no outline, even after a key press; keyboard focus and TV keep the ring, and hover/open tint remains.
 
 ## The popup
 
