@@ -4,10 +4,10 @@ import { ItemFields } from '@jellyfin/sdk/lib/generated-client/models/item-field
 import { ItemSortBy } from '@jellyfin/sdk/lib/generated-client/models/item-sort-by';
 import { SortOrder } from '@jellyfin/sdk/lib/generated-client/models/sort-order';
 import { getLibraryApi } from '@jellyfin/sdk/lib/utils/api/library-api';
-import { useQueries, useQuery } from '@tanstack/react-query';
+import { getShowApi } from '@jellyfin/sdk/lib/utils/api/show-api';
+import { queryOptions, useQueries, useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
-import { getNextUpQuery } from 'apps/legacy/features/libraries/api/useNextUp';
 import { getResumeItemsQuery } from 'apps/legacy/features/libraries/api/useResumeItems';
 import { useApi } from 'hooks/useApi';
 import * as userSettings from 'scripts/settings/userSettings';
@@ -62,17 +62,25 @@ const nextUpCutoff = () => {
  */
 export const useContinueWatching = ({ includeResume = true, includeNextUp = true }: ContinueWatchingOptions = {}) => {
     const { api, user } = useApi();
+    const nextUpParams = {
+        userId: user?.Id, limit: 24, fields: [ItemFields.PrimaryImageAspectRatio, ItemFields.DateCreated, ItemFields.Overview],
+        imageTypeLimit: 1, enableImageTypes: IMAGE_TYPES, enableTotalRecordCount: false,
+        nextUpDateCutoff: nextUpCutoff(), enableResumable: false, enableRewatching: userSettings.enableRewatchingInNextUp()
+    };
     const queries = useQueries({ queries: [
         { ...getResumeItemsQuery(api, {
             // DateCreated is the sort's fallback for a resume point with no play date (one set by an import or the API).
             userId: user?.Id, limit: 12, fields: [ItemFields.PrimaryImageAspectRatio, ItemFields.DateCreated, ItemFields.Overview], imageTypeLimit: 1,
             enableImageTypes: IMAGE_TYPES, enableTotalRecordCount: false, mediaTypes: ['Video']
         }), enabled: !!api && !!user?.Id && includeResume },
-        { ...getNextUpQuery(api, {
-            userId: user?.Id, limit: 24, fields: [ItemFields.PrimaryImageAspectRatio, ItemFields.DateCreated, ItemFields.Overview],
-            imageTypeLimit: 1, enableImageTypes: IMAGE_TYPES, enableTotalRecordCount: false,
-            nextUpDateCutoff: nextUpCutoff(), enableResumable: false, enableRewatching: userSettings.enableRewatchingInNextUp()
-        }), enabled: !!api && !!user?.Id && includeNextUp }
+        queryOptions({
+            queryKey: ['User', user?.Id, 'NextUp', { ...nextUpParams, jfmodPlaceholders: true }],
+            // The plugin's opt-in is not in the SDK's generated request type. Keep it in the key and pass it through Axios.
+            queryFn: async ({ signal }) => (await getShowApi(api!).getNextUp(nextUpParams, {
+                signal, params: { jfmodPlaceholders: true }
+            })).data,
+            enabled: !!api && !!user?.Id && includeNextUp
+        })
     ] });
     // A feed the caller left out contributes nothing, even when another reader has its entry in the shared cache: a
     // disabled query still hands back cached data, which would put a Home section the user hid back into the row.
