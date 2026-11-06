@@ -29,7 +29,7 @@ const keptHealth = (api: Api | undefined) => lastKnown<Health>('jfmod-health:' +
 
 /**
  * The whole Health answer behind {@link usePluginCapabilities}, one shared read per server (P7.Q16 reads `traktInstalled`).
- * The last answer this browser had is drawn from at once and read again at the start (P1.FU23): every Get a Release waits
+ * The last answer this browser had is drawn from at once and read again at the start (P1.FU23): every Download waits
  * on it, and without it a page drawn before the read answered had no cloud. A failed read forgets it.
  */
 export const usePluginHealthSummary = (api: Api | undefined, enabled = true) => useQuery({

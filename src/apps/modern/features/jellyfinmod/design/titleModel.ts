@@ -42,7 +42,7 @@ const iconOf = (node: Element): IconName => {
     const cls = node.className + ' ' + (node.querySelector('.material-icons')?.className ?? '') + ' ' + (node.getAttribute('aria-label') ?? '') + ' ' + node.getAttribute('title');
     for (const [pattern, icon] of [
         ['PlayTrailer|theaters', 'theaters'], ['Playstate|played|check', 'check'], ['UserRating|favorite', 'heart'],
-        ['getRelease|Get a Release|cloud|search|Download This', 'cloud'], ['More|more|menu', 'more'], ['Shuffle|shuffle', 'shuffle'],
+        ['getRelease|Get a Release|Download|cloud|search|Download This', 'cloud'], ['More|more|menu', 'more'], ['Shuffle|shuffle', 'shuffle'],
         ['Replay|replay', 'rew'], ['Play|play', 'play'], ['remove|delete|close', 'close'], ['history', 'history'],
         ['keep|pin', 'pin'], ['bookmark', 'check'], ['Download|get_app', 'arrow']
     ] as const) if (new RegExp(pattern, 'i').test(cls)) return icon;
@@ -206,7 +206,7 @@ export const readTitle = (view: HTMLElement) => {
     const detailNodes = Array.from(host?.querySelectorAll('.detailsGroupItem') ?? []);
     const byWords: Record<string, string> = Object.fromEntries([['Director', 'Directed by'], ['Directors', 'Directed by'], ['Creator', 'Created by'], ['Creators', 'Created by']].map(([key, words]) => [globalize.translate(key), words]));
     const by = detailNodes.find(node => byWords[text(node.querySelector('.label'))]);
-    return { title, originalTitle: text(name?.querySelector('.originalTitle')), parents, meta, facts, by: inlineOf(by).slice(1), byWords: by ? byWords[text(by.querySelector('.label'))] : '', tracks: readTracks(view, host ?? null), image: imageOf(host?.querySelector('.detailImageContainer') ?? null),
+    return { downloadKind: view.dataset.jfmodDownloadState, title, originalTitle: text(name?.querySelector('.originalTitle')), parents, meta, facts, by: inlineOf(by).slice(1), byWords: by ? byWords[text(by.querySelector('.label'))] : '', tracks: readTracks(view, host ?? null), image: imageOf(host?.querySelector('.detailImageContainer') ?? null),
         overview: inlineOf(host?.querySelector('.overview')), genres: inlineOf(host?.querySelector('.itemGenres')),
         tagline: text(host?.querySelector('.tagline')),
         tags: inlineOf(host?.querySelector('.itemTags')),

@@ -1,5 +1,24 @@
 # Download block (missing episode page)
 
+**Status: approved 2026-11-06, D288–D295, built, not accepted.** Computer first look only; phone/TV specifics and full acceptance follow the user's first look. These values supersede the older presentation notes below.
+
+## Status slot (D288–D295)
+
+Base 1em. No panel for Not Downloaded or Unaired. Download occupies Play's place in the pill for an eligible user;
+nothing sits below it. Otherwise the slim line is a 1.618em glyph (φ¹), a 0.618em gap (φ⁻¹), word at 600 and rest at 70%:
+`Not Downloaded · no release chosen yet` or `Unaired · airs 19 May 2027 · in 7 months`.
+
+Queued/downloading/stalled/importing/failed retain their existing data, copy and actions in paper, max-width 46.98em (φ⁸),
+1em padding, 1.618em corners (φ¹), 1em below the pill. Ring 4.236em (φ³), 1em before the body, glyph 2.118em.
+State 1em/600 at pitch 1.618; release 0.854em mono at 61.8%, marks and pack 0.854em/0.236em apart (φ⁻³).
+Bar remains 0.28em (approved exception), 0.618em below marks; actions 1em below, 0.618em apart (TV 1em).
+View Queue precedes the state's action in reading/focus order. Ring/marks/bar are never TV stops; existing computer client links remain.
+Reading starts 1.618em later. Full-width playable track pickers are unchanged.
+
+Code: `components/DownloadBlock.tsx` publishes `data-jfmod-download-state` to its page so `design/TitlePage.tsx` can promote
+or hide the same native cloud command; the release picker and permission checks remain its owners. Styles: `design/titleTop.scss`.
+
+
 **dsD (2026-11-04), built, not accepted:** `design/DlBlock.tsx` and `components/DownloadBlock.tsx` draw source
 `dlb/dm/b/ln1/rls/mline/pack/br/act`, replacing `downloadBlock.scss`. Source values own presentation; earlier rd3/legacy skin
 measurements below are historical. State/queue projection, pack files/dots, permissions, client link, actions, removal dialog
@@ -49,7 +68,7 @@ import finishes the panel is replaced by upstream's track rows and Play appears.
 - Bar: 0.28em over `--jfmod-dlblock-track` (white 12 %; light black 14 %), the fill in the page's text colour; stalled dims
   it to 55 %; importing shows a full bar, still (no breathing anywhere since 2026-10-19: the bar and the state words do not animate).
 - Actions: *View Queue* (link, everyone), *Cancel Download* (grey, administrators), *Search Again* (red, administrators,
-  failed), *Get a Release* (blue, administrators, not downloaded); Title Case, sized like Save
+  failed), *Download* (blue, administrators, not downloaded); Title Case, sized like Save
   ([buttons-and-row-actions.md](buttons-and-row-actions.md)). *Cancel Download* opens the removal dialog for the download's state (D120, 2026-10-29); a held grab is cancelled without
   asking ([buttons-and-row-actions.md, Removing a download](buttons-and-row-actions.md#removing-a-download-one-dialog-its-buttons-the-outcomes)).
 
@@ -62,7 +81,7 @@ import finishes the panel is replaced by upstream's track rows and Play appears.
 | queued | clock | Queued waiting to start (75 %) | release, marks, pack (muted) | same |
 | importing | spinner | Importing linking into the library… | release, marks, full bar, still | View Queue |
 | failed | grey-glass bang | Failed reason (the words red) | release, marks | Search Again · View Queue |
-| not downloaded | cloud | Not Downloaded | — | Get a Release; others see "no release chosen yet" |
+| not downloaded | cloud | Not Downloaded | — | Download; others see "no release chosen yet" |
 | unaired | clock, 70 % | Unaired · airs 19 May 2027 · in 7 months | — | — |
 
 Countdown: "in N days" under 30 days, else "in N months"; the full date is always shown.

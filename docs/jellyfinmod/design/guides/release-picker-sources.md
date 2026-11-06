@@ -1,5 +1,7 @@
 # Release picker: Sources (the icon, the train, the checklist) and the searching ring's colours
 
+**Status: approved 2026-11-06, D288–D295, built, not accepted.** Release-start buttons and tips now say Download (D294); the picker's own Get a Release title and Get Another Quality remain unchanged. Sources behavior and geometry are unchanged.
+
 **Review fixes (2026-11-04), built, not accepted:** the native picker's full-width release row keeps its markup. On TV, Right explicitly moves row → Add → Replace (or row → Cancel while pending); Left reverses that path. Refused actions remain reachable for reading/confirmation. Up/Down still use upstream `focusManager` and arrive on the row. Arrow keys and directional `command` events share this path; acquisition, cancellation and replacement semantics stay unchanged.
 
 **Status:** approved 2026-10-25 (user: "Looks great, tell parent to implement", finished state F1; "yes, recolour the torrent ring
@@ -82,7 +84,7 @@ Code: `components/ReleaseSources.tsx` (`ReleaseSources`, `useTrain`), `component
 - **A new search** (another scope or profile, the picker opened again) asks only the ticked indexers (`indexerIds`, repeated);
   with every one ticked it names none, as before.
 - Remembered per browser (`localStorage` `jfmod-releaseSourcesHidden`, the unticked ids, so a new indexer starts ticked), shared
-  by Get a Release and Get Another Quality. The saved choice is read against the indexers enabled now: if it leaves none ticked
+  by Download and Get Another Quality. The saved choice is read against the indexers enabled now: if it leaves none ticked
   (the ticked ones were turned off or removed), the first is ticked again, so a search never asks a source shown unticked.
 - **Status line:** `18 releases · 6 of 7 indexers answered` (rows shown · the search's health); while rows arrive
   `12 releases so far · waiting for …` (an unticked indexer is not waited for). It names no sources count (user, 2026-10-26: "drop

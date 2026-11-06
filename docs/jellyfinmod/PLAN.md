@@ -1,5 +1,7 @@
 # JellyfinMod — implementation plan
 
+**Title top (2026-11-06, D288–D295): built (not accepted), computer first look.** Stacked φ⁸ reading/status, Download copy, missing-state pill/line/card and watched dates. No commit or deployment; server data untouched. Phone/TV specifics, full matrix and review remain after user approval. See [title pages](design/guides/title-pages.md).
+
 Task list for agents. Each task is self-contained: an agent that has read the **Briefing** below
 and its own task entry should be able to finish without asking a question.
 

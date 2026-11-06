@@ -222,7 +222,7 @@ const MissingSeasonCard: FC<SeasonCardProps> = ({ season, posterPath, episodes, 
             {layoutManager.tv ?
                 <div className={className}>{poster}</div> :
                 <a className={className} href={href} aria-label={'Season ' + season}>{poster}</a>}
-            {/* Nothing on disk: an administrator's Get a Release in the centre on hover, where Play would be (P1.FU19). */}
+            {/* Nothing on disk: an administrator's Download in the centre on hover, where Play would be (P1.FU19). */}
             {download && <CardHoverGet open={download.open} />}
             <FileStateMark state={mark.state} airDate={mark.airDate}
                 download={mark.state === 'missing' ? download : null} />
@@ -399,7 +399,7 @@ export const MissingSeasonCards: FC<SeasonCardsProps> = ({ api, userId, serverId
         const count = nativeSeasonCount(season, childCounts.get(season), detail.episodes);
         return <React.Fragment key={'native:' + season}>
             {count > 0 && <CardTextLine cover={cover} text={episodesWord(count)} />}
-            {/* No episode on disk: no Play on its hover, Get a Release in the centre for an administrator (P1.FU19). */}
+            {/* No episode on disk: no Play on its hover, Download in the centre for an administrator (P1.FU19). */}
             {mark && <>
                 <NoFileCard cover={cover} />
                 <CardMarkSlot cover={cover}>
@@ -594,7 +594,7 @@ export const MissingEpisodeRows: FC<EpisodeRowsProps> = ({ api, userId, view, de
         const episode = placeholderEpisodes.get(itemId);
         const mark = episode && episodeMark(episode);
         if (!episode || !mark) return null;
-        const download = canAcquire && mark === 'missing' ? { label: `Get a Release for Episode ${episode.episodeNumber}, ${episode.title}`,
+        const download = canAcquire && mark === 'missing' ? { label: `Download for Episode ${episode.episodeNumber}, ${episode.title}`,
             open: pickerFor({ episodeId: episode.id }) } : null;
         return createPortal(<FileStateMark state={mark} airDate={episode.airDate} variant='row' download={download} />, host,
             'placeholder:' + itemId);
@@ -602,7 +602,7 @@ export const MissingEpisodeRows: FC<EpisodeRowsProps> = ({ api, userId, view, de
         const element = elements.get(episode.id);
         if (!element) return null;
         // The row's mark is the administrator's button (P1.FU22), named for its episode; its tooltip stays *Not Downloaded*.
-        const download = canAcquire ? { label: `Get a Release for Episode ${episode.episodeNumber}, ${episode.title}`,
+        const download = canAcquire ? { label: `Download for Episode ${episode.episodeNumber}, ${episode.title}`,
             open: pickerFor({ episodeId: episode.id }) } : null;
         if (layoutManager.tv) element.setAttribute('aria-label', `${episode.episodeNumber}. ${episode.title}`);
         return createPortal(<MissingEpisodeRow episode={episode} rating={detail.entry.metadata?.episodeRatings?.[episode.tmdbId]}

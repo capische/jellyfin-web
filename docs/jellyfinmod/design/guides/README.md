@@ -1,5 +1,8 @@
 # Component design guides
 
+**Status: approved 2026-11-06, D288–D295, built, not accepted.** Computer first look only; phone/TV specifics and full acceptance follow the user's first look. These values supersede the older presentation notes below.
+
+
 One short guide per reusable piece of JellyfinMod's interface: what it is for, its anatomy, sizes, colours, states, motion,
 copy, and where it lives in the code. A guide is the **current, approved state** of a component, written so that a new
 mockup, a brief or a build can reuse the component without re-deriving it. The history (what was tried, the measurements,
@@ -21,7 +24,7 @@ The design rulebook, how the components fit together: [GUIDELINES.md](../GUIDELI
 | [media-marks.md](media-marks.md) | codec, HDR and audio marks (Dolby and DTS chips, channel tags) | the release picker, the Video / Audio / Subtitles dropdowns, the download block |
 | [track-dropdown.md](track-dropdown.md) | the track strip and the custom dropdown: one field of Video / Audio / Subtitles segments, paper lists, blue bar on the current entry; the phone mark on the phones' file (accepted 2026-10-30, Phase 12) | the detail page's strip, Predefined in the profile dialog; the phone mark also on every Plays Everywhere quality profile ([quality-profiles.md](quality-profiles.md), D180) |
 | [pending-version.md](pending-version.md) | another version on its way for a title that plays: ring, two lines, the Replace / Add flag, the admin's X | under the detail page's track strip, in its open Video list |
-| [download-block.md](download-block.md) | a missing episode's download panel | the episode page |
+| [download-block.md](download-block.md) | slim missing/unaired status or compact active download card | movie and episode title pages |
 | [quality-profiles.md](quality-profiles.md) | the Quality Profiles section rows and the Add / Edit dialog (Phase 12's Prefer, phone mark and order accepted 2026-10-30) | settings area, setup wizard |
 | [wizard-step-footer.md](wizard-step-footer.md) | the "To continue, …" line beside Continue | the setup wizard |
 | [settings-field.md](settings-field.md) | a settings field's label, the required asterisk and the help line | settings area, setup wizard, settings dialogs |
@@ -29,7 +32,7 @@ The design rulebook, how the components fit together: [GUIDELINES.md](../GUIDELI
 | [indexer-colour.md](indexer-colour.md) | each indexer's fixed colour: the eight-hue palette and how it is given | the picker's Sources and searching ring, the settings indexer rows |
 | [tabs.md](tabs.md) | the tab control: a field-high outlined rail whose selected tab has a soft blue thumb (D273) | the player's Subtitle Appearance panel and the Preferences Subtitles page (Primary, Secondary) |
 | [info-tip.md](info-tip.md) | the (i) that explains a short state: tooltip on a computer, popover on a click, the TV and the phone | the picker's Sources checklist (an indexer's failure); the Queue page's state discs on the phone |
-| [release-picker-sources.md](release-picker-sources.md) | the picker's Sources icon, its dot and train, the checklist, and the searching ring's indexer colours | the release picker (Get a Release, Get Another Quality) |
+| [release-picker-sources.md](release-picker-sources.md) | the picker's Sources icon, its dot and train, the checklist, and the searching ring's indexer colours | the release picker (Download, Get Another Quality) |
 | [ratings.md](ratings.md) | the ratings group in the first metadata row, its popup, the card rating and Refresh Ratings (accepted 2026-10-30) | the movie and series detail pages, Movies and TV cards, the settings area's Ratings section |
 | [search-card.md](search-card.md) | the search grid's card: seamless cells padded 1em, lit paper on hover and TV focus, the + shown on hover as a library poster's Play or cloud, the three-line caption, full matches with 100 or more votes first by date, the rest by votes (D253); the same cell with a two-line caption in the browse pages' rows (approved 2026-11-01, D200–D203; first look approved D232; built, not accepted) | the search page, the browse pages of a TMDB title |
 | [trakt-direction-mark.md](trakt-direction-mark.md) | the Trakt disc with the direction: up sent to Trakt, down brought from it, pending dashed, failed red (accepted 2026-10-31) | Settings › Trakt's Activity rows |

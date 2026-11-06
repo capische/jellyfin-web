@@ -101,7 +101,7 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
     const canAcquire = capabilities.includes(RELEASES_CAPABILITY);
     const [busy, setBusy] = useState(false);
     // A file-less movie is the page the 2026-10-07 design fix redraws: a header icon and a More menu in upstream's header
-    // row, and one raised Get a release where the track block would be. A file-less series keeps its rows.
+    // row, and one raised Download where the track block would be. A file-less series keeps its rows.
     const isMovie = entry.mediaType === 'movie';
     const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
 
@@ -146,13 +146,13 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
     // once (P1.FU9), sharing the request with a picker opened meanwhile, then refetches. A failure keeps the list.
     useEpisodeListLoad(api, { ...detail, entry, episodeListLoaded: listLoaded }, reload);
     const searchReleases = useCallback((event: MouseEvent<HTMLButtonElement>) => openPicker(event.currentTarget), [openPicker]);
-    // Design step 1 and the user's decision of 2026-10-07 for this page: Get a release and More in upstream's header row.
-    useStockHeaderButton(view, { enabled: canAcquire, icon: 'cloud_download', title: 'Get a Release',
+    // Design step 1 and the user's decision of 2026-10-07 for this page: Download and More in upstream's header row.
+    useStockHeaderButton(view, { enabled: canAcquire, icon: 'cloud_download', title: 'Download',
         className: 'jfmod-getRelease', onClick: openPicker, before: ['jfmod-entryMore'] });
     useStockHeaderButton(view, { enabled: isAdmin, icon: 'more_vert', title: 'More', className: 'jfmod-entryMore',
         onClick: setMenuAnchor });
     const closeMenu = useCallback(() => setMenuAnchor(null), []);
-    // Declared after the header buttons' hooks, so their inserts exist when this runs (Get a release leads on the TV).
+    // Declared after the header buttons' hooks, so their inserts exist when this runs (Download leads on the TV).
     // On the TV layout the stock detail page focuses its first action; this page mounts its actions itself, so it does
     // the same once they exist (the release action appears when the capabilities arrive), unless focus is already set.
     // On TV the page places focus on its first action, and moves it forward when a new first action arrives (Search

@@ -16,6 +16,18 @@ the show's next episode at the front, otherwise the replacement slot. TV current
 Reference: workspace `reviews/design-system/guides/card-motion.md`, `ds6.js`/`ds6.css`, page `card-motion` (D290 supersedes its
 proposal status). Physical webOS performance and the remaining layouts await acceptance.
 
+**Status: approved 2026-11-06, D288–D295, built, not accepted.** Computer first look only; phone/TV specifics and full acceptance follow the user's first look. These values supersede the older presentation notes below.
+
+## Watched date and Download (D288–D295)
+
+The foot pill's cloud action/tip is **Download**; **Get Another Quality** is unchanged. On a computer its played check
+shows the [shared design tip](info-tip.md), `data-tip` and matching `aria-label`, never native `title`:
+`Watched <medium locale date>`, adding ` · N times` from 2 plays. Read the item's own `UserData.LastPlayedDate` and
+`PlayCount`; no date says Watched, unplayed says Mark Played. No inferred date from a series' episodes.
+Geometry, D281 confirmation and row refresh remain unchanged. Phone/TV cards add no date display or interaction.
+Code: `design/Cell.tsx`, `design/TitlePage.tsx`, `utils/watched.ts`, `integration/watchedHint.ts`.
+
+
 **Status — D281, approved by the user, 2026-11-06; implemented, live acceptance pending:** the Played pill asks before
 changing a Series or Season, including the title page's season posters. Episodes and movies still toggle immediately.
 Confirmation awaits the mutation for the item and direction captured at activation, preserving the row invalidation below;
@@ -70,7 +82,7 @@ Base unit 1em (computer 14.88 px, phone 14.4 px, TV 20 px). φ steps named; exce
 | Dim | black 23.6 % (φ⁻³), on the overlay's fill, with the ring. The overlay's own opacity stays 1: a parent fading its opacity cuts a child's blur off from the poster |
 | Disc | 3.236em (2φ, 48 px at a computer), card glass, glyph 2em; hidden at rest, so a grid pays for no blur until hovered |
 | Disc under the pointer | scale 1.146 (55 px), fill white 85.4 % with a `#101010` glyph, light theme `rgba(16,16,16,.854)` with a white glyph; 0.236 s; press scale 1.09 on 0.146 s; no ring; pointer cursor |
-| Foot pill | Watched, Favourite, Get a Release, More; card glass, hugs its buttons, centred 0.382em above the foot, radius 1.618em, padding 0.236em on every side (even, the user 2026-11-07; was 0.09em by 0.236em); buttons 2em round, glyph 1.236em, hover tint white 23.6 %, light black 14.6 % |
+| Foot pill | Watched, Favourite, Download, More; card glass, hugs its buttons, centred 0.382em above the foot, radius 1.618em, padding 0.236em on every side (even, the user 2026-11-07; was 0.09em by 0.236em); buttons 2em round, glyph 1.236em, hover tint white 23.6 %, light black 14.6 % |
 | Phone | no hover, no ring, no overlay buttons: a tap opens the title |
 | TV | the ring at 0.236em, solid disc (black 66 %) from `::after`, both instant; press 0.96 at once; no pill, no dim, no blur |
 | Missing art | keeps the ratio box and upstream's fallback icon |
@@ -94,7 +106,7 @@ settings for that view: 2:3 shape, title and year always on, no card layout.
 
 **The ring needs room:** the ring is drawn outside the poster, so a card must not contain paint. `cardDesign.scss` takes `paint` out of upstream's `.card:not(.show-animation)` containment; with it, a row's cards lose the ring's left side (the user's report, 2026-11-04).
 
-**Marks are no controls (ds.t6, built, not accepted):** a download disc that opens nothing and the Not Downloaded mark keep the default arrow on a card whose click opens its page. The title pages' season cards draw the same four-button pill as the grid: Get a Release sits in the pill and on the disc, as the mockup draws it.
+**Marks are no controls (ds.t6, built, not accepted):** a download disc that opens nothing and the Not Downloaded mark keep the default arrow on a card whose click opens its page. The title pages' season cards draw the same four-button pill as the grid: Download sits in the pill and on the disc, as the mockup draws it.
 
 **Icon sizes:** the foot pill's glyphs are 1.236em (18.4 px on a computer) in 2em buttons, the disc's 2em. Each rule also sets `font-size: 1em` on the svg, because MUI's SvgIcon sets 1.5rem and an em width would count from that (the user's report, 2026-11-04).
 

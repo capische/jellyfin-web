@@ -20,7 +20,7 @@ export const isTopDialog = (host: HTMLElement) => {
     return opened[opened.length - 1] === host;
 };
 
-/** Back to the dialog's opener. It can go while the dialog is open (a grab replaces Get a Release): the TV's D-pad must not fall to the top bar. */
+/** Back to the dialog's opener. It can go while the dialog is open (a grab replaces Download): the TV's D-pad must not fall to the top bar. */
 export const returnFocus = (opener: HTMLElement | null) => {
     if (opener?.isConnected) {
         focusManager.focus(opener);

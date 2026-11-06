@@ -23,7 +23,7 @@ export interface StockHeaderButtonOptions {
     className: string;
     onClick: (button: HTMLButtonElement) => void;
     /**
-     * Mod header buttons that must come after this one, so the order never depends on which arrives first (Get a release
+     * Mod header buttons that must come after this one, so the order never depends on which arrives first (Download
      * waits for the plugin's capabilities and still leads the file-less page's More).
      */
     before?: string[];

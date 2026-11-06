@@ -18,12 +18,12 @@ import { formatSize, qualityText } from './ReleaseRowParts';
 
 import { DownloadMark } from '../design/StateMark';
 import { DesignMediaMarks } from '../design/MediaMarks';
-import { Icon } from '../design/Icon';
+import { Cloud, Clock, Icon } from '../design/Icon';
 import { DlBlock } from '../design/DlBlock';
 
 /**
  * The download block of a missing episode's page (P1.FU20, user-approved design 2026-10-13, `design/missing-episode-page-
- * download-block.html`): one panel where a downloaded episode's page has its Video / Audio / Subtitle selectors. The 4em ring
+ * download-block.html`): one panel where a downloaded episode's page has its Video / Audio / Subtitle selectors. The 4.236em ring
  * (the percent inside while it downloads or stalls), the state and its figures, the release name, its marks, size and indexer,
  * Open in the client for administrators, a pack's line with one dot per episode, a bar, and the actions. The still above carries
  * no mark: this block says it (user, 2026-10-13: "too much information"). Once the file is imported the page becomes Jellyfin's.
@@ -41,7 +41,7 @@ interface DownloadBlockProps {
     entryId: string;
     episode: DownloadTarget;
     isAdmin: boolean;
-    /** An administrator on a plugin that searches releases: Get a Release and Search Again open the picker. */
+    /** An administrator on a plugin that searches releases: Download and Search Again open the picker. */
     canAcquire: boolean;
     onGetRelease: (opener: HTMLElement) => void;
     /** The queue says the episode's import is over, or a download was removed: the page reads its entry again. */
@@ -105,11 +105,11 @@ const downloadFigure = (view: QueueRow | undefined, progress: DownloadProgress):
 };
 
 /** The figures of an episode with nothing on its way: unaired with its date and countdown, or not downloaded. */
-const restingFigure = (kind: BlockKind, episode: DownloadTarget, quietNone: boolean): Figure => {
+const restingFigure = (kind: BlockKind, episode: DownloadTarget): Figure => {
     if (kind === 'unaired' && episode.airDate) {
         return { tone: 'muted', text: ['airs ' + airDateLong(episode.airDate), countdown(episode.airDate)].filter(Boolean).join(' · ') };
     }
-    return quietNone ? null : { tone: 'muted', text: 'no release chosen yet' };
+    return { tone: 'muted', text: 'no release chosen yet' };
 };
 
 const WORD: Record<BlockKind, string> = {
@@ -237,7 +237,7 @@ interface ActionsProps {
     onGetRelease: (event: MouseEvent<HTMLButtonElement>) => void;
 }
 
-/** View Queue for everyone who may read the queue; Cancel Download, Search Again and Get a Release for administrators. */
+/** View Queue for everyone who may read the queue; Cancel Download and Search Again for administrators. */
 const Actions: FC<ActionsProps> = ({ state, isAdmin, canAcquire, removing, onCancel, onGetRelease }) => {
     const { kind } = state;
     const queueVisible = useQueueVisible();
@@ -245,18 +245,14 @@ const Actions: FC<ActionsProps> = ({ state, isAdmin, canAcquire, removing, onCan
     const search = kind === 'failed' && canAcquire;
     // A grab being sent to the client can be neither cancelled nor removed until it answers (P4.FU10).
     const cancel = isAdmin && !!state.row && isCancellable(kind) && state.row.importState !== 'submitting';
-    const get = kind === 'none' && canAcquire;
-    if (!queue && !search && !cancel && !get) return null;
+    if (!queue && !search && !cancel) return null;
     return <div className='act'>
+        {queue && <a className='lnk focusable' href={'#' + QUEUE_ROUTE}>View Queue</a>}
         {search && <button type='button' className='btn destroy focusable' onClick={onGetRelease}>
             Search Again
         </button>}
-        {queue && <a className='lnk focusable' href={'#' + QUEUE_ROUTE}>View Queue</a>}
         {cancel && <button type='button' className='btn focusable' disabled={removing} onClick={onCancel}>
             <span>Cancel Download</span>
-        </button>}
-        {get && <button type='button' className='btn main focusable' onClick={onGetRelease}>
-            Get a Release
         </button>}
     </div>;
 };
@@ -290,6 +286,14 @@ const DownloadBlock: FC<DownloadBlockProps & { anchor: Element | null }> = ({ an
     if (view && view.state !== 'unknown') last.current = view;
     const [removing, setRemoving] = useState(false);
     const state = blockState(row, view, last.current, live, episode);
+    const page = anchor?.closest<HTMLElement>('.page');
+    useLayoutEffect(() => {
+        if (!page) return;
+        page.dataset.jfmodDownloadState = state.kind;
+        return () => {
+            delete page.dataset.jfmodDownloadState;
+        };
+    }, [page, state.kind]);
     const working = isWorking(state.kind) && !!state.row;
     useEffect(() => {
         if (working) setLive(true);
@@ -320,12 +324,18 @@ const DownloadBlock: FC<DownloadBlockProps & { anchor: Element | null }> = ({ an
     }, [api, removing, row]);
     const getRelease = useCallback((event: MouseEvent<HTMLButtonElement>) => onGetRelease(event.currentTarget), [onGetRelease]);
 
-    if (!slot) return null;
+    if (!slot || state.kind === 'none' && canAcquire) return null;
     const { kind, progress } = state;
     const shownView = state.row ? view : undefined;
-    const figure = progress ? downloadFigure(shownView, progress) : restingFigure(kind, episode, isAdmin && canAcquire);
+    const figure = progress ? downloadFigure(shownView, progress) : restingFigure(kind, episode);
     const bar = kind === 'downloading' || kind === 'stalled' || kind === 'importing';
     const filled = kind === 'importing' ? 100 : progress?.percent ?? 0;
+    if (kind === 'none' || kind === 'unaired') {
+        return createPortal(<div className='jfmod-titleStatusLine' data-jfmod-state={kind}>
+            <span className='jfmod-statusGlyph'>{kind === 'unaired' ? <Clock /> : <Cloud />}</span>
+            <b>{WORD[kind]}</b>{figure && <span className='jfmod-statusRest'>· {figure.text}</span>}
+        </div>, slot);
+    }
     return createPortal(<DlBlock kind={kind} mark={<BlockIcon state={state} />}
         state={<StateLine kind={kind} figure={figure} />}
         release={<ReleaseLines state={state} episodeId={episode.id} isAdmin={isAdmin} />}

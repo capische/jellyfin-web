@@ -141,7 +141,7 @@ export const DetailsLine: FC<{ label: string; names: string[] }> = ({ label, nam
  * upstream's page for a downloaded episode: the series and "Season N - M. Title" as the header, the meta line with the series'
  * certification, TMDB's still as the image (plain, as a downloaded episode's), the download block where the track selectors sit
  * (P1.FU20), the series' genres, the overview, the director and writer lines, Cast & Crew (the series' regulars, then the crew)
- * and Guest Stars. Administrators get Get a Release for the episode in the header. Once the episode is in the library the page
+ * and Guest Stars. Administrators get Download for the episode in the header. Once the episode is in the library the page
  * becomes Jellyfin's own.
  */
 const EntryEpisodeDetails: FC<EntryEpisodeDetailsProps> = ({ api, userId, serverId, detail: initial, season, episodeNumber, view,
@@ -170,7 +170,7 @@ const EntryEpisodeDetails: FC<EntryEpisodeDetailsProps> = ({ api, userId, server
             episodeId: episode?.id, episodePage: true, episodeListLoaded: detail.episodeListLoaded, onChanged: reload
         }).then(() => restoreFocusTo(opener), () => restoreFocusTo(opener));
     }, [api, detail.episodeListLoaded, detail.episodes, entry.id, entry.mediaType, entry.title, episode?.id, reload]);
-    useStockHeaderButton(view, { enabled: canAcquire && !!episode, icon: 'cloud_download', title: 'Get a Release',
+    useStockHeaderButton(view, { enabled: canAcquire && !!episode, icon: 'cloud_download', title: 'Download',
         className: 'jfmod-getRelease', onClick: openPicker });
     // The header links go to Jellyfin's own series and season pages where it has them, else to the mod's.
     const seasons = useQuery({

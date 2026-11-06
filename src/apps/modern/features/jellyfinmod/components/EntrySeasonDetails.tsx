@@ -34,7 +34,7 @@ interface EntrySeasonDetailsProps {
 /**
  * The mod's page for a season Jellyfin has no item for (`#/details?entryId=…&season=N`, P1.FU11): the series' name and the
  * season in upstream's header, and the season's episodes as the same mod rows the native season page shows, in upstream's
- * own episode list. Administrators also get Get a Release for the season in the header, as on a native season page.
+ * own episode list. Administrators also get Download for the season in the header, as on a native season page.
  */
 const EntrySeasonDetails: FC<EntrySeasonDetailsProps> = ({ api, userId, serverId, detail: initial, season, view, isAdmin, signal, focusOwnership, update }) => {
     const [detail, setDetail] = useState(initial);
@@ -59,7 +59,7 @@ const EntrySeasonDetails: FC<EntrySeasonDetailsProps> = ({ api, userId, serverId
         }).then(() => restoreFocusTo(opener), () => restoreFocusTo(opener));
     }, [api, detail, reload, season]);
     useStockHeaderButton(view, { enabled: canAcquire && capabilities.includes(PACKS_CAPABILITY), icon: 'cloud_download',
-        title: 'Get a Release', className: 'jfmod-getRelease', onClick: openPicker, before: ['jfmod-seasonTotal'] });
+        title: 'Download', className: 'jfmod-getRelease', onClick: openPicker, before: ['jfmod-seasonTotal'] });
     // Once Jellyfin holds the season (its placeholders written while the page is open, P1.FU27), Jellyfin's season page opens,
     // as the route opens it for a season Jellyfin had already: its series is the entry's item, or its placeholders' series.
     const live = useLiveEntryDetail(api, initial);
@@ -82,7 +82,7 @@ const EntrySeasonDetails: FC<EntrySeasonDetailsProps> = ({ api, userId, serverId
             list.classList.remove('vertical-list');
         };
     }, [view]);
-    // On the TV the page places focus on its first action while it owns focus, as the file-less page does: Get a Release, else
+    // On the TV the page places focus on its first action while it owns focus, as the file-less page does: Download, else
     // the first episode row (a focus stop since P1.FU15).
     useEffect(() => {
         if (!layoutManager.tv || !focusOwnership) return;

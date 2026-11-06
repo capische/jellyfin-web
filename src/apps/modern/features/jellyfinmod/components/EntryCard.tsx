@@ -80,7 +80,7 @@ const NativeEntryCard: FC<EntryCardProps & { nativeItem: ItemDto }> = ({ entry, 
     const { className, dataAttributes } = getCardWrapperProps();
     const entryClassName = className + ' jfmod-entryCard';
     // Nothing on disk (a reclaimed title's kept item, or the title's placeholder item, P1.FU26, downloading or not): no Play on
-    // its hover, Get a Release in the centre (P1.FU19).
+    // its hover, Download in the centre (P1.FU19).
     const isPlaceholder = !!entry.placeholderItemId && entry.placeholderItemId.replace(/-/g, '').toLowerCase() === nativeItem.Id?.replace(/-/g, '').toLowerCase();
     const noFile = isPlaceholder || entry.state === FileState.None || entry.state === FileState.Reclaimed ? { 'data-jfmod-nofile': '' } : undefined;
     const content = <>
@@ -136,7 +136,7 @@ const FilelessEntryCard: FC<EntryCardProps> = ({ entry, cardOptions, retention, 
         if (!pending) window.location.hash = '#' + path;
     }, [path, pending]);
     const menu = useInFlightMenu(entry, pending);
-    // Nothing on disk: an administrator's Get a Release in the centre on hover, as on upstream's cards (P1.FU19).
+    // Nothing on disk: an administrator's Download in the centre on hover, as on upstream's cards (P1.FU19).
     const get = useEntryDownload(entry, !pending);
     const content = (
         <div className={'cardBox ' + (cardOptions.cardLayout ? 'visualCardBox' : 'cardBox-bottompadded')}>

@@ -1,5 +1,6 @@
 import React, { type FC, useContext, useLayoutEffect, useState } from 'react';
 import type { BaseItemDto } from '@jellyfin/sdk/lib/generated-client/models/base-item-dto';
+import { watchedLabel } from '../utils/watched';
 import itemHelper from 'components/itemHelper';
 import ItemsContainer from 'elements/emby-itemscontainer/ItemsContainer';
 import { setCardData } from 'components/cardbuilder/cardBuilder';
@@ -96,7 +97,7 @@ const HeroBody: FC<Props> = ({ item, backdrop, overview, details, onPlay, error 
             <ItemsContainer isPlain className='actbar glassy focuscontainer-x'>
                 <Action icon='play' label='Play' title='Play' onClick={onPlay} />
                 {device !== 'phone' && <a className='txt focusable' href={details}>More Info</a>}
-                {itemHelper.canMarkPlayed(item) && <Action icon='check' title={shown.played ? 'Watched' : 'Mark Played'} pressed={shown.played}
+                {itemHelper.canMarkPlayed(item) && <Action icon='check' title={watchedLabel({ ...item.UserData, Played: shown.played })} pressed={shown.played}
                     onClick={() => { void toggle('played'); }} />}
                 {itemHelper.canRate(item) && <Action icon='heart' title={shown.favorite ? 'Favorite' : 'Add to Favorites'} pressed={shown.favorite}
                     onClick={() => { void toggle('favorite'); }} />}

@@ -1,6 +1,7 @@
 import React, { type FC, type PropsWithChildren, useLayoutEffect, useState, createContext, useRef } from 'react';
 import './design.scss';
 import './cardRatings.scss';
+import './titleTop.scss';
 
 export type Device = 'computer' | 'tablet' | 'phone' | 'tv';
 

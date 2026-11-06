@@ -1,5 +1,31 @@
 # Title pages and art ground
 
+**Status: approved 2026-11-06, D288–D295, built, not accepted.** Computer first look only; phone/TV specifics and full acceptance follow the user's first look. These values supersede the older presentation notes below.
+
+## Title head (D288–D295)
+
+Base 1em (computer 14.88 px). The head remains stacked, never split. Top/bottom padding 1.618em (φ¹), poster 27.6%,
+0.618em corners (φ⁻¹), poster/column gap 1.618em (φ¹). Title 2.618em/600 at pitch 1.236; Directed by 1em (φ⁰), its
+label 85.4%, 0.382em below the title and 0.382em before meta items, spaced 1em. Meta to pill 1.618em.
+
+Status and reading each stop at 46.98em (φ⁸); file track pickers retain the full column. Pill to status 1em; status (or pill
+when absent) to reading 1.618em. Tagline 1em/600 at pitch 1.618; 0.382em to overview, 1em at pitch 1.618. Facts 1em
+below, 0.854em at pitch 1.618, 0.382em apart, labels 61.8%, names 600. Tags clamp at 3 lines. Links 0.854em, 0.618em
+below facts; keep only sources without ratings (D276), none on TV.
+
+For a title with no file and no active download, Download is the blue `.play.mainb` with the cloud glyph, first in the pill,
+and the status slot is empty. A user without download permission sees the slim Not Downloaded line; Unaired shows its date
+line and no Download. Active states retain the compact paper card ([download block](download-block.md)).
+
+A played title with a valid `UserData.LastPlayedDate` ends its metadata with a blue 1.236em check, 0.236em before
+`Watched <medium locale date>` at 85.4%. The user's build brief includes ` · N times` from `PlayCount >= 2` on this line
+and the computer tip. No date adds no metadata; the button still says Watched. Unplayed keeps Mark Played.
+
+Focus: Download (or first pill icon), right through the pill; ratings above; View Queue then the state action below,
+then facts' linked names and Cast & Crew. Status line, ring, marks, pack and bar are not TV stops. Series/Season Played
+confirmation (D281) is retained. Code: `design/TitlePage.tsx`, `Head.tsx`, `titleTop.scss`, `components/DownloadBlock.tsx`.
+
+
 **Status — D281, approved by the user, 2026-11-06; implemented, live acceptance pending:** the Series/Season header's
 Played button and title-page poster pill ask through the [shared confirm](shared-chrome.md) before awaiting an explicit
 mutation for the captured item and direction. The same guard covers an episode row's Played action (immediate for an Episode).
@@ -31,7 +57,7 @@ no card paint containment is introduced. Lists and histories scroll to their fin
 
 Actions dispatch the existing controller handlers. Play reads the same original source/audio/subtitle selects and resume mode;
 card Play forwards the original shortcut command. Played awaits its captured mutation; Favourite still clicks its existing custom control. More carries the
-real painted opener and retains mod registrations, deletion warnings/return and permissions. Get a Release uses the same picker.
+real painted opener and retains mod registrations, deletion warnings/return and permissions. Download uses the same picker.
 The existing playback black screen and spinner clean up on every success/error/cancel/rejection/navigation path.
 
 Original titles, taglines, metadata/tag/external links, series air time and secondary facts remain. Native extra card sections keep
