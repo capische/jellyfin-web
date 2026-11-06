@@ -856,8 +856,6 @@ h2.sect2 { margin: 1.618em 0 0.618em; font-size: 1.236em; font-weight: 600; line
    2026-11-07): while the pill shows, its buttons keep their own layer, so the press only scales. */
 &.dev-computer .cell:hover .hmenu .pi, &.dev-tablet .cell:hover .hmenu .pi, .cell.lit .hmenu .pi { will-change: transform; }
 .dbtn:active, .rb:active, .hmenu .pi:active, &:not(html) .btn:active, .actbar .play:active, .actbar .play.sim-press, &.dev-computer .cell .disc:active, &.dev-tablet .cell .disc:active, .cell .disc.sim-press { transition-duration: var(--d0); }
-/* A click is quicker than the press's 0.146 s, so the pill's press goes down at once and eases back on release: it always shows. */
-.hmenu .pi:active { transition-duration: 0s; }
 .playerblack { position: relative; background: #000; }
 /* The spinner (D231): upstream's markup and motion, from loading.scss, one golden step smaller. Size 6.18 % of the screen height (upstream 10 %). Arc and track both 0.21em, upstream's arc. */
 & { --spin-arc: #fff; --spin-track: rgba(255, 255, 255, 0.3); }
