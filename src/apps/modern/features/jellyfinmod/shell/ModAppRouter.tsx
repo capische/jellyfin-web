@@ -163,8 +163,9 @@ export default function ModAppRouter() {
  *
  * `AppHeader` renders the legacy `.skinHeader`, `.mainDrawer` and `.mainDrawerHandle` elements, which must exist
  * in the DOM in every layout because legacy views address them directly; `isHidden` only sets `display: none`.
- * The mod shell owns navigation outside playback. On `/video`, upstream's player controls the legacy header's
- * visibility through classes, so neither wrapper nor toolbar may be hidden with inline display styles.
+ * The mod shell owns navigation outside playback. On `/video` in the legacy layouts (the TV), upstream's player shows
+ * and hides the legacy header through classes, so its toolbar is not hidden there. The modern layout hides the legacy
+ * header everywhere, as upstream does: its video page draws a bar of its own, and showing both doubled the player's bar.
  */
 function ModRootLayout() {
     const location = useLocation();
@@ -179,7 +180,7 @@ function ModRootLayout() {
         >
             <Backdrop />
             <AppHeader
-                isHidden={location.pathname !== '/video' && (layoutManager.modern || isNewLayoutPath || location.pathname === '/login')}
+                isHidden={layoutManager.modern || isNewLayoutPath || location.pathname === '/login'}
                 isToolbarHidden={location.pathname !== '/video' && !PUBLIC_PATHS.includes(location.pathname) && !location.pathname.startsWith('/catalog/settings')
                     && !(location.pathname === '/home' && !location.search.includes('tab=1'))}
             />
