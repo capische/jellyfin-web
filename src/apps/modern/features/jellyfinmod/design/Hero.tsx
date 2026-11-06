@@ -13,6 +13,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import NativeRatingsLine from '../components/NativeRatingsLine';
 import { Root, DesignContext, readEnvironment } from './Root';
 import { Action } from './Action';
+import { useShownUserData } from './useShownUserData';
 import { usePlayedAction } from '../hooks/usePlayedAction';
 
 interface Props {
@@ -45,6 +46,7 @@ const HeroBody: FC<Props> = ({ item, backdrop, overview, details, onPlay, error 
     const played = useTogglePlayedMutation();
     const runPlayed = usePlayedAction();
     const favorite = useToggleFavoriteMutation();
+    const shown = useShownUserData(item.UserData?.Played, item.UserData?.IsFavorite);
     const [height, setHeight] = useState(heroHeight);
     useLayoutEffect(() => {
         const resize = () => setHeight(heroHeight());
@@ -56,17 +58,22 @@ const HeroBody: FC<Props> = ({ item, backdrop, overview, details, onPlay, error 
     const toggle = async (kind: 'played' | 'favorite') => {
         if (!item.Id) return;
         const itemId = item.Id;
-        const isPlayed = !!item.UserData?.Played;
+        const isPlayed = shown.played;
+        const isFavorite = shown.favorite;
         const change = async () => {
+            shown.show(kind, kind === 'played' ? !isPlayed : !isFavorite);
             if (kind === 'played') await played.mutateAsync({ itemId, isPlayed });
-            else await favorite.mutateAsync({ itemId, isFavorite: !!item.UserData?.IsFavorite });
+            else await favorite.mutateAsync({ itemId, isFavorite });
             await queryClient.invalidateQueries({ queryKey: ['JellyfinMod', api?.basePath, user?.Id] });
             await queryClient.invalidateQueries({ queryKey: ['User', user?.Id] });
         };
         try {
-            if (kind === 'played') await runPlayed(item, change);
+            if (kind === 'played') await runPlayed({ ...item, UserData: { ...item.UserData, Played: isPlayed } }, change);
             else await change();
-        } catch (failure) { console.error(failure); }
+        } catch (failure) {
+            shown.reset();
+            console.error(failure);
+        }
     };
     const data = getDataAttributes({ action: ItemAction.Menu, itemId: item.Id, itemServerId: serverId, itemType: item.Type,
         itemMediaType: item.MediaType, itemIsFolder: item.IsFolder, itemUserData: item.UserData });
@@ -89,9 +96,9 @@ const HeroBody: FC<Props> = ({ item, backdrop, overview, details, onPlay, error 
             <ItemsContainer isPlain className='actbar glassy focuscontainer-x'>
                 <Action icon='play' label='Play' title='Play' onClick={onPlay} />
                 {device !== 'phone' && <a className='txt focusable' href={details}>More Info</a>}
-                {itemHelper.canMarkPlayed(item) && <Action icon='check' title={item.UserData?.Played ? 'Watched' : 'Mark Played'}
+                {itemHelper.canMarkPlayed(item) && <Action icon='check' title={shown.played ? 'Watched' : 'Mark Played'} pressed={shown.played}
                     onClick={() => { void toggle('played'); }} />}
-                {itemHelper.canRate(item) && <Action icon='heart' title={item.UserData?.IsFavorite ? 'Favorite' : 'Add to Favorites'}
+                {itemHelper.canRate(item) && <Action icon='heart' title={shown.favorite ? 'Favorite' : 'Add to Favorites'} pressed={shown.favorite}
                     onClick={() => { void toggle('favorite'); }} />}
                 <span {...data} className='itemAction' data-action={ItemAction.Menu}><Action icon='more' title='More' onClick={() => undefined} /></span>
             </ItemsContainer>

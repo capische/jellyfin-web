@@ -57,12 +57,12 @@ const CellMarks: FC<{ model: CellModel }> = ({ model }) => {
 const CellMenu: FC<{ model: CellModel }> = ({ model }) => {
     const tv = useContext(DesignContext) === 'tv';
     const controlClass = 'pi' + (tv ? '' : ' focusable');
-    const { item, entry, pending, get, download, toggle, menu, releaseLabel } = model;
+    const { item, entry, pending, get, download, toggle, menu, releaseLabel, isPlayed, isFavorite } = model;
     return <span className='hmenu glassy jfmod-cardActions'>
         {item && itemHelper.canMarkPlayed(item) && <span className={controlClass + ' itemAction'} data-action={ItemAction.None} role='button' tabIndex={tv ? -1 : 0} onKeyDown={activate}
-            data-tip={item.UserData?.Played ? 'Watched' : 'Mark Played'} aria-label={item.UserData?.Played ? 'Watched' : 'Mark Played'} data-ds-action='played' aria-pressed={!!item.UserData?.Played} onClick={event => { void toggle(event, 'played'); }}><Icon name='check' /></span>}
+            data-tip={isPlayed ? 'Watched' : 'Mark Played'} aria-label={isPlayed ? 'Watched' : 'Mark Played'} data-ds-action='played' aria-pressed={isPlayed} onClick={event => { void toggle(event, 'played'); }}><Icon name='check' /></span>}
         {item && itemHelper.canRate(item) && <span className={controlClass + ' itemAction'} data-action={ItemAction.None} role='button' tabIndex={tv ? -1 : 0} onKeyDown={activate}
-            data-tip={item.UserData?.IsFavorite ? 'Favorite' : 'Add to Favorites'} aria-label={item.UserData?.IsFavorite ? 'Favorite' : 'Add to Favorites'} data-ds-action='favorite' aria-pressed={!!item.UserData?.IsFavorite} onClick={event => { void toggle(event, 'favorite'); }}><Icon name='heart' /></span>}
+            data-tip={isFavorite ? 'Favorite' : 'Add to Favorites'} aria-label={isFavorite ? 'Favorite' : 'Add to Favorites'} data-ds-action='favorite' aria-pressed={isFavorite} onClick={event => { void toggle(event, 'favorite'); }}><Icon name='heart' /></span>}
         {get && <span className={controlClass + ' itemAction'} data-action={ItemAction.None} role='button' tabIndex={tv ? -1 : 0} onKeyDown={activate} data-tip={releaseLabel} aria-label={releaseLabel} data-ds-action='get' onClick={download}><Icon name='cloud' /></span>}
         {(item || entry && !pending) && <span className={`${controlClass}${item ? ' itemAction' : ''}`} role='button' tabIndex={tv ? -1 : 0}
             onKeyDown={activate} data-tip='More' aria-label='More' data-action={item ? ItemAction.Menu : undefined} onClick={menu}><Icon name='more' /></span>}

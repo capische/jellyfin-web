@@ -21,6 +21,7 @@ import { useQueueVisible } from '../hooks/useQueue';
 import { isKnownScale } from '../constants/ratings';
 import actionsheet from 'components/actionSheet/actionSheet';
 import { QUEUE_ROUTE } from '../constants/queue';
+import { useShownUserData } from './useShownUserData';
 import { usePlayedAction } from '../hooks/usePlayedAction';
 
 const cellShape = (item: ItemDto | undefined, options: CardOptions) => {
@@ -52,6 +53,7 @@ export const useCellModel = (row: BrowseRow, options: CardOptions, alwaysShowCou
     const played = useTogglePlayedMutation();
     const runPlayed = usePlayedAction();
     const favorite = useToggleFavoriteMutation();
+    const shown = useShownUserData(item?.UserData?.Played, item?.UserData?.IsFavorite);
     const empty = useCardHasNoFile(item?.Id);
     const release = useCardRelease(item?.Id, item?.Type);
     const entryGet = useEntryDownload(entry ?? undefined, !!entry);
@@ -94,18 +96,23 @@ export const useCellModel = (row: BrowseRow, options: CardOptions, alwaysShowCou
         event.stopPropagation();
         if (!item?.Id) return;
         const itemId = item.Id;
-        const isPlayed = !!item.UserData?.Played;
+        const isPlayed = shown.played;
+        const isFavorite = shown.favorite;
         const change = async () => {
+            shown.show(kind, kind === 'played' ? !isPlayed : !isFavorite);
             if (kind === 'played') await played.mutateAsync({ itemId, isPlayed });
-            else await favorite.mutateAsync({ itemId, isFavorite: !!item.UserData?.IsFavorite });
+            else await favorite.mutateAsync({ itemId, isFavorite });
             // The caller's key and the user's own feeds the rows are drawn from (Resume, Next Up, Latest): a played episode's
             // card gives way to its series' next one, and the icons change, at once rather than when the server's push comes.
             await Promise.all([options.queryKey, ['User', user?.Id]].map(queryKey => queryClient.invalidateQueries({ queryKey, type: 'all', refetchType: 'active' })));
         };
         try {
-            if (kind === 'played') await runPlayed(item, change);
+            if (kind === 'played') await runPlayed({ ...item, UserData: { ...item.UserData, Played: isPlayed } }, change);
             else await change();
-        } catch (error) { console.error(error); }
+        } catch (error) {
+            shown.reset();
+            console.error(error);
+        }
     };
     const menu = (event: MouseEvent<HTMLElement>) => {
         if (!item && entry && !pending) {
@@ -123,5 +130,5 @@ export const useCellModel = (row: BrowseRow, options: CardOptions, alwaysShowCou
         }
     };
     const rating = visibleRating(row.rating);
-    return { action, releaseLabel: release.label, prepareRelease: release.prepare, countdown, searching, flightMenu, empty, item, entry, get, pending, noFile, queue, shape, source, failedSource, setFailedSource, title, name, second, progress, count, data, open, download, toggle, menu, rating };
+    return { action, releaseLabel: release.label, prepareRelease: release.prepare, countdown, searching, flightMenu, empty, item, entry, get, pending, noFile, queue, shape, source, failedSource, setFailedSource, title, name, second, progress, count, data, open, download, toggle, menu, rating, isPlayed: shown.played, isFavorite: shown.favorite };
 };
