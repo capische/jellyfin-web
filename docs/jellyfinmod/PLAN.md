@@ -2548,3 +2548,15 @@ of the end state and the merge are still to come.
   needs the six predefined profiles (charlie 64/0, bravo has HD and Any); `p9-ratings`' stale card needs values aged in the database;
   `replacement-sweep`'s Dashboard focus and `/Packages` 404 are beta's too; `q16-trakt` needs a disposable fresh server on the Pi
   (the painted Trakt line was read with an intercepted answer on four layouts).
+
+**Last fixes, test pass and review (2026-11-06), merged; built (not accepted) until the user's final test on beta.** After the
+user's looks (D278–D287, D292): one player bar; a card's row refreshes after Watched or Favourite and the next episode goes to the
+front of Continue Watching; no ring after a click, even after a key press (`.ds-pointer`, ratings group included); the card pill
+hugs its buttons, progress stays inside the poster corners, the ratings popup opens below its marks; a whole series or season asks
+before Mark Played or Unplayed (D281); confirms and alerts are centred on computer and tablet (D287). The gate-2 matrix passed on
+both lines (bravo 12.0, charlie 12.2), Chromium and real Chrome, computer, tablet, phone, TV 1080 and 720, dark and light, with
+no product defect (only the known intermittent TV Back focus, the stale-card fixture and a phone OSD timing in `ds-tabs`). The
+Codex review (gpt-6.1-sol high) of `517483ee2b..cd01e38eed` found two P2s and a P3, fixed in "send the confirmed played change,
+count episodes as the server marks them and drop held rings on a click" and approved on re-review; the affected checks re-ran
+green on both lines. The p9 run had left a fixture MDBList key and stand-in ratings on bravo and charlie; both plugin databases
+were restored from the copies taken before the run.
