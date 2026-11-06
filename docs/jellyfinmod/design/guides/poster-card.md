@@ -1,5 +1,10 @@
 # Poster card
 
+**Status — D281, approved by the user, 2026-11-06; implemented, live acceptance pending:** the Played pill asks before
+changing a Series or Season, including the title page's season posters. Episodes and movies still toggle immediately.
+Confirmation preserves the existing mutation and row invalidation described below; cancellation makes no change.
+The shared [confirm dialog](shared-chrome.md) owns the copy, server counts and safe TV focus.
+
 **Card geometry fixes (2026-11-05, user brief), built, not accepted:** `Cell` and title-page cards use
 `.jfmod-cardActions` to size the same foot pill to its actual buttons and centre it at 50% with a half-width translation.
 Padding stays `0.09em` vertically (φ⁻⁵) and `0.236em` horizontally (φ⁻³), with the existing `2em` buttons and `1.618em`
