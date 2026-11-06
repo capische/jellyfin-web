@@ -761,6 +761,11 @@
         contain: none;
     }
 
+    &.dev-computer,
+    &.dev-tablet {
+        > .dialog:not(.wide):not(.narrow) { align-self: center; }
+    }
+
     &.dev-phone,
     &.dev-tv {
         padding: 0;

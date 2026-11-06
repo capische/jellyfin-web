@@ -2019,6 +2019,12 @@ plugin-only representation (plan-ops#8, low, single-source, in
 
 ## Decision log
 
+- **2026-11-06 — D281, approved by the user:** design-owned Mark Played / Mark Unplayed on a Series or Season asks first,
+  with server episode/season counts, Cancel first and primary Mark Played / Mark Unplayed last. Movies and episodes remain
+  immediate. Reuse the existing Remove/Replace confirm; TV starts on Cancel. Count failures still ask without numbers.
+  Reference: workspace `reviews/design-system/ds5.js`; current copy/count contract in
+  [shared chrome](design/guides/shared-chrome.md). Implemented; live acceptance remains with the user.
+
 - **2026-09-06** — **Removal, including Undo, is admin-only.** Ordinary users may add titles but
   cannot delete saved entries. Phase 3 expiry runs automatically unless an admin disables retention;
   eligible media is reclaimed while catalog entries and history remain.

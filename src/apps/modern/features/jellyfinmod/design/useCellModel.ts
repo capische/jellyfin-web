@@ -21,6 +21,7 @@ import { useQueueVisible } from '../hooks/useQueue';
 import { isKnownScale } from '../constants/ratings';
 import actionsheet from 'components/actionSheet/actionSheet';
 import { QUEUE_ROUTE } from '../constants/queue';
+import { usePlayedAction } from '../hooks/usePlayedAction';
 
 const cellShape = (item: ItemDto | undefined, options: CardOptions) => {
     if (item?.Type === 'Person') return 'c';
@@ -49,6 +50,7 @@ export const useCellModel = (row: BrowseRow, options: CardOptions, alwaysShowCou
     const { api, user } = useApi();
     const queryClient = useQueryClient();
     const played = useTogglePlayedMutation();
+    const runPlayed = usePlayedAction();
     const favorite = useToggleFavoriteMutation();
     const empty = useCardHasNoFile(item?.Id);
     const release = useCardRelease(item?.Id, item?.Type);
@@ -91,12 +93,17 @@ export const useCellModel = (row: BrowseRow, options: CardOptions, alwaysShowCou
         event.preventDefault();
         event.stopPropagation();
         if (!item?.Id) return;
-        try {
-            if (kind === 'played') await played.mutateAsync({ itemId: item.Id, isPlayed: !!item.UserData?.Played });
-            else await favorite.mutateAsync({ itemId: item.Id, isFavorite: !!item.UserData?.IsFavorite });
+        const itemId = item.Id;
+        const change = async () => {
+            if (kind === 'played') await played.mutateAsync({ itemId, isPlayed: !!item.UserData?.Played });
+            else await favorite.mutateAsync({ itemId, isFavorite: !!item.UserData?.IsFavorite });
             // The caller's key and the user's own feeds the rows are drawn from (Resume, Next Up, Latest): a played episode's
             // card gives way to its series' next one, and the icons change, at once rather than when the server's push comes.
             await Promise.all([options.queryKey, ['User', user?.Id]].map(queryKey => queryClient.invalidateQueries({ queryKey, type: 'all', refetchType: 'active' })));
+        };
+        try {
+            if (kind === 'played') await runPlayed(item, change);
+            else await change();
         } catch (error) { console.error(error); }
     };
     const menu = (event: MouseEvent<HTMLElement>) => {
