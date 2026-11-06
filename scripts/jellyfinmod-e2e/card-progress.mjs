@@ -164,8 +164,9 @@ const cardState = (page, selector) => page.evaluate(([sel, mark]) => {
         percent: fill ? parseFloat(fill.style.width) : null,
         colour: fill ? getComputedStyle(fill).backgroundColor : null,
         barOpacity: fill ? getComputedStyle(fill).opacity : null,
-        heightEm: bar ? Math.round(bar.getBoundingClientRect().height / fontSize * 100) / 100 : null,
-        atBottom: bar ? Math.abs(bar.getBoundingClientRect().bottom - frame.getBoundingClientRect().bottom) < 1.5 : false,
+        // The painted bar's layer now spans the poster so it can clip to its corners (ds.t7); the track is its fill's height.
+        heightEm: bar ? Math.round((fill ?? bar).getBoundingClientRect().height / fontSize * 100) / 100 : null,
+        atBottom: bar ? Math.abs((fill ?? bar).getBoundingClientRect().bottom - frame.getBoundingClientRect().bottom) < 1.5 : false,
         disc: disc ? {
             kind: disc.getAttribute('data-jfmod-kind') ?? titled.getAttribute('data-jfmod-kind'), card: disc.classList.contains('card'), title: titled.title || disc.title, newVersion: disc.classList.contains('new-version'),
             colour: getComputedStyle(disc).color, background: getComputedStyle(disc.closest('.cmark') ?? disc).backgroundColor, backdrop: getComputedStyle(disc.closest('.cmark') ?? disc).backdropFilter,
