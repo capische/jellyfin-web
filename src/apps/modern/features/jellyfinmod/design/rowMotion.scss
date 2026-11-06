@@ -1,0 +1,14 @@
+.jfmod-rowLeave {
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(0.618em);
+    transition: opacity var(--d1, 0.236s) var(--ease, cubic-bezier(0.236, 0, 0, 1)), transform var(--d1, 0.236s) var(--ease, cubic-bezier(0.236, 0, 0, 1));
+}
+
+.jfmod-rowMove {
+    transition: transform var(--d2, 0.382s) var(--ease, cubic-bezier(0.236, 0, 0, 1));
+}
+
+.jfmod-rowEnter {
+    transition: opacity var(--d2, 0.382s) var(--ease, cubic-bezier(0.236, 0, 0, 1)), transform var(--d2, 0.382s) var(--ease, cubic-bezier(0.236, 0, 0, 1));
+}

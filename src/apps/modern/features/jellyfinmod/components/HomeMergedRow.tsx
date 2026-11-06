@@ -56,13 +56,14 @@ const portraitOptions = {
     showParentTitle: true
 };
 
-const RowShell: FC<{ title: string; rows: BrowseRow[]; wide?: boolean; loading?: boolean }> = ({ title, rows, wide, loading }) => {
+const RowShell: FC<{ title: string; rows: BrowseRow[]; wide?: boolean; loading?: boolean; motionReady?: boolean }> = ({ title, rows, wide, loading, motionReady }) => {
     const { api, user, __legacyApiClient__ } = useApi();
     const options = { ...(wide ? rowOptions : portraitOptions), serverId: __legacyApiClient__?.serverId(),
         queryKey: ['JellyfinMod', api?.basePath, user?.Id] };
     setCardData(rows.flatMap(row => row.kind === 'native' ? [row.nativeItem] : []), options);
-    if (!rows.length && !loading) return null;
-    return <Root><Section title={title} queryKey={options.queryKey}>
+    if (!rows.length && !loading && motionReady === undefined) return null;
+    return <Root><Section title={title} queryKey={options.queryKey}
+        motionIds={motionReady === undefined ? undefined : rows.map(row => row.kind === 'native' ? row.nativeItem.Id! : row.entry.id)} motionReady={motionReady}>
         {rows.map(row => <Cell key={row.kind === 'native' ? row.nativeItem.Id : row.entry.id} row={row} options={options} />)}
         {loading && !rows.length && Array.from({ length: 6 }, (_, index) => <CellSkeleton key={index} wide={wide} library />)}
         <LibraryCast rows={rows} />
@@ -70,8 +71,8 @@ const RowShell: FC<{ title: string; rows: BrowseRow[]; wide?: boolean; loading?:
 };
 
 const ContinueRow: FC<ContinueProps> = ({ includeResume, includeNextUp }) => {
-    const { items, answered } = useContinueWatching({ includeResume, includeNextUp });
-    return <RowShell title='Continue Watching' rows={items.map(nativeItem => ({ kind: 'native', nativeItem }))} wide loading={!answered} />;
+    const { items, answered, settled } = useContinueWatching({ includeResume, includeNextUp });
+    return <RowShell title='Continue Watching' rows={items.map(nativeItem => ({ kind: 'native', nativeItem }))} wide loading={!answered} motionReady={settled} />;
 };
 
 /** A Browse row that is a title's placeholder item standing for its entry (P1.FU26). */

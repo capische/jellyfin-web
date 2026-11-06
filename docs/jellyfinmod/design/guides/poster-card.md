@@ -2,6 +2,20 @@
 
 **D284, approved by the user, 2026-11-06; built, live acceptance pending:** Continue Watching keeps a placeholder next episode (`IsPlaceHolder: true`) as the existing file-less episode card: Not Downloaded mark, Get a Release action, no Play and no watched-progress bar; the Home hero skips placeholders.
 
+**Row motion — approved 2026-11-06, D290; computer Continue Watching built, not accepted.** After a card's Watched or
+Favourite save succeeds, its glyph updates immediately and the row holds its cards until the server's refetched feeds and ordering dates settle. Compare native
+item ids: outgoing cards fade to 0 and drop `0.618em` over `--d1` (`0.236s`); then survivors slide from their old horizontal
+positions to their new ones (FLIP) over `--d2` (`0.382s`), while new cards fade in from `translateX(-1.618em)`. Both use
+`--ease`, `cubic-bezier(0.236, 0, 0, 1)`. Only transform and opacity transition; no width, margin, gap or scroll animation.
+No motion on first load, background refresh, unchanged ids or failed saves/refetches. Outgoing cards and their pill leave
+keyboard navigation during the fade. Reduced motion swaps instantly. CSS transitions and a timer avoid `Animation.finished`;
+no CSS `min()`/`max()`. Implementation: `design/Section.tsx`, `design/useRowMotion.ts`, `design/rowMotion.scss`,
+`design/Cell.tsx`, `design/useCellModel.ts`, `components/HomeMergedRow.tsx`. An empty row disappears after its last card leaves.
+**After first look:** other rows (including Favorites) and TV's `0.146s` leave + `0.236s` slide, any-key finish and focus to
+the show's next episode at the front, otherwise the replacement slot. TV currently keeps its existing instant update.
+Reference: workspace `reviews/design-system/guides/card-motion.md`, `ds6.js`/`ds6.css`, page `card-motion` (D290 supersedes its
+proposal status). Physical webOS performance and the remaining layouts await acceptance.
+
 **Status — D281, approved by the user, 2026-11-06; implemented, live acceptance pending:** the Played pill asks before
 changing a Series or Season, including the title page's season posters. Episodes and movies still toggle immediately.
 Confirmation awaits the mutation for the item and direction captured at activation, preserving the row invalidation below;
