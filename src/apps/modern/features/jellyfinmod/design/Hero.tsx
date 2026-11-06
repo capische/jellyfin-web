@@ -56,8 +56,9 @@ const HeroBody: FC<Props> = ({ item, backdrop, overview, details, onPlay, error 
     const toggle = async (kind: 'played' | 'favorite') => {
         if (!item.Id) return;
         const itemId = item.Id;
+        const isPlayed = !!item.UserData?.Played;
         const change = async () => {
-            if (kind === 'played') await played.mutateAsync({ itemId, isPlayed: !!item.UserData?.Played });
+            if (kind === 'played') await played.mutateAsync({ itemId, isPlayed });
             else await favorite.mutateAsync({ itemId, isFavorite: !!item.UserData?.IsFavorite });
             await queryClient.invalidateQueries({ queryKey: ['JellyfinMod', api?.basePath, user?.Id] });
             await queryClient.invalidateQueries({ queryKey: ['User', user?.Id] });

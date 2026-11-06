@@ -2,6 +2,9 @@ import type { BaseItemDto } from '@jellyfin/sdk/lib/generated-client';
 import React, { type FC, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import focusManager from 'components/focusManager';
 import inputManager from 'scripts/inputManager';
+import { useTogglePlayedMutation } from 'hooks/useFetchItems';
+import { EventType } from 'constants/eventType';
+import Events from 'utils/events';
 import { Head } from './Head';
 import RatingIcon from '../components/RatingIcon';
 import { Root, DesignContext } from './Root';
@@ -67,6 +70,7 @@ const factClass = (fact: { badge: boolean; star: boolean; critic: boolean }) => 
 
 const useTitleCommand = (view: HTMLElement, item?: PlayedItem) => {
     const runPlayed = usePlayedAction();
+    const played = useTogglePlayedMutation();
     return (command: TitleCommand, opener: HTMLElement) => {
         if (command.disabled) return;
         const host = command.node.closest<HTMLElement>('[data-id][data-type]');
@@ -75,7 +79,17 @@ const useTitleCommand = (view: HTMLElement, item?: PlayedItem) => {
             if (command.node.isConnected && opener.isConnected) runTitleCommand(view, command, opener);
         };
         if (command.icon === 'check') {
-            void runPlayed({ ...target, UserData: { Played: command.pressed } }, run).catch(console.error);
+            const itemId = target.Id;
+            const isPlayed = !!command.pressed;
+            void runPlayed({ ...target, UserData: { Played: isPlayed } }, async () => {
+                if (!itemId || !command.node.isConnected || !opener.isConnected) return;
+                const state = await played.mutateAsync({ itemId, isPlayed });
+                // Native header controls own their state; card controls refresh through their query keys.
+                const button = command.node as HTMLElement & { setItem?: (value: PlayedItem & { ServerId?: string }) => void };
+                button.setItem?.({ Id: itemId, ServerId: button.dataset.serverid,
+                    Type: target.Type, UserData: { Played: state } });
+                Events.trigger(document, EventType.REFRESH_NEEDED);
+            }).catch(console.error);
         } else {
             run();
         }

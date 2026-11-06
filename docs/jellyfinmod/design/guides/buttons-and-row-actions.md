@@ -2,8 +2,9 @@
 
 **Status — D281, approved by the user, 2026-11-06; implemented, live acceptance pending:** Mark Played and Mark Unplayed
 on a Series or Season ask first on every design surface: the card pill, title action bar, title-page poster actions and Home
-hero. Movie and Episode actions remain immediate. Confirmation runs the original toggle and its existing row refresh;
-Cancel, Close, Escape and remote Back change nothing. Upstream context menus keep their own behavior. See
+hero. Movie and Episode actions remain immediate. Confirmation awaits the captured item/direction mutation and its existing row refresh;
+Cancel, Close, Escape and remote Back change nothing. Retained `.btn.kf` and `.rb.foc` rings are suppressed in pointer mode outside TV
+(review fixes, 2026-11-06; built, live acceptance pending). Upstream context menus keep their own behavior. See
 [shared chrome](shared-chrome.md) for the dialog and count rules; code: `hooks/usePlayedAction.ts`.
 
 **dsD (2026-11-04), built, not accepted:** title pages use source `actbar/play/dbtn`, row `ib/rb`, and disclosure

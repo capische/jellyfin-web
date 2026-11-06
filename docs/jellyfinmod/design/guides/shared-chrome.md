@@ -15,13 +15,17 @@ Approved source: workspace `reviews/design-system/ds5.js`, Home states `played-s
   `recursive=true`, `includeItemTypes=Episode` and the current user follows the folder operation's recursive episode scope.
   No played-state filter: episodes already played also receive the folder write. Seasons are the distinct `SeasonId`s in
   that set, including specials when present; empty seasons do not count. No limit or page slice is requested.
-- Match server `Folder.MarkPlayed`: non-virtual episodes, plus virtual aired episodes only when the user displays missing
-  episodes (`locationTypes=Virtual`, `isUnaired=false`, with the date filtered by the server). Real unaired files still count.
+- Match Jellyfin 12.0 `Folder.MarkPlayed`: non-virtual episodes, plus virtual episodes only when the user displays missing
+  episodes and their premiere is absent or before today in the server's local calendar. Real unaired files still count.
+  One episode request includes dates and location types, without `isUnaired` (its instant/null semantics differ).
+  The API exposes neither the server timezone nor the computed unaired flag: dated virtual episodes in the previous
+  48 hours use the no-count fallback, as does an unavailable server Date header, rather than assume the browser's timezone
+  (review fix, 2026-11-06; built, live acceptance pending).
   `Folder.MarkUnplayed` visits all recursive episodes, including virtual and unaired ones. These are episode items, not a
   sum of episode index ranges or alternate video files. `GET /Items/{id}` supplies names for sparse title-page command hosts.
 - If a metadata/count read fails, still ask with no numeric count: `All episodes of {Series} are marked played.` or
   `All episodes of {Series} {Season name} are marked played.` Apply the same Unplayed ending. Names are escaped as text.
-  Repeated activation while counting, confirming or running the original toggle is ignored by that action.
+  Repeated activation while counting, confirming or awaiting the captured mutation is ignored by that action.
 
 **The player's one bar (ds.t7, 2026-11-06), built, not accepted:** on a computer, tablet or phone the player has one top bar, upstream's video page's own (Back, then SyncPlay and Cast at the right, as the mockup draws it); its title is hidden, as the legacy header's was, because the controls carry it (`.jfmod-osdName`). The legacy header stays hidden there, as upstream hides it in the modern layout: its `/video` exemption from inline hiding drew a second bar under the first (the user's report). The TV keeps the legacy header in the player, its toolbar exempt on `/video`.
 
