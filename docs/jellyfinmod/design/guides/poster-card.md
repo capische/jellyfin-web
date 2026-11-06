@@ -1,5 +1,7 @@
 # Poster card
 
+**D284, approved by the user, 2026-11-06; built, live acceptance pending:** Continue Watching keeps a placeholder next episode (`IsPlaceHolder: true`) as the existing file-less episode card: Not Downloaded mark, Get a Release action, no Play and no watched-progress bar; the Home hero skips placeholders.
+
 **Status — D281, approved by the user, 2026-11-06; implemented, live acceptance pending:** the Played pill asks before
 changing a Series or Season, including the title page's season posters. Episodes and movies still toggle immediately.
 Confirmation awaits the mutation for the item and direction captured at activation, preserving the row invalidation below;

@@ -72,7 +72,7 @@ export const useCellModel = (row: BrowseRow, options: CardOptions, alwaysShowCou
     const [failedSource, setFailedSource] = useState<string>();
     const title = item?.Name ?? entry?.title ?? '';
     const { name, second } = captionOf(item, title, item?.ProductionYear ?? entry?.year ?? '');
-    const progress = item?.UserData?.PlayedPercentage;
+    const progress = noFile ? undefined : item?.UserData?.PlayedPercentage;
     const count = item?.UserData?.UnplayedItemCount;
     const action = resolveAction({ defaultAction: options.action ?? ItemAction.Link, isFolder: item?.IsFolder ?? false, isPhoto: item?.MediaType === 'Photo' });
     const data = item ? getDataAttributes({ action, itemServerId: item.ServerId ?? options.serverId,

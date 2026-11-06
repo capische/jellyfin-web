@@ -33,7 +33,7 @@ const HERO_CANDIDATES = 200;
  * fail, which is the thing the user complained about in the first place, so such titles are not chosen.
  */
 const isPlayable = (item: BaseItemDto): boolean =>
-    item.Type === BaseItemKind.Movie || (item.RecursiveItemCount ?? 0) > 0;
+    !item.IsPlaceHolder && (item.Type === BaseItemKind.Movie || (item.RecursiveItemCount ?? 0) > 0);
 
 interface Backdrop {
     id: string;
@@ -56,7 +56,7 @@ interface Decision {
 const PENDING: Decision = { pending: true, choice: null };
 
 const isMovieOrEpisode = (item: ItemDto) =>
-    !!item.Id && (item.Type === BaseItemKind.Movie || item.Type === BaseItemKind.Episode);
+    !!item.Id && !item.IsPlaceHolder && (item.Type === BaseItemKind.Movie || item.Type === BaseItemKind.Episode);
 
 /**
  * The backdrop the hero shows for an item: an episode shows its series', anything else its own.
@@ -84,7 +84,7 @@ const seriesToLookUp = (items: ItemDto[]) => [...new Set(items
 
 const HomeHero: FC = () => {
     const { api, user, __legacyApiClient__ } = useApi();
-    // The hero is what the user is in the middle of — the first card of Continue watching (user, 2026-10-07) — from
+    // The hero is what the user is in the middle of — the first playable card of Continue watching (D284) — from
     // the same feeds the row shows: a section the user hid from Home does not come back as the hero.
     const sections: HomeSectionType[] = getAllSectionsToShow(userSettings);
     const continueWatching = useContinueWatching({
