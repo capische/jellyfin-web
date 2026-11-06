@@ -23,7 +23,10 @@ links Favorites, Shows, Movies; other existing links follow them.
   Its own glass is white 9%, blur 12px/saturate 180% (light black 6%); hover white 14%/light black 10%. Solid paper fallback.
   Active .135em primary ring; TV .236em, paper on plain ground and black 66% over art.
 - Below **1366 window pixels** the server wordmark goes. The existing tablet drawer breakpoint (900px) switches search from
-  centered to filling the menu-to-icons gap. No extra collision rule is introduced below 1100px.
+  centered to filling the menu-to-icons gap.
+- **A computer window under 1180 px** (where the centred 29.03em field would reach the links; the user, 2026-11-07: "shorten
+  and expand on selection but it should not overlap"; built, not accepted): the field follows the links 1.618em clear (φ),
+  11.09em wide (2.618em × φ³), and on focus grows to 29.03em at most, over the .236s ease, stopping 1.618em short of the icons.
 - Computer: typing the first character navigates to the existing Search route, retaining the same field/caret, URL query and
   library scope. Search has no duplicate body field. `#searchTextInput` remains its ID on that route. Tablet uses the same field.
 - Phone: the search icon and upstream page field stay; the hidden desktop input is not mounted. Targets remain at least 40px.
