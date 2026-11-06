@@ -224,12 +224,13 @@ const popup = page => page.evaluate(selector => {
     for (const hidden of copy.querySelectorAll('.jfmod-ratingsHidden')) hidden.remove();
     return { rows: [...node.querySelectorAll('[data-jfmod-rating]')].map(row => ({ source: row.dataset.jfmodRating,
         value: row.querySelector('.rval')?.textContent ?? '', votes: row.querySelector('.rvt')?.textContent ?? '',
-        title: (row.getAttribute('title') ?? row.getAttribute('data-tip')) ?? '' })), text: copy.textContent, width: Math.round(node.getBoundingClientRect().width),
+        // ds.t7: no native tooltip; the provenance is in the row's accessible label (guides/ratings.md).
+        title: (row.getAttribute('title') ?? row.getAttribute('data-tip') ?? row.getAttribute('aria-label')) ?? '', tooltip: row.hasAttribute('title') })), text: copy.textContent, width: Math.round(node.getBoundingClientRect().width),
     links: node.querySelectorAll('a').length, intrinsic: Math.abs(node.getBoundingClientRect().width - ([...node.querySelector('.rrow').children].filter(cell => !cell.classList.contains('jfmod-ratingsHidden')).reduce((sum, cell) => sum + cell.getBoundingClientRect().width, 0) + parseFloat(getComputedStyle(node).paddingLeft) + parseFloat(getComputedStyle(node).paddingRight))) < 1 };
 }, POPUP);
-/** Rows only (no "via …" line, no caveat), the provenance in each row's title, the content width, no links. */
+/** Rows only (no "via …" line, no caveat), the provenance in each row's accessible label and no native tooltip, the content width, no links. */
 const popupOk = (shown, found, expected) => !!shown && JSON.stringify(shown.rows.map(row => row.source)) === JSON.stringify(expected)
-    && !/via|as of|differ/i.test(shown.text) && shown.rows.every(row => /via (MDBList, as of|TMDB)|server/i.test(row.title)) && shown.links === 0
+    && !/via|as of|differ/i.test(shown.text) && shown.rows.every(row => /via (MDBList, as of|TMDB)|server/i.test(row.title) && !row.tooltip) && shown.links === 0
     && shown.intrinsic && !/votes/i.test(shown.text);
 async function preferencesPage(page, layout) {
     await go(page, '#/catalog/preferences');
