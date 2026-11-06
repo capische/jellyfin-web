@@ -1,0 +1,84 @@
+/* D276/D277. Base 1em; the pointer's half-gap target preserves the existing group width. */
+.jfds .jfmod-ratingLinks {
+    .rgroup {
+        padding: 0.1em 0;
+        margin: 0 -0.3em;
+    }
+
+    .ritem {
+        padding: 0.1em 0.3em;
+        margin: -0.1em 0;
+        border-radius: 0.382em;
+        transition: background-color var(--d1) var(--ease);
+    }
+
+    .ritem + .ritem { margin-left: 0; }
+
+    .pmenu.rmenu {
+        padding-right: 0.236em;
+        padding-left: 0.236em;
+    }
+
+    .rmk {
+        height: 1.618em;
+        padding-left: 0.382em;
+    }
+
+    .rvt {
+        padding-right: 0.382em;
+        color: rgba(255, 255, 255, 0.7);
+        opacity: 1;
+    }
+}
+
+.jfds[data-theme='light'] .jfmod-ratingLinks .rvt {
+    color: rgba(0, 0, 0, 0.743);
+    opacity: 1;
+}
+
+.jfds.dev-phone .jfmod-ratingLinks,
+.jfds.dev-tablet .jfmod-ratingLinks {
+    .rgroup { margin: 0; }
+    .rmk { height: 2.7816em; }
+}
+
+.jfds .jfmod-ratingLinks a.rrow {
+    color: inherit;
+    text-decoration: none;
+    cursor: pointer;
+
+    > :not(.jfmod-ratingsHidden) { transition: background-color var(--d1) var(--ease); }
+    > .rmk { border-radius: 0.382em 0 0 0.382em; }
+    > .rvt { border-radius: 0 0.382em 0.382em 0; }
+
+    &:focus-visible {
+        border-radius: 0.382em;
+        outline: 0.135em solid var(--primary);
+        outline-offset: -0.135em;
+    }
+}
+
+@media (hover: hover) {
+    .jfds.dev-computer .rgwrap.jfmod-ratingLinks,
+    .jfds.dev-tablet .rgwrap.jfmod-ratingLinks {
+        &:hover .rgroup { background: none; }
+        .jfmod-ratingMarkLink { cursor: pointer; }
+        .jfmod-ratingMarkLink:hover { background: var(--tint); }
+        a.rrow:hover > :not(.jfmod-ratingsHidden) { background: var(--tint); }
+    }
+}
+
+/* Hover styling must not reopen a popup closed by following a link or Escape. */
+.jfds .rgwrap.jfmod-ratingsAnchor {
+    .rmenu:not(.open),
+    .rmenu:not(.open) + .rcaret {
+        visibility: hidden;
+        opacity: 0;
+        pointer-events: none;
+    }
+}
+
+.jfds .jfmod-ratingLinksPending {
+    min-height: 1em;
+    visibility: hidden;
+}

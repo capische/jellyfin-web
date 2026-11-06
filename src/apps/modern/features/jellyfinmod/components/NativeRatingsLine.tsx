@@ -9,6 +9,7 @@ import { RATINGS_CAPABILITY, RATINGS_STALE_MS } from '../constants/ratings';
 import { usePluginHealthSummary } from '../hooks/useAcquisition';
 import { loadPluginCapabilities, loadRatingsPreferences, useRatingsPreferences } from '../hooks/useRatingsPreferences';
 import RatingsGroup from './RatingsGroup';
+import type { RatingTitle } from '../utils/ratingLinks';
 import { DesignEnvironment } from '../design/Root';
 
 interface NativeRatingsLineProps {
@@ -19,6 +20,7 @@ interface NativeRatingsLineProps {
     itemType: Promise<string | undefined>;
     /** The type already known when the group mounts (null: the read failed; undefined: not answered yet). */
     knownType?: string | null;
+    title: Promise<RatingTitle>;
 }
 
 /** The query key of a native item's ratings, so a manual refresh can ask for it again. */
@@ -43,7 +45,15 @@ export const prefetchItemRatings = async (api: Api, userId: string, itemId: stri
  * row, in place of the stock star and tomato. It is mounted as upstream fills the row, before anything is known, and reserves
  * its space at once; it gives the space back when the item has none (not a movie or series, an older plugin, ratings off).
  */
-const NativeRatingsLine: FC<NativeRatingsLineProps> = ({ api, userId, itemId, itemType, knownType }) => {
+const NativeRatingsLine: FC<NativeRatingsLineProps> = ({ api, userId, itemId, itemType, knownType, title }) => {
+    const [ratingTitle, setRatingTitle] = useState<RatingTitle>();
+    useEffect(() => {
+        let current = true;
+        title.then(value => current && setRatingTitle(value), () => undefined);
+        return () => {
+            current = false;
+        };
+    }, [title]);
     const health = usePluginHealthSummary(api);
     const supported = !!health.data?.capabilities.includes(RATINGS_CAPABILITY);
     const preferences = useRatingsPreferences(api);
@@ -72,7 +82,7 @@ const NativeRatingsLine: FC<NativeRatingsLineProps> = ({ api, userId, itemId, it
     // A failed minute's read keeps the last answer (react-query keeps its data): only a first answer that failed is "none".
     const ready = wanted === true && (ratings.data !== undefined || ratings.isError);
     return <DesignEnvironment><RatingsGroup ratings={ratings.data?.ratings ?? (ratings.isError ? [] : undefined)} sources={preferences.sources} ready={ready}
-        wanted={wanted} /></DesignEnvironment>;
+        title={ratingTitle} wanted={wanted} /></DesignEnvironment>;
 };
 
 export default NativeRatingsLine;

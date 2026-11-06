@@ -2480,3 +2480,17 @@ Codex review (gpt-6.1-sol high) of `517483ee2b..cd01e38eed` found two P2s and a 
 count episodes as the server marks them and drop held rings on a click" and approved on re-review; the affected checks re-ran
 green on both lines. The p9 run had left a fixture MDBList key and stand-in ratings on bravo and charlie; both plugin databases
 were restored from the copies taken before the run.
+
+## Clickable rating links — D274/D276/D277 (2026-11-06)
+
+**Built (not accepted), computer first look.** Title-head mouse marks open validated source URLs; popup rows are
+anchors on computer/touch, with touch sizing included. TV remains display only and has no external-links line.
+The bottom line removes only sites represented in the popup, retaining all links without ratings. Web defaults
+include TMDB; the plugin owns its defaults migration and optional source URL delivery. Guides: [ratings](design/guides/ratings.md),
+[title pages](design/guides/title-pages.md). No deployment or server-data changes. Real plugin URL delivery,
+real Chrome, physical touch/TV devices, the full matrix and user acceptance remain later gates.
+
+First-look validation: TypeScript, changed-file ESLint/stylelint and the development build pass. The build
+retains inherited patch-surface warnings and four Sass import deprecations. Playwright Chromium: 37 passed,
+0 failed, with real ratings answers and browser-only URL/default/source-list interception; computer links,
+keyboard order, malformed fallbacks, no-ratings/TMDB-only/unticked cases, TV 1920/1280 and phone sizing.
