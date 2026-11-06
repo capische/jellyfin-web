@@ -1408,6 +1408,18 @@
     .pmenu .mi:focus,
     .pmenu .mi.foc,
     .rgroup:focus { box-shadow: none; }
+
+    /* After a key press the browser keeps showing focus rings, and upstream's scroller focuses what a click lands on, so a click would ring it. */
+    a:not(.cell):not(.srow2):not(.rb):focus-visible,
+    .dbtn:focus-visible,
+    .rgroup.foc,
+    .play:focus-visible { outline: none; }
+
+    .tab:focus-visible,
+    .pi:focus-visible,
+    .ib:focus-visible,
+    .disc:focus-visible,
+    .cb:has(input:focus-visible) { box-shadow: none; }
 }
 
 /* dsF: Preferences keep their upstream page as a hidden controller host, like the title pages. */
