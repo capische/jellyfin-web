@@ -2024,6 +2024,8 @@ plugin-only representation (plan-ops#8, low, single-source, in
 
 ## Decision log
 
+- **2026-11-06 — D288–D295, approved by the user; built, not accepted:** computer title heads use one φ scale and stacked 46.98em reading/status measure; Not Downloaded uses the pill's blue Download with no status below, or a slim line without permission; Unaired is a line; active downloads use a compact 4.236em-ring card. Get a Release actions become Download (picker title retained; Get Another Quality unchanged). Played metadata and computer action tips read LastPlayedDate/PlayCount; medium locale date, count from 2 plays as requested in the build brief. [Current values](design/guides/title-pages.md). Computer first look only; phone/TV and acceptance follow the user's look.
+
 - **2026-11-06 — D281, approved by the user:** design-owned Mark Played / Mark Unplayed on a Series or Season asks first,
   with server episode/season counts, Cancel first and primary Mark Played / Mark Unplayed last. Movies and episodes remain
   immediate. Reuse the existing Remove/Replace confirm; TV starts on Cancel. Count failures still ask without numbers.

@@ -1,0 +1,159 @@
+/* D288-D295, computer first look. Base 1em; values follow ds6.css's phi steps. */
+.jfds .jfmod-titleTop {
+    .jfmod-titleHead .itemName { line-height: 1.236; }
+
+    .jfmod-titleHead .by {
+        margin-top: 0.382em;
+    }
+
+    .jfmod-byLabel { opacity: 0.854; }
+
+    .jfmod-titleHead .meta { margin-top: 0; }
+
+    .jfmod-titleHead .actbar { margin-top: 1.618em; }
+
+    [data-ds-slot='download'] {
+        max-width: 46.98em;
+    }
+
+    .jfmod-dlblockSlot { margin-top: 1em; }
+
+    .jfmod-dlblockSlot:empty { display: none; }
+
+    .jfmod-dlblockSlot .dlb {
+        margin: 0;
+        padding: 1em;
+        border-radius: 1.618em;
+    }
+
+    .jfmod-dlblockSlot .dm.page {
+        width: 4.236em;
+        height: 4.236em;
+        margin-right: 1em;
+    }
+
+    .jfmod-dlblockSlot .dm.page > svg.glyph {
+        width: 2.118em;
+        height: 2.118em;
+        margin: -1.059em;
+    }
+
+    .jfmod-dlblockSlot .ln1 {
+        font-size: 1em;
+        line-height: 1.618;
+    }
+
+    .jfmod-dlblockSlot .rls {
+        margin-top: 0;
+        font-size: 0.854em;
+        opacity: 0.618;
+    }
+
+    .jfmod-dlblockSlot .mline,
+    .jfmod-dlblockSlot .pack {
+        margin-top: 0.236em;
+        font-size: 0.854em;
+    }
+
+    .jfmod-dlblockSlot .act > * { margin: 0 0.618em 0 0; }
+
+    .jfmod-titleReading {
+        max-width: 46.98em;
+        margin-top: 1.618em;
+        text-align: left;
+    }
+
+    .jfmod-tagline {
+        margin: 0;
+        font-weight: 600;
+        line-height: 1.618;
+    }
+
+    .jfmod-titleText .overview { margin: 0; }
+
+    .jfmod-tagline + .overview { margin-top: 0.382em; }
+
+    .jfmod-titleFacts { margin-top: 1em; }
+
+    .jfmod-titleFacts .tags,
+    .jfmod-titleFacts .links {
+        margin: 0;
+        font-size: 0.854em;
+        line-height: 1.618;
+    }
+
+    .jfmod-titleFacts .tags + .tags { margin-top: 0.382em; }
+
+    .jfmod-titleFacts .links { margin-top: 0.618em; }
+
+    .jfmod-titleFactLabel {
+        margin-right: 0.382em;
+        opacity: 0.618;
+    }
+
+    .jfmod-titleTags {
+        display: -webkit-box;
+        overflow: hidden;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+    }
+}
+
+.jfds:not(html):not(.dev-phone) .jfmod-titleHead {
+    .col { margin-left: 1.618em; }
+
+    .by { font-size: 1em; }
+
+    .meta > * { margin: 0.382em 1em 0 0; }
+}
+
+.jfds .jfmod-titleStatusLine {
+    display: flex;
+    align-items: center;
+    line-height: 1.618;
+    color: var(--text);
+
+    b {
+        margin-right: 0.382em;
+        font-weight: 600;
+    }
+
+    .jfmod-statusGlyph {
+        flex: none;
+        width: 1.618em;
+        height: 1.618em;
+        margin-right: 0.618em;
+    }
+
+    svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+    }
+
+    .jfmod-statusRest { opacity: 0.7; }
+}
+
+.jfds .meta .jfmod-watchedMeta {
+    display: flex;
+    align-items: center;
+    opacity: 0.854;
+
+    svg {
+        width: 1.236em;
+        height: 1.236em;
+        margin-right: 0.236em;
+        fill: var(--primary);
+    }
+}
+
+/* Keep the current phone structure safe; dedicated phone/TV acceptance follows the computer gate. */
+.jfds.dev-phone .jfmod-titleTop .jfmod-dlblockSlot .dm.page { font-size: 0.764em; }
+
+.jfds.layout-tv .jfmod-titleTop {
+    .jfmod-dlblockSlot .act > * { margin-right: 1em; }
+
+    .jfmod-titleFacts .links { display: none; }
+}
+
+.jfds .jfmod-titleTop .jfmod-titleTags b { font-weight: 400; }

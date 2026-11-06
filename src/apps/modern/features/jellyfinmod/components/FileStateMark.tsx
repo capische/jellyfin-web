@@ -104,7 +104,7 @@ export const useEntryDownload = (entry: Entry | undefined, wanted: boolean): Mar
 /**
  * The administrator's round button. Its click is taken natively on the button and goes no further, so neither the card's
  * link, the card's own click, nor upstream's item container (which acts on the card around it) sees it. `tooltip` replaces the
- * name as its tooltip (a row's reads *Not Downloaded*, its name *Get a Release for …*).
+ * name as its tooltip (a row's reads *Not Downloaded*, its name *Download for …*).
  */
 const MarkButton: FC<{ className: string; download: MarkDownload; tooltip?: string; children: ReactNode }> = ({ className, download,
     tooltip, children }) => {
@@ -171,7 +171,7 @@ const busyMark = (entry: Entry | undefined, countdown: number | null, base: stri
 
 /** The button's download: an entry's own (named for the title), else the one given; null for an indicator. */
 const markAction = (entry: Entry | undefined, entryDownload: MarkDownload | null, download: MarkDownload | null | undefined) => {
-    if (entry) return entryDownload && { ...entryDownload, label: 'Get a Release for ' + entry.title };
+    if (entry) return entryDownload && { ...entryDownload, label: 'Download for ' + entry.title };
     return download ?? null;
 };
 

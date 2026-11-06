@@ -85,7 +85,7 @@ const pageLookup = (itemId: string, itemType: string | undefined, seriesId: stri
     (itemType === 'Season' && seriesId ? { lookupId: seriesId, seasonOf: seasonNumber ?? 0 } : { lookupId: itemId, seasonOf: undefined });
 
 /**
- * Whether a page of this type has Get a Release while its entry is not read yet (P1.FU23): a season needs a number and pack
+ * Whether a page of this type has Download while its entry is not read yet (P1.FU23): a season needs a number and pack
  * search. Once the lookup has answered the page's own rule applies; a title the plugin has no entry for then loses the icon,
  * which on 28096 was 1 title of 164 (2026-10-13).
  */
@@ -688,7 +688,7 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
     useStockHeaderButton(view, {
         enabled: canAcquire && (isFilePage || isSeriesPage || seasonSearch || expectsRelease(!!data || noEntry, itemType, capabilities, seasonOf)),
         icon: 'cloud_download',
-        title: 'Get a Release',
+        title: 'Download',
         className: 'jfmod-getRelease',
         onClick: getRelease,
         before: ['jfmod-seasonTotal']

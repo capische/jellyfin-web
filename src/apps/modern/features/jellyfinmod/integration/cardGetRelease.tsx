@@ -23,7 +23,7 @@ import '../components/fileStateMark.scss';
 import './cardGetRelease.scss';
 
 /**
- * Get a Release on a card (P1.FU12, user-approved design 2026-10-12; UX §5.7). Administrators only, where the plugin serves
+ * Download on a card (P1.FU12, user-approved design 2026-10-12; UX §5.7). Administrators only, where the plugin serves
  * release search, for movie, series, season and episode cards whose title the plugin has an entry for:
  *
  * - **Desktop:** an icon in upstream's hover overlay, after Favorite and before More, in the overlay's own round button
@@ -67,7 +67,7 @@ export const NO_FILE_ATTRIBUTE = 'data-jfmod-nofile';
 /** The same, set from Jellyfin's own counts on any series or season card with no episode (P1.FU23). */
 const EMPTY_ATTRIBUTE = 'data-jfmod-empty';
 const PACK_TYPES = new Set(['Series', 'Season']);
-const NOT_AVAILABLE = 'Get a Release is not available for this title.';
+const NOT_AVAILABLE = 'Download is not available for this title.';
 const CENTRE_CLASS = 'cardOverlayFab-primary';
 /** The item a card's icon (and a card's asked lookup) is for: a card element can be drawn again for another item. */
 const ITEM_ATTRIBUTE = 'data-jfmod-item';
@@ -98,7 +98,7 @@ const seasonOf = async (api: Api, userId: string, itemId: string) => {
     return season?.SeriesId && season.IndexNumber ? { seriesId: season.SeriesId, seasonNumber: season.IndexNumber } : null;
 };
 
-const labelFor = (intent: 'addVersion' | undefined) => (intent ? 'Get Another Quality' : 'Get a Release');
+const labelFor = (intent: 'addVersion' | undefined) => (intent ? 'Get Another Quality' : 'Download');
 
 /** An episode card: only an episode the plugin tracks, so the picker can preselect it. */
 const episodeTarget = async (api: Api, entryId: string, itemId: string): Promise<CardTarget | null> => {
@@ -168,10 +168,10 @@ const cardOf = (element: Element | null) => {
     return card && itemId && CARD_TYPES.has(type) ? { card, itemId, type } : null;
 };
 
-/** Shows the card's answer on its icon: its label, no icon when the title has no release search, Get a Release until known. */
+/** Shows the card's answer on its icon: its label, no icon when the title has no release search, Download until known. */
 const applyTarget = (button: HTMLButtonElement, target: CardTarget | null | undefined) => {
     button.hidden = target === null;
-    const label = target?.label ?? 'Get a Release';
+    const label = target?.label ?? 'Download';
     button.title = label;
     button.setAttribute('aria-label', label);
 };
@@ -380,7 +380,7 @@ export const CardHoverGet: FC<{ open: (button: HTMLElement) => void }> = ({ open
     }, []);
     if (!layoutManager.desktop) return null;
     return <div className='cardOverlayContainer jfmod-hoverGet'>
-        <button ref={ref} type='button' title='Get a Release' aria-label='Get a Release'
+        <button ref={ref} type='button' title='Download' aria-label='Download'
             className={`paper-icon-button-light cardOverlayButton cardOverlayButton-hover ${CENTRE_CLASS} jfmod-cardGetCentre`}>
             <span className='material-icons cardOverlayButtonIcon cardOverlayButtonIcon-hover cloud_download' aria-hidden='true' />
         </button>
@@ -410,13 +410,13 @@ const CardGetRelease: FC = () => {
         };
 
         // The card's item menu on every layout: what touch and the TV have instead of the hover overlay. It is drawn with
-        // the menu, not after the card's answer: an answer already in gives its label (or no item), else Get a Release.
+        // the menu, not after the card's answer: an answer already in gives its label (or no item), else Download.
         const unregister = registerCardMenuItem(({ itemId, type, element }) => {
             const known = settledTarget(itemId, type);
             if (!eligible(type, packs) || known?.target === null) return Promise.resolve(null);
             return Promise.resolve({
                 id: 'jfmod-more-getRelease',
-                name: known?.target?.label ?? 'Get a Release',
+                name: known?.target?.label ?? 'Download',
                 icon: 'cloud_download',
                 run: () => openFor({ itemId, type }, element)
             });
@@ -513,7 +513,7 @@ export const useCardRelease = (itemId?: string | null, type?: string | null) => 
             else announce(NOT_AVAILABLE);
         });
     };
-    return { open: enabled && target !== null ? open : null, prepare, label: target?.label || 'Get a Release' };
+    return { open: enabled && target !== null ? open : null, prepare, label: target?.label || 'Download' };
 };
 
 export const useCardHasNoFile = (itemId?: string | null) => {

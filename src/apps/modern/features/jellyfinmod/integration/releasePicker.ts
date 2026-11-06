@@ -150,7 +150,7 @@ export interface PickerScope {
     seasonNumber?: number;
 }
 
-/** Loads an entry's episodes first, for openers that only know its id (a card's mark, a card's Get a Release). */
+/** Loads an entry's episodes first, for openers that only know its id (a card's mark, a card's Download). */
 export const openReleasePickerForEntry = async (api: Api, entryId: string, { nativeItemId, intent, seasonNumber }: PickerScope = {}) => {
     const detail = await getEntry(api, entryId);
     const sameId = (value?: string | null) => !!value && !!nativeItemId

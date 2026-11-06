@@ -1,4 +1,5 @@
 import React, { type FC, type KeyboardEvent, type FocusEvent, useContext } from 'react';
+import { watchedLabel } from '../utils/watched';
 import itemHelper from 'components/itemHelper';
 import { playbackManager } from 'components/playback/playbackmanager';
 import { ItemAction } from 'constants/itemAction';
@@ -60,7 +61,7 @@ const CellMenu: FC<{ model: CellModel }> = ({ model }) => {
     const { item, entry, pending, get, download, toggle, menu, releaseLabel, isPlayed, isFavorite } = model;
     return <span className='hmenu glassy jfmod-cardActions'>
         {item && itemHelper.canMarkPlayed(item) && <span className={controlClass + ' itemAction'} data-action={ItemAction.None} role='button' tabIndex={tv ? -1 : 0} onKeyDown={activate}
-            data-tip={isPlayed ? 'Watched' : 'Mark Played'} aria-label={isPlayed ? 'Watched' : 'Mark Played'} data-ds-action='played' aria-pressed={isPlayed} onClick={event => { void toggle(event, 'played'); }}><Icon name='check' /></span>}
+            data-tip={watchedLabel({ ...item.UserData, Played: isPlayed })} aria-label={watchedLabel({ ...item.UserData, Played: isPlayed })} data-ds-action='played' aria-pressed={isPlayed} onClick={event => { void toggle(event, 'played'); }}><Icon name='check' /></span>}
         {item && itemHelper.canRate(item) && <span className={controlClass + ' itemAction'} data-action={ItemAction.None} role='button' tabIndex={tv ? -1 : 0} onKeyDown={activate}
             data-tip={isFavorite ? 'Favorite' : 'Add to Favorites'} aria-label={isFavorite ? 'Favorite' : 'Add to Favorites'} data-ds-action='favorite' aria-pressed={isFavorite} onClick={event => { void toggle(event, 'favorite'); }}><Icon name='heart' /></span>}
         {get && <span className={controlClass + ' itemAction'} data-action={ItemAction.None} role='button' tabIndex={tv ? -1 : 0} onKeyDown={activate} data-tip={releaseLabel} aria-label={releaseLabel} data-ds-action='get' onClick={download}><Icon name='cloud' /></span>}
@@ -101,7 +102,7 @@ export const Cell: FC<{ row: BrowseRow; options: CardOptions; alwaysShowCountdow
             <CellMarks model={model} />
             {shape !== 'c' && discAvailable && <span
                 className='disc hov glassy itemAction' role='button' tabIndex={-1}
-                data-action={noFile ? ItemAction.None : ItemAction.Play} aria-label={noFile ? 'Get a Release' : 'Play'} data-ds-action={noFile ? 'get' : undefined}
+                data-action={noFile ? ItemAction.None : ItemAction.Play} aria-label={noFile ? 'Download' : 'Play'} data-ds-action={noFile ? 'get' : undefined}
                 onKeyDown={activate} onClick={noFile ? download : undefined}>{noFile ? <Cloud /> : <Icon name='play' />}</span>}
             {shape !== 'c' && <CellMenu model={model} />}
         </span><CellCaption model={model} /></div>

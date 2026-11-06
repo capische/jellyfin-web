@@ -1,5 +1,22 @@
 # Buttons and row actions
 
+**Status: approved 2026-11-06, D288–D295, built, not accepted.** Computer first look only; phone/TV specifics and full acceptance follow the user's first look. These values supersede the older presentation notes below.
+
+## Download and Watched (D288–D295)
+
+Every release-start action now says **Download**, including card tips, row actions and More. The picker retains its own
+**Get a Release** dialog title; **Get Another Quality** is unchanged. A missing title's eligible pill starts with a blue
+`.play.mainb` cloud and Download label, replacing Play, without a second cloud or a status line underneath.
+Existing 0.382em pill padding, 3em icon boxes and labelled button minimum 6.854em remain.
+
+On a computer, a played Watched button uses `data-tip` and the same `aria-label`, never native `title`:
+`Watched <medium locale date>` plus ` · N times` from `PlayCount >= 2`. Data is `UserData.LastPlayedDate` and `PlayCount`;
+format is numeric day, short month, numeric year. No date: Watched. Unplayed: Mark Played. Applies to title pill, card pill,
+episode rows and Home hero. The metadata line also shows the date and count, per the user's build brief.
+TV Enter and phone tap still toggle immediately (Series/Season still confirm under D281); there is no new date interaction.
+Shared date copy: `utils/watched.ts`; native command-host rows reuse `integration/watchedHint.ts`'s batched read.
+
+
 **Status — D281, approved by the user, 2026-11-06; implemented, live acceptance pending:** Mark Played and Mark Unplayed
 on a Series or Season ask first on every design surface: the card pill, title action bar, title-page poster actions and Home
 hero. Movie and Episode actions remain immediate. Confirmation awaits the captured item/direction mutation and its existing row refresh;
@@ -18,7 +35,7 @@ source primary active ink. Per-file History/Keep/Remove act on the same binding.
 is card glass, 3em corners and .382em padding, icon boxes 3em/glyphs 1.6em. Play carries its existing localized
 Play/Resume title as a visible label, minimum width 6.854em, white 85.4%/dark ink (light: dark 85.4%/white),
 and grows across the phone. Press .96 in .146s; no scale with reduced motion. Every existing action remains;
-rare extra actions wrap. Missing movies' existing Get a Release becomes the blue labelled main action in this
+rare extra actions wrap. Missing movies' existing Download becomes the blue labelled main action in this
 pill; its duplicate raised button under the head is removed, and queue status stays there. Add to Library stays
 blue. The Played countdown and primary kept infinity remain on the tick. History/Episode Retention keep their real
 closed disclosure buttons, with a decorative Material chevron rotating .382s (.146s TV, instant reduced motion). See [title pages](title-pages.md).
@@ -51,7 +68,7 @@ foot pill, 2em each ([poster-card.md](poster-card.md)).
 
 | Kind | Colour | Use |
 | --- | --- | --- |
-| main | blue, the primary `#00a4dc` | the one main action of a view: Save, Add Profile, Continue, Get a Release |
+| main | blue, the primary `#00a4dc` | the one main action of a view: Save, Add Profile, Continue, Download |
 | other | grey | everything else: Cancel, Add Predefined Profiles, Cancel Download, View Queue as a button |
 | destroy | red, the error `#c62828` | Remove, Search Again after a failure, Replace in the picker |
 

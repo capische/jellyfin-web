@@ -1,5 +1,16 @@
 # Info tip: the (i) and its popover
 
+**Status: approved 2026-11-06, D288–D295, built, not accepted.** Computer first look only; phone/TV specifics and full acceptance follow the user's first look. These values supersede the older presentation notes below.
+
+## Watched action tips (D288–D295)
+
+Design-owned title/card/episode-row/Home-hero Watched actions use `data-tip` plus matching `aria-label`, without native
+`title`. On a computer the paper tip has 0.618em corners (φ⁻¹), 0.854em text, 0.236em × 0.618em padding (φ⁻³/φ⁻¹),
+0.382em offset (φ⁻²), 0.382s wait and 0.236s fade. Card-pill text stays 0.764em. No tip on phone/TV.
+Copy is `Watched <medium locale date>` plus ` · N times` from 2 plays; no date Watched, unplayed Mark Played.
+This is the existing design `[data-tip]::after`, not the (i)'s popover. Code: `utils/watched.ts` and `design/_ds.scss`.
+
+
 **rd2 shared chrome (built, not accepted):** the (i) reuses the round row action and its .236s pointer tint; the TV ring is
 white in both themes, as required by the redesign's row-action rule. Shared tooltip timing is .382s wait/.236s fade, no tooltip
 on phone/TV. The InfoPopover itself is explicitly excluded from menu paper/caps/phone sheets and retains the anchored

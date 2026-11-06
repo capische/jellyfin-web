@@ -1,5 +1,16 @@
 # Ratings: the group, its popup and the card rating
 
+**Status: approved 2026-11-06, D288–D295, built, not accepted.** Computer first look only; phone/TV specifics and full acceptance follow the user's first look. These values supersede the older presentation notes below.
+
+## Title top metadata (D288–D295)
+
+Ratings retain their group, source preference and popup. The title's metadata has no extra top margin; each item is
+0.382em below Directed by and 1em from its neighbour. A played title's Watched date follows the group and Ends at,
+with its own blue check (1.236em, 0.236em before the words) and 85.4% text. Count from 2 plays follows the date as
+requested in the build brief. This adds no focus stop. Status/reading measure is 46.98em; the metadata is not capped.
+External links still omit every source already represented by a rating (D276); TV has no links line.
+
+
 **Dropdown geometry fix (2026-11-05, user brief), built, not accepted:** `design/Ratings.tsx` uses
 `.jfmod-ratingsAnchor` (`design/cardRatings.scss`), an inline flex box enclosing the full mark/value stack. The existing
 centred popup's `top: 100%` now starts below that full box, with its `0.382em` gap (1em base, φ⁻²) and existing caret,

@@ -22,7 +22,7 @@ import { appRouter } from 'components/router/appRouter';
  * Several items may be registered at once (a series page's Keep Series and Shuffle, P1.FU12); each call gets every item that
  * claims it, in registration order.
  *
- * A card's item menu (P1.FU12: Get a Release on touch and TV, where cards have no hover overlay) does not pass through the
+ * A card's item menu (P1.FU12: Download on touch and TV, where cards have no hover overlay) does not pass through the
  * default export's `show`: upstream's `shortcuts.js` imports the module itself and calls its named `show`, which cannot be
  * wrapped. So card items are matched at the sheet: a sheet opened from inside a movie, series, season or episode card
  * (`positionTo` is the card or its More button) that no detail-page invocation claims asks the registered card items, by the

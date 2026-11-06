@@ -1,5 +1,15 @@
 # Download state mark
 
+**Status: approved 2026-11-06, D288–D295, built, not accepted.** Computer first look only; phone/TV specifics and full acceptance follow the user's first look. These values supersede the older presentation notes below.
+
+## Title top (D288–D295)
+
+The active title-page status card uses a 4.236em page ring (φ³), a 2.118em glyph and a 1em body gap, within a 46.98em
+measure (φ⁸). Its Not Downloaded and Unaired alternatives are slim lines with a 1.618em glyph and 0.618em gap.
+No duplicate mark or line under a pill offering Download. Card/row/Queue marks and state projection are unchanged.
+Styles: `design/titleTop.scss`; see [download block](download-block.md).
+
+
 **dsE (2026-11-04), built, not accepted:** the Queue's row uses the mockup's words: `3.1 of 7.4 GB`, `Queued`, `Importing…`, with the client's name in the state tooltip rather than on a line of its own. Title is `Name · S01E02`, without a year.
 
 **dsD (2026-11-04), built, not accepted:** title cells/rows and download/pending blocks now use `design/StateMark.tsx`
@@ -116,7 +126,7 @@ easing. Motion is transform and opacity only.
 - **Queue page subtitle:** a Replace reads `Replaces 1080p: 2160p Remux` (D13, worded as D11), an Add `Another version: …`.
 - **Episode page:** inside the download block ([download-block.md](download-block.md)); the still carries no mark.
 - **Season and series headers** (the native and the mod's season page, the native series page): the row-size mark (2.5em) as an
-  indicator in upstream's action row, after the Get a Release cloud and before Favourite (`span.jfmod-seasonTotal`), then 0.45em
+  indicator in upstream's action row, after the Download cloud and before Favourite (`span.jfmod-seasonTotal`), then 0.45em
   on the figure at 86 %: `2 of 8 episodes · 38% · 2 h 10 min left`. On the phone (`.layout-mobile`) the ring stays in the centred
   row and the figure is one centred line under it (`.jfmod-seasonTotalLine`); the TV is the desktop row at 125 %. The total over
   the batch (`batchProgress`): M is every episode of the season (of every season on the series page) that had no file and a

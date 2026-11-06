@@ -6,6 +6,7 @@ import { useTogglePlayedMutation } from 'hooks/useFetchItems';
 import { EventType } from 'constants/eventType';
 import Events from 'utils/events';
 import { Head } from './Head';
+import { watchedLabel, watchedDate } from '../utils/watched';
 import RatingIcon from '../components/RatingIcon';
 import { Root, DesignContext } from './Root';
 import { Icon, Cloud, Clock } from './Icon';
@@ -55,9 +56,9 @@ const Inline: FC<{ parts: InlinePart[]; underline?: boolean }> = ({ parts, under
         }}>{underline ? <u>{part.text}</u> : part.text}</a> : <React.Fragment key={part.key}>{part.text}</React.Fragment>)}</>;
 
 /** ds.js's `Genres: <b>Comedy</b>`: the label is the source's first part when it ends in a colon. */
-const Labelled: FC<{ parts: InlinePart[] }> = ({ parts }) => {
+const Labelled: FC<{ parts: InlinePart[]; label?: string }> = ({ parts, label }) => {
     const labelled = parts[0]?.text.endsWith(': ');
-    return <>{labelled && parts[0].text}<b><Inline parts={labelled ? parts.slice(1) : parts} /></b></>;
+    return <>{(labelled || label) && <span className='jfmod-titleFactLabel'>{labelled ? parts[0].text.replace(/: $/, '') : label}</span>}<b><Inline parts={labelled ? parts.slice(1) : parts} /></b></>;
 };
 
 const commandClass = (command: TitleCommand) => command.play ? 'play' : 'dbtn';
@@ -96,14 +97,23 @@ const useTitleCommand = (view: HTMLElement, item?: PlayedItem) => {
     };
 };
 
-const Command: FC<{ view: HTMLElement; command: TitleCommand; row?: boolean; item?: PlayedItem }> = ({ view, command, row, item }) => {
+const commandLabel = (command: TitleCommand, item?: BaseItemDto) => command.icon === 'check' ?
+    watchedLabel({ ...item?.UserData, Played: command.pressed }) : command.label;
+
+const Command: FC<{ view: HTMLElement; command: TitleCommand; row?: boolean; item?: BaseItemDto; download?: boolean }> = ({ view, command, row, item, download }) => {
     const run = useTitleCommand(view, item);
+    const label = commandLabel(command, item);
+    let kind = row ? 'ib' : commandClass(command);
+    if (download) kind = 'play mainb';
+    let tip = command.badge?.title ?? label;
+    if (command.icon === 'check') tip = label;
     return <button type='button'
-        className={(row ? 'ib' : commandClass(command)) + ' focusable' + (command.pressed ? ' on' : '') + (command.disabled ? ' off' : '')}
-        data-tip={command.play ? undefined : command.badge?.title ?? command.label} aria-label={command.label} aria-pressed={['check', 'heart'].includes(command.icon) ? command.pressed : undefined}
+        className={kind + ' focusable' + (command.pressed ? ' on' : '') + (command.disabled ? ' off' : '')}
+        data-tip={command.play || download ? undefined : tip} aria-label={label}
+        data-ds-watched={command.icon === 'check' && !item ? '' : undefined} data-id={item?.Id} data-type={item?.Type} aria-pressed={['check', 'heart'].includes(command.icon) ? command.pressed : undefined}
         data-ds-state-kind={row && command.icon === 'cloud' ? 'not-downloaded' : undefined} aria-disabled={command.disabled} data-ds-command={command.node.className} onClick={event => run(command, event.currentTarget)}
         onFocus={event => event.currentTarget.classList.add('focus')} onBlur={event => event.currentTarget.classList.remove('focus')}>
-        {row && command.icon === 'cloud' ? <Cloud /> : <Icon name={command.icon} />}{command.play && command.label}
+        {(row || download) && command.icon === 'cloud' ? <Cloud /> : <Icon name={command.icon} />}{(command.play || download) && label}
         {command.badge && <span className={'tickb' + (command.badge.kept ? ' kept' : '')}>{command.badge.text}</span>}
     </button>;
 };
@@ -135,7 +145,7 @@ const PosterActions: FC<{ card: TitleCard; view: HTMLElement }> = ({ card, view 
     const primary = card.commands.find(command => ['play', 'cloud'].includes(command.icon));
     const playCommand = !card.node.matches('[data-jfmod-placeholder], [data-jfmod-nofile], [data-jfmod-empty]') && !!card.node.dataset.id
         && ['Movie', 'Series', 'Season', 'Episode'].includes(card.node.dataset.type ?? '');
-    // The mockup's pill keeps Get a Release beside the disc that offers the same; Play stays only on the disc.
+    // The mockup's pill keeps Download beside the disc that offers the same; Play stays only on the disc.
     const pillOrder = ['check', 'heart', 'cloud'];
     const pillRank = (command: TitleCommand) => {
         const rank = pillOrder.indexOf(command.icon);
@@ -149,7 +159,7 @@ const PosterActions: FC<{ card: TitleCard; view: HTMLElement }> = ({ card, view 
             // The same existing shortcut command as a remote's Play key, on the original command host.
             else card.node.dispatchEvent(new CustomEvent('command', { bubbles: true, cancelable: true, detail: { command: 'play' } }));
         }}>{posterActionIcon(primary, card.mark)}</button>}
-        {menuCommands.length > 0 && <span className='hmenu glassy jfmod-cardActions'>{menuCommands.map(command => <button type='button' key={command.key} className={'pi' + (device === 'tv' ? '' : ' focusable')} tabIndex={device === 'tv' ? -1 : 0} data-tip={command.label} aria-label={command.label}
+        {menuCommands.length > 0 && <span className='hmenu glassy jfmod-cardActions'>{menuCommands.map(command => <button type='button' key={command.key} className={'pi' + (device === 'tv' ? '' : ' focusable')} tabIndex={device === 'tv' ? -1 : 0} data-tip={commandLabel(command)} aria-label={commandLabel(command)} data-ds-watched={command.icon === 'check' ? '' : undefined}
             data-ds-action={{ check: 'played', heart: 'favorite', cloud: 'get' }[command.icon as string]}
             aria-pressed={['check', 'heart'].includes(command.icon) ? command.pressed : undefined}
             onClick={event => {
@@ -208,7 +218,7 @@ const Card: FC<{ card: TitleCard; view: HTMLElement }> = ({ card, view }) => {
     const name = <><div className='nm'>{card.title}</div><div className='ln2'>{card.facts.length ? card.facts.map(fact => <span key={fact.text} className={fact.figure?.className ?? (fact.star ? 'star' : undefined)} title={fact.figure?.title}>{fact.star && <Icon name='star' />}{fact.text}</span>) : <span>{card.second}</span>}</div></>;
     const overview = <p className='ov'>{card.overview}</p>;
     const state = cardState(card);
-    // A failure takes Get a Release's place on the row: the bang is an indicator, never both (download-state-mark.md).
+    // A failure takes Download's place on the row: the bang is an indicator, never both (download-state-mark.md).
     const failedRow = card.mark?.kind === 'failed';
     const commands = failedRow ? card.commands.filter(command => command.icon !== 'cloud') : card.commands;
     const rowCommands = device === 'phone' ? phoneRowCommands({ ...card, commands }, !!state) : commands;
@@ -260,7 +270,7 @@ const Content: FC<{ view: HTMLElement; type: string; art: string; item?: BaseIte
         const observer = new MutationObserver(read);
         const source = view.querySelector('.detailPageWrapperContainer');
         if (source) observer.observe(source, { childList: true, subtree: true, attributes: true, characterData: true });
-        observer.observe(view, { attributes: true, attributeFilter: ['class', 'data-jfmod-placeholder', 'data-ds-tracks-mounted'] });
+        observer.observe(view, { attributes: true, attributeFilter: ['class', 'data-jfmod-placeholder', 'data-ds-tracks-mounted', 'data-jfmod-download-state'] });
         const update = (event: Event) => {
             setEnvironment((event as CustomEvent<{ type: string; art: string; item?: BaseItemDto }>).detail);
             read();
@@ -275,7 +285,7 @@ const Content: FC<{ view: HTMLElement; type: string; art: string; item?: BaseIte
         };
     }, [view]);
     useEffect(() => {
-        // Get a Release is mounted before the controller has revealed Play: wait for the controller's own buttons.
+        // Download is mounted before the controller has revealed Play: wait for the controller's own buttons.
         if (device !== 'tv' || focused.current || !model.commands.some(command => ['check', 'heart'].includes(command.icon)) || !ref.current) return;
         if (document.activeElement && document.activeElement !== document.body && !view.contains(document.activeElement)) return;
         const first = ref.current.querySelector<HTMLElement>('.actbar .play, .actbar button');
@@ -286,6 +296,7 @@ const Content: FC<{ view: HTMLElement; type: string; art: string; item?: BaseIte
     let here = '';
     if (environment.type === 'Season') here = model.title;
     else if (environment.type === 'Episode' && item?.IndexNumber != null) here = 'Episode ' + item.IndexNumber;
+    const watched = item?.UserData?.Played && watchedDate(item.UserData) ? watchedLabel(item.UserData) : null;
     const lines = <>{model.parents.length > 0 && <div className='by'>{model.parents.map((parent, index) => <React.Fragment key={parent.href}>
         {index > 0 && ' › '}<a className='focusable' href={parent.href} onClick={event => {
             if (parent.command) {
@@ -293,7 +304,7 @@ const Content: FC<{ view: HTMLElement; type: string; art: string; item?: BaseIte
                 parent.command.click();
             }
         }}><u>{parent.label}</u></a></React.Fragment>)}{here && ' › ' + here}</div>}
-    {!model.parents.length && model.by.length > 0 && <div className='by'>{model.byWords} <Inline parts={model.by} underline /></div>}
+    {!model.parents.length && model.by.length > 0 && <div className='by'><span className='jfmod-byLabel'>{model.byWords}</span> <Inline parts={model.by} underline /></div>}
     <div className='meta'>{environment.type === 'Season' && item?.ProductionYear && <span>{item.ProductionYear}</span>}{environment.type === 'Season' && !!item?.ChildCount && <span>{item.ChildCount} episodes</span>}
         {model.meta.filter(fact => !fact.endsAt).map(fact => <span key={fact.text} className={factClass(fact)}>
             {fact.star && <Icon name='star' />}{fact.critic && <RatingIcon className='rm rt' rating={{ source: 'tomatoes_critic', value: parseFloat(fact.text), scale: 'percent' }} />}{fact.parts.length ? <Inline parts={fact.parts} /> : fact.text}</span>)}
@@ -301,11 +312,15 @@ const Content: FC<{ view: HTMLElement; type: string; art: string; item?: BaseIte
         <Slot view={view} name='ratings' />
         {environment.type === 'Series' && !!item?.RecursiveItemCount && <span>{item.RecursiveItemCount} episodes · {item.ChildCount} seasons</span>}
         {model.meta.filter(fact => fact.endsAt).map(fact => <span key={fact.text} data-ds-endsat=''><Inline parts={fact.parts} /></span>)}
+        {watched && <span className='jfmod-watchedMeta'><Icon name='check' />{watched}</span>}
     </div></>;
-    const pill = model.commands.length > 0 && <div className={'actbar glassy focuscontainer-x' + (model.commands.some(command => command.play) ? '' : ' short')}>
-        {model.commands.map(command => <Command key={command.key} view={view} command={command} item={item} />)}</div>;
-    return <div ref={ref}>
-        <Head title={model.title} poster={model.image} art={environment.art || (environment.type === 'Person' ? model.image : undefined)} lines={lines} pill={pill} wide={environment.type === 'Episode'} icon={environment.type === 'Person' ? 'person' : undefined}>
+    const download = !model.commands.some(command => command.play) && model.downloadKind === 'none';
+    const commands = model.commands.filter(command => command.icon !== 'cloud' || model.downloadKind !== 'unaired');
+    if (download) commands.sort((a, b) => Number(b.icon === 'cloud') - Number(a.icon === 'cloud'));
+    const pill = commands.length > 0 && <div className={'actbar glassy focuscontainer-x' + (download || commands.some(command => command.play) ? '' : ' short')}>
+        {commands.map(command => <Command key={command.key} view={view} command={command} item={item} download={download && command.icon === 'cloud'} />)}</div>;
+    return <div ref={ref} className={environment.type === 'Person' ? undefined : 'jfmod-titleTop'}>
+        <Head titleTop={environment.type !== 'Person'} title={model.title} poster={model.image} art={environment.art || (environment.type === 'Person' ? model.image : undefined)} lines={lines} pill={pill} wide={environment.type === 'Episode'} icon={environment.type === 'Person' ? 'person' : undefined}>
             <Slot view={view} name='notice' /><Slot view={view} name='tracks' />
             {model.tracks.length > 0 && <div ref={stackRef} className={'gpk' + (stacked ? ' stacked' : '')}>
                 {model.tracks.map(track => <TrackField key={track.name} kind={track.kind} name={track.name}
@@ -318,11 +333,15 @@ const Content: FC<{ view: HTMLElement; type: string; art: string; item?: BaseIte
                 </TrackField>)}
             </div>}
             <Slot view={view} name='download' />
-            {model.originalTitle && <div className='tags'>{model.originalTitle}</div>}
-            <div className='overview'>{model.tagline && <p>{model.tagline}</p>}{model.overview.length > 0 && <p data-ds-overview=''><Inline parts={model.overview} /></p>}</div>
-            {[...model.details, model.genres].filter(parts => parts.length).map(parts => <div className='tags' data-ds-detail='' key={parts.map(part => part.text).join('')}><Labelled parts={parts} /></div>)}
-            {model.tags.length > 0 && <div className='tags'><Inline parts={model.tags} /></div>}
-            <div className='links'>{model.links.map((link, index) => <React.Fragment key={link.href}>{index > 0 && ', '}<a className='focusable' href={link.href} target='_blank' rel='noreferrer'><b>{link.label}</b></a></React.Fragment>)}</div>
+            <div className='jfmod-titleReading'>
+                {model.originalTitle && <div className='tags'>{model.originalTitle}</div>}
+                <div className='jfmod-titleText'>{model.tagline && <p className='jfmod-tagline'>{model.tagline}</p>}{model.overview.length > 0 && <div className='overview'><p data-ds-overview=''><Inline parts={model.overview} /></p></div>}</div>
+                <div className='jfmod-titleFacts'>
+                    {model.details.filter(parts => parts.length).map(parts => <div className='tags' data-ds-detail='' key={parts.map(part => part.text).join('')}><Labelled parts={parts} /></div>)}
+                    {model.genres.length > 0 && <div className='tags'><Labelled parts={model.genres} label='Genres' /></div>}
+                    {model.tags.length > 0 && <div className='tags jfmod-titleTags'><Labelled parts={model.tags} label='Tags' /></div>}
+                    <div className='links'>{model.links.map((link, index) => <React.Fragment key={link.href}>{index > 0 && ', '}<a className='focusable' href={link.href} target='_blank' rel='noreferrer'><b>{link.label}</b></a></React.Fragment>)}</div>
+                </div></div>
             <Slot view={view} name='augment' />
         </Head>
         <div className='plain titlefoot'><Slot view={view} name='sections' />{model.sections.map(section => section.cards.some(card => card.row) ?

@@ -27,7 +27,7 @@ export const FILE_STATE_LABEL: Record<FileState, string> = {
 /**
  * Whether the Not Downloaded mark is an administrator's button (P1.FU11) or, for everyone, a plain indicator, per kind of mark.
  * Cards: off since P1.FU19 (user 2026-10-13: "As for the clickable state icon, let's remove it for now"); the picker opens from a
- * card's hover cloud, the card's menu and the page header's Get a Release. Rows: on again since P1.FU22 (user 2026-10-13:
+ * card's hover cloud, the card's menu and the page header's Download. Rows: on again since P1.FU22 (user 2026-10-13:
  * "Replace yellow with white and add hover effect + click which open the picker for the episode"): a row's mark (a missing
  * episode's row, a library list row) is the administrator's round button, with the look of upstream's round row icons. The
  * click, the focus stop and the TV hop follow the flag; a failure on a row stays an indicator either way.
