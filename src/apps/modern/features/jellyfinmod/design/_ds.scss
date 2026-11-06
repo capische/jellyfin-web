@@ -817,7 +817,7 @@ h2.sect2 { margin: 1.618em 0 0.618em; font-size: 1.236em; font-weight: 600; line
 /* A row and buttons */
 .mi, .vrow, .srow, .srow2, .rel, .qrow, .gpk .seg, .fld .box, .gpill { transition: background-color var(--d1) var(--ease), box-shadow var(--d1) var(--ease); }
 /* Every round icon button's hover tint fades, in and out on 0.236 s: it answers the pointer (D229). */
-.dbtn, .rb, .ib, .bic { transition: background-color var(--d1) var(--ease), box-shadow var(--d1) var(--ease), transform var(--d1) var(--ease); }
+.dbtn, .rb, .ib, .bic, .hmenu .pi { transition: background-color var(--d1) var(--ease), box-shadow var(--d1) var(--ease), transform var(--d1) var(--ease); }
 .dbtn, .ib, .actbar .play { position: relative; }
 .bic { position: relative; display: flex; flex: none; border-radius: 50%; cursor: pointer; }
 .bic:hover, .bic.hv, .dbtn.hv, .ib.hv { background: var(--tint); }
@@ -845,8 +845,8 @@ h2.sect2 { margin: 1.618em 0 0.618em; font-size: 1.236em; font-weight: 600; line
 .actbar .play svg { transition: transform var(--d1) var(--ease); }
 .actbar .play:hover .g, .actbar .play.sim-hover .g { transform: scale(1.146); }
 .actbar .play:active, .actbar .play.sim-press { transform: scale(0.96); }
-.dbtn:active, .rb:active, &:not(html) .btn:active { transform: scale(0.96); }
-.dbtn:active, .rb:active, &:not(html) .btn:active, .actbar .play:active, .actbar .play.sim-press, &.dev-computer .cell .disc:active, &.dev-tablet .cell .disc:active, .cell .disc.sim-press { transition-duration: var(--d0); }
+.dbtn:active, .rb:active, .hmenu .pi:active, &:not(html) .btn:active { transform: scale(0.96); }
+.dbtn:active, .rb:active, .hmenu .pi:active, &:not(html) .btn:active, .actbar .play:active, .actbar .play.sim-press, &.dev-computer .cell .disc:active, &.dev-tablet .cell .disc:active, .cell .disc.sim-press { transition-duration: var(--d0); }
 .playerblack { position: relative; background: #000; }
 /* The spinner (D231): upstream's markup and motion, from loading.scss, one golden step smaller. Size 6.18 % of the screen height (upstream 10 %). Arc and track both 0.21em, upstream's arc. */
 & { --spin-arc: #fff; --spin-track: rgba(255, 255, 255, 0.3); }
