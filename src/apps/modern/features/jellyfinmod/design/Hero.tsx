@@ -13,6 +13,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import NativeRatingsLine from '../components/NativeRatingsLine';
 import { Root, DesignContext, readEnvironment } from './Root';
 import { Action } from './Action';
+import { usePlayedAction } from '../hooks/usePlayedAction';
 
 interface Props {
     item: BaseItemDto | ItemDto;
@@ -42,6 +43,7 @@ const HeroBody: FC<Props> = ({ item, backdrop, overview, details, onPlay, error 
     const { api, user, __legacyApiClient__ } = useApi();
     const queryClient = useQueryClient();
     const played = useTogglePlayedMutation();
+    const runPlayed = usePlayedAction();
     const favorite = useToggleFavoriteMutation();
     const [height, setHeight] = useState(heroHeight);
     useLayoutEffect(() => {
@@ -53,11 +55,16 @@ const HeroBody: FC<Props> = ({ item, backdrop, overview, details, onPlay, error 
     setCardData([item as ItemDto], { serverId });
     const toggle = async (kind: 'played' | 'favorite') => {
         if (!item.Id) return;
-        try {
-            if (kind === 'played') await played.mutateAsync({ itemId: item.Id, isPlayed: !!item.UserData?.Played });
-            else await favorite.mutateAsync({ itemId: item.Id, isFavorite: !!item.UserData?.IsFavorite });
+        const itemId = item.Id;
+        const change = async () => {
+            if (kind === 'played') await played.mutateAsync({ itemId, isPlayed: !!item.UserData?.Played });
+            else await favorite.mutateAsync({ itemId, isFavorite: !!item.UserData?.IsFavorite });
             await queryClient.invalidateQueries({ queryKey: ['JellyfinMod', api?.basePath, user?.Id] });
             await queryClient.invalidateQueries({ queryKey: ['User', user?.Id] });
+        };
+        try {
+            if (kind === 'played') await runPlayed(item, change);
+            else await change();
         } catch (failure) { console.error(failure); }
     };
     const data = getDataAttributes({ action: ItemAction.Menu, itemId: item.Id, itemServerId: serverId, itemType: item.Type,

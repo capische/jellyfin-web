@@ -11,6 +11,15 @@ const sass = require('sass');
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const feature = path.join(repo, 'src/apps/modern/features/jellyfinmod');
 const mocks = {
+    RootAppRouter: `const listeners=new Set(); const stack=[]; export const history={location:{pathname:'/',search:'',state:{}},
+        listen(fn){listeners.add(fn);return()=>listeners.delete(fn)},
+        push(url,state){stack.push(this.location);this.location={pathname:'/',search:'',state};this.emit()},
+        replace(url,state){this.location={pathname:'/',search:'',state};this.emit()},
+        back(){this.location=stack.pop()||{pathname:'/',search:'',state:{}};this.emit()},
+        emit(){for(const fn of [...listeners])fn({location:this.location})}};`,
+    appRouter: 'export const appRouter={ready:()=>Promise.resolve()};',
+    useApi: 'export const useApi=()=>window.playedContext||{};',
+    dialog: `import {showDesignDialog} from '${feature}/design/Dialogs'; export default {show:showDesignDialog};`,
     layoutManager: `export default { get tv(){return document.documentElement.classList.contains('layout-tv')},get mobile(){return document.documentElement.classList.contains('layout-mobile')} };`,
     browser: 'export default {supportsCssAnimation:()=>false};',
     inputManager: `export default {on:(n,f)=>n.addEventListener('command',f),off:(n,f)=>n.removeEventListener('command',f)};`,
@@ -45,7 +54,7 @@ const result = await build({
             pending:React.createElement('div',{className:'pend'},'Pending'),note:'Whole folder delete warning'}),
             history&&React.createElement(FileHistoryPopover,{...history,history:Array.from({length:100},(_,i)=>({id:String(i),bindingId:history?.version.bindingId,createdAt:new Date(Date.now()-i*86400000).toISOString(),eventType:'imported',summary:'Imported file',detail:null})),onClose:closeHistory}));};
         let starting; const manager={};
-        window.api={render(type='Movie'){flushSync(()=>root.render(React.createElement(TitlePage,{view,type,art:''})));},
+        window.api={render(type='Movie',item){flushSync(()=>root.render(React.createElement(TitlePage,{view,type,art:'',item})));},
             sources(){setTitleSources(view,[{Id:'aaaa',Size:55000000000,MediaStreams:[{Type:'Video',Width:3840,Height:2160,Codec:'hevc'},{Type:'Audio',Codec:'truehd',Profile:'Atmos'}]},
                 {Id:'bbbb',Size:15000000000,MediaStreams:[{Type:'Video',Width:1920,Height:1080,Codec:'h264'},{Type:'Audio',Codec:'aac'}]}]);},
             right(){focusManager.moveRight(document.activeElement)},
@@ -63,8 +72,9 @@ const result = await build({
     plugins:[{name:'app-environment',setup(builder){
         builder.onResolve({filter:/\.(scss|css)$/},args=>({path:args.path,namespace:'empty'}));
         builder.onLoad({filter:/.*/,namespace:'empty'},()=>({contents:'',loader:'js'}));
-        builder.onResolve({filter:/(?:^|\/)(layoutManager|browser|inputManager|scrollManager|scrollHelper|keyboardNavigation|dpadModals|loading|globalize)$/},args=>({path:args.path.split('/').pop(),namespace:'mock'}));
-        builder.onLoad({filter:/.*/,namespace:'mock'},args=>({contents:mocks[args.path],loader:'js'}));
+        builder.onResolve({ filter:/^components\/dialog\/dialog$/ }, ()=>({ path:'dialog', namespace:'mock' }));
+        builder.onResolve({ filter:/(?:^|\/)(RootAppRouter|appRouter|useApi|layoutManager|browser|inputManager|scrollManager|scrollHelper|keyboardNavigation|dpadModals|loading|globalize)$/ }, args=>({ path:args.path.split('/').pop(), namespace:'mock' }));
+        builder.onLoad({ filter:/.*/, namespace:'mock' }, args=>({ contents:mocks[args.path], loader:'js', resolveDir:repo }));
     }}]
 });
 const css = [path.join(repo,'src/styles/librarybrowser.scss'),...['design/design.scss','components/ratings.scss','integration/playbackStart.scss'].map(file=>path.join(feature,file))]
@@ -325,6 +335,120 @@ try {
     assert.equal(await reserve.evaluate(node=>node.classList.contains('focusable')),false,'a hidden reserve is no TV focus stop');
     assert(await reserve.evaluate(node=>node.getBoundingClientRect().width< [...node.querySelectorAll('.ritem')].reduce((sum,item)=>sum+item.getBoundingClientRect().width,0)),
         'fallback reserves the widest rating, not their sum');
+    // D281: real title command -> played guard -> SDK GETs -> shared confirm. The transport is an in-memory fixture;
+    // confirming below only clicks the fixture command host, never a Jellyfin endpoint. All page network remains blocked.
+    await page.setViewportSize({ width:1440, height:900 });
+    await page.evaluate(()=>{
+        window.setupPlayed = (item, options = {})=>{
+            window.playedGets = [];
+            window.nativePlayedCalls = 0;
+            window.playedContext = { user:{ Id:'user', Configuration:{ DisplayMissingEpisodes:!!options.missing } }, api:{
+                configuration:{ basePath:'https://offline.invalid' }, axiosInstance:{ defaults:{}, request:async config=>{
+                    if (config.method !== 'GET') throw new Error('Fixture permits GET only');
+                    // eslint-disable-next-line compat/compat -- Node-only browser fixture; never shipped.
+                    const url = new URL(config.url, 'https://offline.invalid');
+                    window.playedGets.push(url.pathname + url.search);
+                    if (url.pathname !== '/Items') return { data:item };
+                    if (options.fail) throw new Error('Count unavailable');
+                    const virtual = url.searchParams.get('locationTypes') === 'Virtual';
+                    const n = virtual ? 1 : (options.count ?? 3);
+                    return { data:{ Items:Array.from({ length:n }, (_, i)=>({ Id:(virtual ? 'virtual' : 'real') + i, SeasonId:i === 0 ? 'season1' : 'season2' })) } };
+                } } } };
+            const view = document.getElementById('itemDetailPage');
+            const source = view.querySelector('.btnPlaystate');
+            source.classList.toggle('playstatebutton-played', !!item.UserData?.Played);
+            source.title = item.UserData?.Played ? 'Mark unplayed' : 'Mark played';
+            source.onclick = ()=>window.nativePlayedCalls++;
+            window.api.render(item.Type, item);
+            view.dispatchEvent(new CustomEvent('ds-title-update', { detail:{ type:item.Type, art:'', item } }));
+        };
+    });
+    const setupPlayed = async(item, options = {})=>{
+        // mountDialog keeps its closing Back listener for 200 ms to consume a repeated remote press.
+        await page.waitForTimeout(250);
+        await page.evaluate(fixture=>window.setupPlayed(fixture.item, fixture.options), { item, options });
+        await played.waitFor();
+    };
+    const series = { Id:'series', Type:'Series', Name:'Stranger Things', UserData:{ Played:false } };
+    await page.evaluate(()=>{
+        document.documentElement.className = 'jfmod-chrome layout-desktop';
+    });
+    await setupPlayed(series);
+    await played.click();
+    await page.getByRole('dialog', { name:'Mark Stranger Things Played?' }).waitFor();
+    assert.equal(await page.locator('[data-ds-text]').innerText(), 'All 3 episodes in 2 seasons are marked played.');
+    assert.equal(await page.evaluate(()=>window.nativePlayedCalls), 0);
+    assert.equal(await page.locator('.dlgfoot .btn.main').innerText(), 'Mark Played');
+    const reads = await page.evaluate(()=>window.playedGets.length);
+    await played.evaluate(node=>node.click());
+    assert.equal(await page.getByRole('dialog').count(), 1);
+    assert.equal(await page.evaluate(()=>window.playedGets.length), reads);
+    await page.keyboard.press('Escape');
+    await page.getByRole('dialog').waitFor({ state:'detached' });
+    assert.equal(await page.evaluate(()=>window.nativePlayedCalls), 0);
+    await setupPlayed(series, { count:1 });
+    await played.click();
+    await page.locator('[data-ds-text]').waitFor();
+    assert.equal(await page.locator('[data-ds-text]').innerText(), 'All 1 episode in 1 season are marked played.');
+    await page.getByRole('button', { name:'Cancel', exact:true }).click();
+    await page.getByRole('dialog').waitFor({ state:'detached' });
+    assert.equal(await page.evaluate(()=>window.nativePlayedCalls), 0);
+    await setupPlayed(series, { fail:true });
+    await played.click();
+    await page.locator('[data-ds-text]').waitFor();
+    assert.equal(await page.locator('[data-ds-text]').innerText(), 'All episodes of Stranger Things are marked played.');
+    await page.keyboard.press('Escape');
+    await page.getByRole('dialog').waitFor({ state:'detached' });
+    await setupPlayed(series, { missing:true });
+    await played.click();
+    await page.locator('[data-ds-text]').waitFor();
+    assert.equal(await page.locator('[data-ds-text]').innerText(), 'All 4 episodes in 2 seasons are marked played.');
+    assert(await page.evaluate(()=>window.playedGets.some(url=>url.includes('locationTypes=Virtual') && url.includes('isUnaired=false'))));
+    await page.getByRole('dialog').getByRole('button', { name:'Mark Played', exact:true }).click();
+    await page.waitForFunction(()=>window.nativePlayedCalls === 1);
+    await page.getByRole('dialog').waitFor({ state:'detached' });
+    await page.evaluate(()=>{
+        document.documentElement.className = 'jfmod-chrome layout-tv';
+    });
+    await setupPlayed({ ...series, UserData:{ Played:true } });
+    await played.click();
+    await page.getByRole('dialog', { name:'Mark Stranger Things Unplayed?' }).waitFor();
+    assert.equal(await page.locator('[data-ds-text]').innerText(), 'All 3 episodes in 2 seasons are marked unplayed, including the ones you have watched.');
+    assert.equal(await page.evaluate(()=>document.activeElement?.textContent), 'Cancel');
+    assert(await page.evaluate(()=>window.playedGets.filter(url=>url.startsWith('/Items?')).every(url=>!url.includes('LocationTypes') && !url.includes('locationTypes') && !url.includes('isUnaired'))));
+    await page.evaluate(()=>document.dispatchEvent(new KeyboardEvent('keydown', { key:'BrowserBack', bubbles:true, cancelable:true })));
+    await page.getByRole('dialog').waitFor({ state:'detached' });
+    assert.equal(await page.evaluate(()=>window.nativePlayedCalls), 0);
+    await setupPlayed({ Id:'season', Type:'Season', Name:'Season 4', SeriesName:'Stranger Things', UserData:{ Played:false } }, { count:9 });
+    await played.click();
+    await page.getByRole('dialog', { name:'Mark Season 4 Played?' }).waitFor();
+    assert.equal(await page.locator('[data-ds-text]').innerText(), 'All 9 episodes of Stranger Things Season 4 are marked played.');
+    assert(await page.evaluate(()=>window.playedGets.some(url=>url.includes('parentId=season') && url.includes('recursive=true') && url.includes('includeItemTypes=Episode'))));
+    await page.keyboard.press('Escape');
+    await page.getByRole('dialog').waitFor({ state:'detached' });
+    // A title-page season poster follows the same guard before its hidden native button is clicked.
+    await page.waitForTimeout(250);
+    await page.evaluate(()=>{
+        const cards = document.getElementById('castContent');
+        cards.innerHTML = '<div class="card" data-type="Season" data-id="season"><div class="cardText">Season 4</div><button class="btnPlaystate" title="Mark played"></button></div>';
+        cards.querySelector('button').onclick = ()=>window.nativePlayedCalls++;
+    });
+    const posterPlayed = painted.locator('.cell[data-id="season"] [data-ds-action="played"]');
+    await posterPlayed.waitFor({ state:'attached' });
+    await posterPlayed.evaluate(node=>node.click());
+    await page.getByRole('dialog', { name:'Mark Season 4 Played?' }).waitFor();
+    assert.equal(await page.evaluate(()=>window.nativePlayedCalls), 0);
+    await page.getByRole('dialog').getByRole('button', { name:'Mark Played', exact:true }).click();
+    await page.waitForFunction(()=>window.nativePlayedCalls === 1);
+    await page.getByRole('dialog').waitFor({ state:'detached' });
+    for (const Type of ['Movie', 'Episode']) {
+        await setupPlayed({ Id:Type, Type, Name:Type });
+        await played.click();
+        await page.waitForFunction(()=>window.nativePlayedCalls === 1);
+        assert.equal(await page.getByRole('dialog').count(), 0);
+        assert.equal(await page.evaluate(()=>window.playedGets.length), 0);
+    }
+    console.log('PASS D281 title Played: counts, singulars, missing/unaired scope, fallback, Cancel/Escape/TV Back, safe focus, original command and immediate Movie/Episode');
     await reference.close();
     assert.deepEqual(errors,[]);
     console.log('dsD: native heads/actions/cards; source selects and version choices; video-only facts; binding actions; image fallback; live device/theme and persistent slots; playback-start cleanup passed.');

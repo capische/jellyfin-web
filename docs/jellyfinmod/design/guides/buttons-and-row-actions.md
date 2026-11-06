@@ -1,5 +1,11 @@
 # Buttons and row actions
 
+**Status — D281, approved by the user, 2026-11-06; implemented, live acceptance pending:** Mark Played and Mark Unplayed
+on a Series or Season ask first on every design surface: the card pill, title action bar, title-page poster actions and Home
+hero. Movie and Episode actions remain immediate. Confirmation runs the original toggle and its existing row refresh;
+Cancel, Close, Escape and remote Back change nothing. Upstream context menus keep their own behavior. See
+[shared chrome](shared-chrome.md) for the dialog and count rules; code: `hooks/usePlayedAction.ts`.
+
 **dsD (2026-11-04), built, not accepted:** title pages use source `actbar/play/dbtn`, row `ib/rb`, and disclosure
 `dsc/opn/er` through the design components. Original commands, permissions and busy/refusal guards remain. Real buttons add
 focusable/ARIA semantics without upstream visual components; native Played/Favourite controls retain their original calls and

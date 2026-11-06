@@ -1,10 +1,34 @@
 # Shared chrome
 
+**Status — D281, approved by the user, 2026-11-06; implemented, live acceptance pending:** Series and Season Played actions
+reuse `components/confirm/confirm` → `design/Dialogs.tsx`, the same confirm used by Remove/Replace. Existing
+`dialog` / `dlghead` / `dlgbody` / `dlgfoot` markup, paper, sizes, motion and focus lifecycle remain. Cancel is the secondary
+first button and starts focused on TV, as the Remove dialog's safe choice does; computers retain the shared confirm's focus.
+The primary last button is **Mark Played** or **Mark Unplayed**. Cancel, Close, Escape and Back do not run the toggle.
+Approved source: workspace `reviews/design-system/ds5.js`, Home states `played-series`, `played-season`, `unplayed-series`.
+
+- Titles: **Mark {Series} Played?** / **Mark {Season name} Played?**, or **Unplayed**.
+- Series body: `All {N} episodes in {S} seasons are marked played.` Season body:
+  `All {N} episodes of {Series} {Season name} are marked played.` Use `1 episode` / `1 season` for singular counts.
+- Unplayed bodies end `are marked unplayed, including the ones you have watched.`
+- Counts are fetched at activation, never inferred from a visible row or unwatched badge. `GET /Items` with `parentId`,
+  `recursive=true`, `includeItemTypes=Episode` and the current user follows the folder operation's recursive episode scope.
+  No played-state filter: episodes already played also receive the folder write. Seasons are the distinct `SeasonId`s in
+  that set, including specials when present; empty seasons do not count. No limit or page slice is requested.
+- Match server `Folder.MarkPlayed`: non-virtual episodes, plus virtual aired episodes only when the user displays missing
+  episodes (`locationTypes=Virtual`, `isUnaired=false`, with the date filtered by the server). Real unaired files still count.
+  `Folder.MarkUnplayed` visits all recursive episodes, including virtual and unaired ones. These are episode items, not a
+  sum of episode index ranges or alternate video files. `GET /Items/{id}` supplies names for sparse title-page command hosts.
+- If a metadata/count read fails, still ask with no numeric count: `All episodes of {Series} are marked played.` or
+  `All episodes of {Series} {Season name} are marked played.` Apply the same Unplayed ending. Names are escaped as text.
+  Repeated activation while counting, confirming or running the original toggle is ignored by that action.
+
 **The player's one bar (ds.t7, 2026-11-06), built, not accepted:** on a computer, tablet or phone the player has one top bar, upstream's video page's own (Back, then SyncPlay and Cast at the right, as the mockup draws it); its title is hidden, as the legacy header's was, because the controls carry it (`.jfmod-osdName`). The legacy header stays hidden there, as upstream hides it in the modern layout: its `/video` exemption from inline hiding drew a second bar under the first (the user's report). The TV keeps the legacy header in the player, its toolbar exempt on `/video`.
 
 **Review fixes (2026-11-04), built, not accepted:** the legacy header's toolbar is exempt from inline hiding on `/video` (the header itself only on the TV since ds.t7), leaving Back, Cast and SyncPlay under the player's existing visibility classes. TV header-tab hiding is limited to `html.jfmod-chrome.layout-tv`. The native seek thumb retains upstream's `show-focus` growth. The player integration mirrors the original `.osdTitle` empty state to `.jfmod-empty` on its container, replacing `:has()` for older Safari/webOS without changing playback.
 
 **dsF sweep (2026-11-04), built, not accepted:** dialogs are top-aligned as in the mockup (`dscrim`), not centred, so a picker does not jump when results arrive. Focus rings are for keys and the TV, not clicks. The player and Preferences own their markup: see [dsF.md](../dsF.md).
+Confirms and alerts sit vertically centred on computers and tablets; growing dialogs stay top-aligned, and phone/TV keep their layouts (user, 2026-11-06).
 
 **dsD (2026-11-04), built, not accepted:** title/picker restyling and obsolete file-history/picker exclusions are
 removed; source markup owns those surfaces. Shared chrome still serves unported custom screens. Dashboard, mod admin settings

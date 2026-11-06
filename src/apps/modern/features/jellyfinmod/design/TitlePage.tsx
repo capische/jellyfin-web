@@ -16,6 +16,7 @@ import { DesignMediaMarks } from './MediaMarks';
 import { streamMarks } from '../constants/versions';
 import { formatBytes } from '../constants/queue';
 import { rememberCommandOpener } from '../integration/commandOpener';
+import { usePlayedAction, type PlayedItem } from '../hooks/usePlayedAction';
 
 const slots = new WeakMap<HTMLElement, Map<string, HTMLDivElement>>();
 /** Keep controller portals and their focus/state alive when head changes structure on a layout switch. */
@@ -64,14 +65,34 @@ const factClass = (fact: { badge: boolean; star: boolean; critic: boolean }) => 
     return undefined;
 };
 
-const Command: FC<{ view: HTMLElement; command: TitleCommand; row?: boolean }> = ({ view, command, row }) => <button type='button'
-    className={(row ? 'ib' : commandClass(command)) + ' focusable' + (command.pressed ? ' on' : '') + (command.disabled ? ' off' : '')}
-    data-tip={command.play ? undefined : command.badge?.title ?? command.label} aria-label={command.label} aria-pressed={['check', 'heart'].includes(command.icon) ? command.pressed : undefined}
-    data-ds-state-kind={row && command.icon === 'cloud' ? 'not-downloaded' : undefined} aria-disabled={command.disabled} data-ds-command={command.node.className} onClick={event => runTitleCommand(view, command, event.currentTarget)}
-    onFocus={event => event.currentTarget.classList.add('focus')} onBlur={event => event.currentTarget.classList.remove('focus')}>
-    {row && command.icon === 'cloud' ? <Cloud /> : <Icon name={command.icon} />}{command.play && command.label}
-    {command.badge && <span className={'tickb' + (command.badge.kept ? ' kept' : '')}>{command.badge.text}</span>}
-</button>;
+const useTitleCommand = (view: HTMLElement, item?: PlayedItem) => {
+    const runPlayed = usePlayedAction();
+    return (command: TitleCommand, opener: HTMLElement) => {
+        if (command.disabled) return;
+        const host = command.node.closest<HTMLElement>('[data-id][data-type]');
+        const target = item || { Id: host?.dataset.id, Type: host?.dataset.type };
+        const run = () => {
+            if (command.node.isConnected && opener.isConnected) runTitleCommand(view, command, opener);
+        };
+        if (command.icon === 'check') {
+            void runPlayed({ ...target, UserData: { Played: command.pressed } }, run).catch(console.error);
+        } else {
+            run();
+        }
+    };
+};
+
+const Command: FC<{ view: HTMLElement; command: TitleCommand; row?: boolean; item?: PlayedItem }> = ({ view, command, row, item }) => {
+    const run = useTitleCommand(view, item);
+    return <button type='button'
+        className={(row ? 'ib' : commandClass(command)) + ' focusable' + (command.pressed ? ' on' : '') + (command.disabled ? ' off' : '')}
+        data-tip={command.play ? undefined : command.badge?.title ?? command.label} aria-label={command.label} aria-pressed={['check', 'heart'].includes(command.icon) ? command.pressed : undefined}
+        data-ds-state-kind={row && command.icon === 'cloud' ? 'not-downloaded' : undefined} aria-disabled={command.disabled} data-ds-command={command.node.className} onClick={event => run(command, event.currentTarget)}
+        onFocus={event => event.currentTarget.classList.add('focus')} onBlur={event => event.currentTarget.classList.remove('focus')}>
+        {row && command.icon === 'cloud' ? <Cloud /> : <Icon name={command.icon} />}{command.play && command.label}
+        {command.badge && <span className={'tickb' + (command.badge.kept ? ' kept' : '')}>{command.badge.text}</span>}
+    </button>;
+};
 
 const openCard = (card: TitleCard) => {
     const action = card.node.matches('button, .itemAction') ? card.node : card.node.querySelector<HTMLElement>('.cardImageContainer.itemAction, .listItemBody .itemAction, .jfmod-missingRowLink');
@@ -96,6 +117,7 @@ const TrackValue: FC<{ option?: TitleTrack['options'][number]; closed?: boolean 
 /** The source cell's disc and foot pill, forwarding the original card commands. */
 const PosterActions: FC<{ card: TitleCard; view: HTMLElement }> = ({ card, view }) => {
     const device = useContext(DesignContext);
+    const run = useTitleCommand(view, { Id: card.node.dataset.id, Type: card.node.dataset.type, Name: card.title });
     const primary = card.commands.find(command => ['play', 'cloud'].includes(command.icon));
     const playCommand = !card.node.matches('[data-jfmod-placeholder], [data-jfmod-nofile], [data-jfmod-empty]') && !!card.node.dataset.id
         && ['Movie', 'Series', 'Season', 'Episode'].includes(card.node.dataset.type ?? '');
@@ -109,7 +131,7 @@ const PosterActions: FC<{ card: TitleCard; view: HTMLElement }> = ({ card, view 
     return <>
         {(primary || playCommand) && <button type='button' className={'disc hov glassy' + (device === 'tv' ? '' : ' focusable')} tabIndex={device === 'tv' ? -1 : 0} data-ds-primary-action={primary ? primaryAction(primary) : 'play'} aria-label={primary?.label || 'Play ' + card.title} onClick={event => {
             event.stopPropagation();
-            if (primary) runTitleCommand(view, primary, event.currentTarget);
+            if (primary) run(primary, event.currentTarget);
             // The same existing shortcut command as a remote's Play key, on the original command host.
             else card.node.dispatchEvent(new CustomEvent('command', { bubbles: true, cancelable: true, detail: { command: 'play' } }));
         }}>{posterActionIcon(primary, card.mark)}</button>}
@@ -118,7 +140,7 @@ const PosterActions: FC<{ card: TitleCard; view: HTMLElement }> = ({ card, view 
             aria-pressed={['check', 'heart'].includes(command.icon) ? command.pressed : undefined}
             onClick={event => {
                 event.stopPropagation();
-                runTitleCommand(view, command, event.currentTarget);
+                run(command, event.currentTarget);
             }}><Icon name={command.icon} /></button>)}</span>}
     </>;
 };
@@ -267,7 +289,7 @@ const Content: FC<{ view: HTMLElement; type: string; art: string; item?: BaseIte
         {model.meta.filter(fact => fact.endsAt).map(fact => <span key={fact.text} data-ds-endsat=''><Inline parts={fact.parts} /></span>)}
     </div></>;
     const pill = model.commands.length > 0 && <div className={'actbar glassy focuscontainer-x' + (model.commands.some(command => command.play) ? '' : ' short')}>
-        {model.commands.map(command => <Command key={command.key} view={view} command={command} />)}</div>;
+        {model.commands.map(command => <Command key={command.key} view={view} command={command} item={item} />)}</div>;
     return <div ref={ref}>
         <Head title={model.title} poster={model.image} art={environment.art || (environment.type === 'Person' ? model.image : undefined)} lines={lines} pill={pill} wide={environment.type === 'Episode'} icon={environment.type === 'Person' ? 'person' : undefined}>
             <Slot view={view} name='notice' /><Slot view={view} name='tracks' />
