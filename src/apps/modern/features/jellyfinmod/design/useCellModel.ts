@@ -94,8 +94,9 @@ export const useCellModel = (row: BrowseRow, options: CardOptions, alwaysShowCou
         event.stopPropagation();
         if (!item?.Id) return;
         const itemId = item.Id;
+        const isPlayed = !!item.UserData?.Played;
         const change = async () => {
-            if (kind === 'played') await played.mutateAsync({ itemId, isPlayed: !!item.UserData?.Played });
+            if (kind === 'played') await played.mutateAsync({ itemId, isPlayed });
             else await favorite.mutateAsync({ itemId, isFavorite: !!item.UserData?.IsFavorite });
             // The caller's key and the user's own feeds the rows are drawn from (Resume, Next Up, Latest): a played episode's
             // card gives way to its series' next one, and the icons change, at once rather than when the server's push comes.
