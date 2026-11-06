@@ -80,7 +80,8 @@ export const useRowMotion = (children: ReactNode, ids?: string[], ready = true) 
                     clear();
                     setSnapshot(null);
                 } else {
-                    setSnapshot(previous => previous && { ...previous, phase: 'ready' });
+                    // The row may already have moved on its own feeds' answer (below); only a row still waiting is told.
+                    setSnapshot(previous => previous?.phase === 'waiting' ? { ...previous, phase: 'ready' } : previous);
                 }
             }
         }
@@ -89,7 +90,10 @@ export const useRowMotion = (children: ReactNode, ids?: string[], ready = true) 
     useLayoutEffect(() => {
         const element = root.current;
         if (!element || !snapshot) return;
-        if (snapshot.phase === 'ready' && ready) {
+        // The whole Home refetches after an action, the hero's checks included; the row moves as soon as its own feeds have
+        // answered with other cards rather than when every query has (the user: "black area stays for couple seconds").
+        const answered = snapshot.phase === 'waiting' && cellsIn(element).map(cell => cell.dataset.id).join(',') !== ids?.join(',');
+        if ((snapshot.phase === 'ready' || answered) && ready) {
             const old = cellsIn(element);
             const next = new Set(ids);
             if (old.map(cell => cell.dataset.id).join(',') === ids?.join(',')) {
