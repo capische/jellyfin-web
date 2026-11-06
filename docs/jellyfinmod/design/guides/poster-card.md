@@ -1,5 +1,15 @@
 # Poster card
 
+**Card geometry fixes (2026-11-05, user brief), built, not accepted:** `Cell` and title-page cards use
+`.jfmod-cardActions` to size the same foot pill to its actual buttons and centre it at 50% with a half-width translation.
+Padding stays `0.09em` vertically (φ⁻⁵) and `0.236em` horizontally (φ⁻³), with the existing `2em` buttons and `1.618em`
+corners. An entry without a Jellyfin item omits Played/Favourite (there is no item to save them against); More offers
+**More Info**, opening its existing title page and its permitted management actions, plus **View Queue** while available.
+Pending entries have no More. Native items retain their original permissions and delegated More menu.
+`.jfmod-posterCell` clips each progress layer against the poster's full `0.618em` radius (φ⁻¹), keeping the existing
+`0.28em` track (approved thickness exception), image corners and outer ring. The poster itself keeps visible overflow
+for pill tooltips and focus rings. Styles: `design/cardRatings.scss`; no upstream styles change.
+
 **Watched and Favourite refresh their row (ds.t7, 2026-11-06), built, not accepted:** after the server answers, a pill's Watched or Favourite reads the row again from the caller's key and from the user's own feeds (`['User', userId]`: Resume, Next Up, Latest, Items), as the Home hero does. A Continue Watching episode marked played gives way to its series' next unwatched episode, or leaves the row when there is none; the row keeps its order, newest show first, so the next episode stands where the show now sorts. Before, only the caller's key was read and Home's rows changed only when the server's push came, seconds later or not at all (the user's report: the buttons did nothing).
 
 **ds.t7 (2026-11-05), built, not accepted:** Recently Added holds one shape: an episode there (`preferParentPoster`, the row's upstream option) draws its series' 2:3 poster, never a crop of its still, keeps the caption (series, then `S1:E4 · title`) and opens the episode. Continue Watching, Next Up and any row that asks for wide keep the 16:9 still; Favourites' Episodes and Search's Episodes stay stills in rows of their own. A season card (`Cell`: Recently Added, Favourites, Search) names its series, as the user approved: first line the series, second `Season 12 · 2018` (no year, the season's name alone), third unchanged; the poster and what it opens stay. The series' own Seasons row is the title page's and keeps its plain caption.

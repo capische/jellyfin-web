@@ -17,9 +17,10 @@ import { FileState } from '../types/entry';
 import { getEntryPath, getTmdbImage } from '../utils/entryLinks';
 import { useCardHasNoFile, useCardRelease } from '../integration/cardGetRelease';
 import { useEntryDownload } from '../components/FileStateMark';
-import { openInFlightCardMenu } from '../integration/queueActions';
 import { useQueueVisible } from '../hooks/useQueue';
 import { isKnownScale } from '../constants/ratings';
+import actionsheet from 'components/actionSheet/actionSheet';
+import { QUEUE_ROUTE } from '../constants/queue';
 
 const cellShape = (item: ItemDto | undefined, options: CardOptions) => {
     if (item?.Type === 'Person') return 'c';
@@ -99,10 +100,18 @@ export const useCellModel = (row: BrowseRow, options: CardOptions, alwaysShowCou
         } catch (error) { console.error(error); }
     };
     const menu = (event: MouseEvent<HTMLElement>) => {
-        if (!item && queue) {
+        if (!item && entry && !pending) {
             event.preventDefault();
             event.stopPropagation();
-            void openInFlightCardMenu(event.currentTarget);
+            // Native item menus need an item id. Entries can open their own page (including its management actions),
+            // and an in-flight entry can open the queue, without pretending Played/Favourite can be saved on it.
+            void actionsheet.show({ positionTo: event.currentTarget, items: [
+                { id: 'info', name: 'More Info', icon: 'info' },
+                ...(queue ? [{ id: 'queue', name: 'View Queue', icon: 'download' }] : [])
+            ] }).then(id => {
+                if (id === 'info') open();
+                if (id === 'queue') window.location.hash = '#' + QUEUE_ROUTE;
+            }, () => undefined);
         }
     };
     const rating = visibleRating(row.rating);

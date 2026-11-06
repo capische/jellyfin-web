@@ -57,14 +57,14 @@ const CellMarks: FC<{ model: CellModel }> = ({ model }) => {
 const CellMenu: FC<{ model: CellModel }> = ({ model }) => {
     const tv = useContext(DesignContext) === 'tv';
     const controlClass = 'pi' + (tv ? '' : ' focusable');
-    const { item, get, download, toggle, menu, queue, releaseLabel } = model;
-    return <span className='hmenu glassy'>
+    const { item, entry, pending, get, download, toggle, menu, releaseLabel } = model;
+    return <span className='hmenu glassy jfmod-cardActions'>
         {item && itemHelper.canMarkPlayed(item) && <span className={controlClass + ' itemAction'} data-action={ItemAction.None} role='button' tabIndex={tv ? -1 : 0} onKeyDown={activate}
             data-tip={item.UserData?.Played ? 'Watched' : 'Mark Played'} aria-label={item.UserData?.Played ? 'Watched' : 'Mark Played'} data-ds-action='played' aria-pressed={!!item.UserData?.Played} onClick={event => { void toggle(event, 'played'); }}><Icon name='check' /></span>}
         {item && itemHelper.canRate(item) && <span className={controlClass + ' itemAction'} data-action={ItemAction.None} role='button' tabIndex={tv ? -1 : 0} onKeyDown={activate}
             data-tip={item.UserData?.IsFavorite ? 'Favorite' : 'Add to Favorites'} aria-label={item.UserData?.IsFavorite ? 'Favorite' : 'Add to Favorites'} data-ds-action='favorite' aria-pressed={!!item.UserData?.IsFavorite} onClick={event => { void toggle(event, 'favorite'); }}><Icon name='heart' /></span>}
         {get && <span className={controlClass + ' itemAction'} data-action={ItemAction.None} role='button' tabIndex={tv ? -1 : 0} onKeyDown={activate} data-tip={releaseLabel} aria-label={releaseLabel} data-ds-action='get' onClick={download}><Icon name='cloud' /></span>}
-        {(item || queue) && <span className={`${controlClass}${item ? ' itemAction' : ''}`} role='button' tabIndex={tv ? -1 : 0}
+        {(item || entry && !pending) && <span className={`${controlClass}${item ? ' itemAction' : ''}`} role='button' tabIndex={tv ? -1 : 0}
             onKeyDown={activate} data-tip='More' aria-label='More' data-action={item ? ItemAction.Menu : undefined} onClick={menu}><Icon name='more' /></span>}
     </span>;
 };
@@ -90,7 +90,7 @@ export const Cell: FC<{ row: BrowseRow; options: CardOptions; alwaysShowCountdow
     const fallback = fallbackIcon(item?.Type, shape);
     const discAvailable = noFile ? !!get : !!item && playbackManager.canPlay(item);
     const { flightMenu } = model;
-    return <div className={`cell ${shape}${shape === 'c' ? '' : ' act'} focusable${item ? ' itemAction' : ''}`}
+    return <div className={`cell jfmod-posterCell ${shape}${shape === 'c' ? '' : ' act'} focusable${item ? ' itemAction' : ''}`}
         {...data} data-action={item ? action : undefined} tabIndex={0} role='link' aria-label={title} aria-busy={pending || undefined}
         aria-disabled={pending || undefined} data-jfmod-entry-id={pending ? undefined : entry?.id}
         data-jfmod-empty={empty ? '' : undefined} data-jfmod-tmdb-id={entry?.tmdbId} data-jfmod-nofile={noFile ? '' : undefined}

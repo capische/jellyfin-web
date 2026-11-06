@@ -113,7 +113,7 @@ const PosterActions: FC<{ card: TitleCard; view: HTMLElement }> = ({ card, view 
             // The same existing shortcut command as a remote's Play key, on the original command host.
             else card.node.dispatchEvent(new CustomEvent('command', { bubbles: true, cancelable: true, detail: { command: 'play' } }));
         }}>{posterActionIcon(primary, card.mark)}</button>}
-        {menuCommands.length > 0 && <span className='hmenu glassy'>{menuCommands.map(command => <button type='button' key={command.key} className={'pi' + (device === 'tv' ? '' : ' focusable')} tabIndex={device === 'tv' ? -1 : 0} data-tip={command.label} aria-label={command.label}
+        {menuCommands.length > 0 && <span className='hmenu glassy jfmod-cardActions'>{menuCommands.map(command => <button type='button' key={command.key} className={'pi' + (device === 'tv' ? '' : ' focusable')} tabIndex={device === 'tv' ? -1 : 0} data-tip={command.label} aria-label={command.label}
             data-ds-action={{ check: 'played', heart: 'favorite', cloud: 'get' }[command.icon as string]}
             aria-pressed={['check', 'heart'].includes(command.icon) ? command.pressed : undefined}
             onClick={event => {
@@ -199,7 +199,7 @@ const Card: FC<{ card: TitleCard; view: HTMLElement }> = ({ card, view }) => {
                 <>{still}<div className='body'>{name}{overview}</div>{actions}</>}
         </div>;
     }
-    return <div className={'cell focusable ' + card.shape + (card.shape !== 'c' ? ' act' : '') + (card.downloadProgress ? ' ds-downloading' : '') + (focus && device !== 'phone' ? ' focus' : '')} data-ds-source-classes={card.node.className} data-ds-href={card.href} {...card.attributes} {...attributes}>
+    return <div className={'cell jfmod-posterCell focusable ' + card.shape + (card.shape !== 'c' ? ' act' : '') + (card.downloadProgress ? ' ds-downloading' : '') + (focus && device !== 'phone' ? ' focus' : '')} data-ds-source-classes={card.node.className} data-ds-href={card.href} {...card.attributes} {...attributes}>
         <div className='tile'><Poster src={card.image} icon={({ c: 'person', p: 'movie', w: 'tv' } as const)[card.shape]}>
             <CardCorner card={card} state={state} />
             {card.downloadProgress && <span className='prog' data-ds-progress=''><i className='dl' style={{ width: card.downloadProgress }} /></span>}
