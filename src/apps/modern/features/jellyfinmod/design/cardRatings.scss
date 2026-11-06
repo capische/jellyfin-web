@@ -4,7 +4,9 @@
         width: auto;
         height: auto;
         margin-left: 0;
-        padding: 0.09em 0.236em;
+
+        /* The same 0.236em (φ⁻³) on all four sides, so a hovered button's round tint sits evenly in the pill (the user, 2026-11-07). */
+        padding: 0.236em;
         transform: translateX(-50%);
     }
 
