@@ -56,7 +56,7 @@ Base unit 1em (computer 14.88 px, phone 14.4 px, TV 20 px). φ steps named; exce
 | Dim | black 23.6 % (φ⁻³), on the overlay's fill, with the ring. The overlay's own opacity stays 1: a parent fading its opacity cuts a child's blur off from the poster |
 | Disc | 3.236em (2φ, 48 px at a computer), card glass, glyph 2em; hidden at rest, so a grid pays for no blur until hovered |
 | Disc under the pointer | scale 1.146 (55 px), fill white 85.4 % with a `#101010` glyph, light theme `rgba(16,16,16,.854)` with a white glyph; 0.236 s; press scale 1.09 on 0.146 s; no ring; pointer cursor |
-| Foot pill | Watched, Favourite, Get a Release, More; card glass, hugs its buttons, centred 0.382em above the foot, radius 1.618em, padding 0.09em by 0.236em; buttons 2em round, glyph 1.236em, hover tint white 23.6 %, light black 14.6 % |
+| Foot pill | Watched, Favourite, Get a Release, More; card glass, hugs its buttons, centred 0.382em above the foot, radius 1.618em, padding 0.236em on every side (even, the user 2026-11-07; was 0.09em by 0.236em); buttons 2em round, glyph 1.236em, hover tint white 23.6 %, light black 14.6 % |
 | Phone | no hover, no ring, no overlay buttons: a tap opens the title |
 | TV | the ring at 0.236em, solid disc (black 66 %) from `::after`, both instant; press 0.96 at once; no pill, no dim, no blur |
 | Missing art | keeps the ratio box and upstream's fallback icon |
