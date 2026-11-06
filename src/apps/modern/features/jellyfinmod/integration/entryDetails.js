@@ -1,3 +1,4 @@
+import { ratingHref } from '../utils/ratingLinks';
 import { AbortController as RequestAbortController } from 'abortcontroller-polyfill/dist/cjs-ponyfill';
 import { clearBackdrop } from 'components/backdrop/backdrop';
 import loading from 'components/loading/loading';
@@ -42,6 +43,7 @@ export default function initializeEntryDetails(view, params) {
         renderMount?.remove();
         renderMount = undefined;
         mount.textContent = '';
+        view.removeAttribute('data-jfmod-entry-no-ratings');
         libraryMenu.setTransparentMenu(false);
         clearBackdrop();
         const backdrop = view.querySelector('#itemBackdrop');
@@ -128,6 +130,19 @@ export default function initializeEntryDetails(view, params) {
             let type = detail.entry.mediaType === 'movie' ? 'Movie' : 'Series';
             if (isSeason) type = 'Season';
             if (isEpisode) type = 'Episode';
+            view.toggleAttribute('data-jfmod-entry-no-ratings', isSeason);
+            const externalLinks = view.querySelector('.itemExternalLinks');
+            if (externalLinks) {
+                externalLinks.textContent = '';
+                for (const [source, name] of [['imdb', 'IMDb'], ['tmdb', 'TMDB'], ['trakt', 'Trakt']]) {
+                    const href = ratingHref({ source }, { title: detail.entry.title, movie: detail.entry.mediaType === 'movie', imdbId: detail.entry.imdbId, tmdbId: detail.entry.tmdbId });
+                    if (!href) continue;
+                    const link = document.createElement('a');
+                    link.href = href;
+                    link.textContent = name;
+                    externalLinks.appendChild(link);
+                }
+            }
             titlePage(view, type, image);
             view.classList.add('jfmod-titleMissing');
             view.classList.toggle('jfmod-titleNoActions', !user.Policy?.IsAdministrator);

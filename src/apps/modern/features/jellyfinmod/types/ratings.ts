@@ -4,6 +4,8 @@ export interface Rating {
     value: number;
     scale: 'ten' | 'percent' | 'five' | 'four';
     votes?: number | null;
+    /** Optional source title page supplied by the plugin; validated before use. */
+    url?: string | null;
     /** `tmdb` (the entry's own snapshot), `mdblist`, or the host's own item: `host_omdb`, `host_tmdb`. */
     provider: 'tmdb' | 'mdblist' | 'host_omdb' | 'host_tmdb';
     fetchedAt?: string | null;

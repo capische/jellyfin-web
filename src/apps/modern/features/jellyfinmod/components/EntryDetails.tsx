@@ -245,6 +245,7 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
     const refreshRatingsItem = useRefreshRatingsMenuItem(api, entry.id, rereadRatings, setMenuAnchor);
     return <>
         {view.querySelector('[data-ds-slot="ratings"]') && createPortal(<DesignEnvironment><RatingsGroup ratings={ratingsPreferences.enabled ? ratings : []} sources={ratingsPreferences.sources} ready={ratingsPreferences.loaded}
+            title={{ title: entry.title, movie: isMovie, imdbId: entry.imdbId, tmdbId: entry.tmdbId }}
             wanted={ratingsPreferences.loaded ? ratingsPreferences.enabled : undefined} ownStar onHidesStar={setGroupHidesStar} /></DesignEnvironment>, view.querySelector('[data-ds-slot="ratings"]')!)}
         {isMovie && <DownloadBlock anchor={view.querySelector('.trackSelections')} entryId={entry.id}
             episode={{ id: null, state: entry.state, progress: entry.progress, availability: 'missing', airDate: null }} isAdmin={isAdmin}

@@ -1,5 +1,9 @@
 import type { BaseItemDto } from '@jellyfin/sdk/lib/generated-client';
 import React, { type FC, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { appHost } from 'components/apphost';
+import layoutManager from 'components/layoutManager';
+import { AppFeature } from 'constants/appFeature';
+import { hasRatedLink } from '../utils/ratingLinks';
 import focusManager from 'components/focusManager';
 import inputManager from 'scripts/inputManager';
 import { useTogglePlayedMutation } from 'hooks/useFetchItems';
@@ -256,6 +260,28 @@ const Card: FC<{ card: TitleCard; view: HTMLElement }> = ({ card, view }) => {
     </div>;
 };
 
+const TitleLinks: FC<{ view: HTMLElement; type: string; links: { label: string; href: string }[] }> = ({ view, type, links }) => {
+    const device = useContext(DesignContext);
+    const [ratedSources, setRatedSources] = useState<string[] | null>(null);
+    useLayoutEffect(() => {
+        const slot = view.querySelector('[data-ds-slot="ratings"]');
+        const read = () => {
+            const value = slot?.querySelector<HTMLElement>('[data-jfmod-rating-sources]')?.dataset.jfmodRatingSources;
+            setRatedSources(value === undefined ? null : value.split(','));
+        };
+        const observer = new MutationObserver(read);
+        if (slot) observer.observe(slot, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-jfmod-rating-sources'] });
+        read();
+        return () => observer.disconnect();
+    }, [view]);
+    if (device === 'tv' || layoutManager.tv || !appHost.supports(AppFeature.ExternalLinks)) return null;
+    const waiting = !view.hasAttribute('data-jfmod-entry-no-ratings') && ratedSources === null && ['Movie', 'Series', 'Season', 'Episode'].includes(type);
+    const shown = waiting ? [] : links.filter(link => !hasRatedLink(link.label, ratedSources ?? []));
+    if (!waiting && !shown.length) return null;
+    return <div className={'links' + (waiting ? ' jfmod-ratingLinksPending' : '')}>{shown.map((link, index) => <React.Fragment key={link.href}>
+        {index > 0 && ', '}<a className='focusable' href={link.href} target='_blank' rel='noreferrer'><b>{link.label}</b></a></React.Fragment>)}</div>;
+};
+
 /** ds.js head/actbar/sect/season and ds2.js title pages. No controller-owned element is painted here. */
 const Content: FC<{ view: HTMLElement; type: string; art: string; item?: BaseItemDto }> = ({ view, type: initialType, art: initialArt, item: initialItem }) => {
     const [environment, setEnvironment] = useState<{ type: string; art: string; item?: BaseItemDto }>({ type: initialType, art: initialArt, item: initialItem });
@@ -340,7 +366,7 @@ const Content: FC<{ view: HTMLElement; type: string; art: string; item?: BaseIte
                     {model.details.filter(parts => parts.length).map(parts => <div className='tags' data-ds-detail='' key={parts.map(part => part.text).join('')}><Labelled parts={parts} /></div>)}
                     {model.genres.length > 0 && <div className='tags'><Labelled parts={model.genres} label='Genres' /></div>}
                     {model.tags.length > 0 && <div className='tags jfmod-titleTags'><Labelled parts={model.tags} label='Tags' /></div>}
-                    <div className='links'>{model.links.map((link, index) => <React.Fragment key={link.href}>{index > 0 && ', '}<a className='focusable' href={link.href} target='_blank' rel='noreferrer'><b>{link.label}</b></a></React.Fragment>)}</div>
+                    <TitleLinks view={view} type={environment.type} links={model.links} />
                 </div></div>
             <Slot view={view} name='augment' />
         </Head>

@@ -2,6 +2,7 @@ import React, { type FC, type PropsWithChildren, useLayoutEffect, useState, crea
 import './design.scss';
 import './cardRatings.scss';
 import './titleTop.scss';
+import './ratingLinks.scss';
 
 export type Device = 'computer' | 'tablet' | 'phone' | 'tv';
 

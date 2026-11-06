@@ -2,6 +2,17 @@
 
 **Status: approved 2026-11-06, D288–D295, built, not accepted.** Computer first look only; phone/TV specifics and full acceptance follow the user's first look. These values supersede the older presentation notes below.
 
+## External links (D276/D277)
+
+**Status: approved 2026-11-06, D276/D277, built, not accepted.** The bottom `.links` line shows only sources
+without a displayed popup row: TVDB, other `ExternalUrls`, or an unticked/unavailable rating source. Shared
+RT and Metacritic site links give way to either corresponding row. With no ratings (off, unsupported,
+failed or empty), keep every link. Keep a one-line reservation while the ratings decision is pending,
+then draw the remainder or collapse once; ratings off draws at once. File-less pages build IMDb, TMDB
+and Trakt links from the entry's ids, including series ids for child pages, by [ratings.md](ratings.md).
+Hide the line entirely when `layoutManager.tv || !appHost.supports(AppFeature.ExternalLinks)`; TV never
+gets links from ratings either. No server metadata is changed by opening a link.
+
 ## Title head (D288–D295)
 
 Base 1em (computer 14.88 px). The head remains stacked, never split. Top/bottom padding 1.618em (φ¹), poster 27.6%,

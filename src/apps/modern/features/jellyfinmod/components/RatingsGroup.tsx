@@ -1,5 +1,4 @@
 import React, { type FC, useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 
 import layoutManager from 'components/layoutManager';
 import inputManager from 'scripts/inputManager';
@@ -9,11 +8,13 @@ import type { Rating, RatingSource } from '../types/ratings';
 import RatingIcon from './RatingIcon';
 import { DesignContext } from '../design/Root';
 import { DesignRatings } from '../design/Ratings';
+import { ratingHref, type RatingTitle } from '../utils/ratingLinks';
 import './ratings.scss';
 
 interface RatingsGroupProps {
     /** The title's ratings; undefined while unknown. */
     ratings: Rating[] | undefined;
+    title?: RatingTitle;
     /** The sources ticked, in their order: the row shows those among IMDb, Rotten Tomatoes and Trakt; the popup shows all of them. */
     sources: RatingSource[];
     /** Whether the answer (or the decision that there is none) has arrived. */
@@ -69,7 +70,7 @@ const inlineOf = (shown: Rating[], fallback: boolean) => {
 };
 
 /** What a list shows, as a comparable key: a new answer with the same key changes nothing on screen. */
-const keyOf = (list: Rating[]) => list.map(rating => [rating.source, rating.value, rating.votes ?? '', rating.fetchedAt ?? '', rating.stale].join(':')).join('|');
+const keyOf = (list: Rating[]) => list.map(rating => [rating.source, rating.value, rating.votes ?? '', rating.fetchedAt ?? '', rating.stale, rating.url ?? ''].join(':')).join('|');
 
 /**
  * What may show at all: the sources ticked (the user's own choice, else the server's default; user decision 9), in their
@@ -99,7 +100,7 @@ const RowItems: FC<{ list: Rating[]; stack: boolean }> = ({ list, stack }) => {
  * as wide as its mark/value/count columns, centered on the group and clamped to the viewport. Rows never wrap. Where a value came from and when is the row's native title and, for a screen reader, hidden text; a value older than
  * the refresh window is dimmed.
  */
-const Popup: FC<{ list: Rating[]; id: string; anchor: Element; open: boolean }> = ({ list, id, anchor, open }) => {
+const Popup: FC<{ list: Rating[]; id: string; anchor: Element; open: boolean; href: (rating: Rating) => string | undefined; popup: ReturnType<typeof usePopup>; onBlur: (event: React.FocusEvent) => void }> = ({ list, id, anchor, open, href, popup, onBlur }) => {
     const box = useRef<HTMLDivElement>(null);
     const [visible, setVisible] = useState(open);
     useEffect(() => {
@@ -138,18 +139,23 @@ const Popup: FC<{ list: Rating[]; id: string; anchor: Element; open: boolean }> 
         };
     }, [anchor, list, open, visible]);
     if (!visible && !open) return null;
-    return createPortal(<div ref={box} className={'jfmod-ratingsPopover' + (open ? '' : ' jfmod-ratingsPopover-closing')} aria-hidden={!open || undefined}>
-        <div id={id} role='tooltip' className='jfmod-groupPopup' data-jfmod-ratings-popup=''>
-            {list.map(rating => <div key={rating.source} className={'jfmod-popRow' + (rating.stale ? ' jfmod-pop-stale' : '')}
-                data-jfmod-rating={rating.source} title={tooltipLines(rating).join('. ')}
-                aria-label={ratingName(rating) + (rating.votes ? ', ' + formatVotes(rating.votes) + ' votes' : '')}>
-                <span className='jfmod-popMark'><RatingIcon rating={rating} /></span>
-                <span className='jfmod-popValue'>{formatValue(rating)}</span>
-                <span className='jfmod-popVotes'>{rating.votes ? formatVotes(rating.votes) : ''}</span>
-                <span className='jfmod-ratingsHidden'>{SOURCE_LONG[rating.source] + ', ' + provenance(rating)}</span>
-            </div>)}
+    return <div ref={box} className={'jfmod-ratingsPopover' + (open ? '' : ' jfmod-ratingsPopover-closing')} aria-hidden={!open || undefined}>
+        <div id={id} className='jfmod-groupPopup' data-jfmod-ratings-popup='' onPointerEnter={popup.enter} onPointerLeave={popup.leave} onBlur={onBlur}>
+            {list.map(rating => {
+                const url = href(rating);
+                const Row = url ? 'a' : 'div';
+                return <Row key={rating.source} className={'jfmod-popRow' + (rating.stale ? ' jfmod-pop-stale' : '')}
+                    href={url} target={url ? '_blank' : undefined} rel={url ? 'noreferrer' : undefined} tabIndex={url && !open ? -1 : undefined}
+                    onKeyDown={url ? popup.onKeyDown : undefined} onClick={url ? popup.close : undefined} data-jfmod-rating={rating.source}
+                    aria-label={tooltipLines(rating).join('. ') + (url ? '. Open on ' + SOURCE_LONG[rating.source] : '')}>
+                    <span className='jfmod-popMark'><RatingIcon rating={rating} /></span>
+                    <span className='jfmod-popValue'>{formatValue(rating)}</span>
+                    <span className='jfmod-popVotes'>{rating.votes ? formatVotes(rating.votes) : ''}</span>
+                    <span className='jfmod-ratingsHidden'>{SOURCE_LONG[rating.source] + ', ' + provenance(rating)}</span>
+                </Row>;
+            })}
         </div>
-    </div>, document.body);
+    </div>;
 };
 
 /**
@@ -195,32 +201,48 @@ export const usePopup = (box: React.RefObject<HTMLElement>, popupId: string, has
     }, [hover]);
     const leave = useCallback((event: React.PointerEvent) => {
         if (!hover || event.pointerType !== 'mouse') return;
-        closing.current = window.setTimeout(() => setOpen(false), 150);
-    }, [hover]);
+        closing.current = window.setTimeout(() => {
+            const active = document.activeElement;
+            if (active && box.current?.contains(active) && active.matches(':focus-visible')) return;
+            setOpen(false);
+        }, 150);
+    }, [box, hover]);
     const onPointerDown = useCallback((event: React.PointerEvent) => {
         pointer.current = event.pointerType;
     }, []);
-    const toggle = useCallback(() => {
+    const close = useCallback(() => {
+        window.clearTimeout(closing.current);
+        setOpen(false);
+    }, []);
+    const toggle = useCallback((event: React.MouseEvent, href?: string) => {
         const byMouse = pointer.current === 'mouse';
         pointer.current = null;
-        if (hover && byMouse) return;
+        if (hover && byMouse) {
+            if (href) {
+                window.open(href, '_blank', 'noopener,noreferrer');
+                close();
+            }
+            return;
+        }
         setOpen(value => !value);
-    }, [hover]);
+    }, [hover, close]);
     const onFocus = useCallback(() => {
         // Keyboard focus on a computer shows it, as hovering does; a tap's focus leaves the tap's click to decide.
         if (!tv && pointer.current === null) setOpen(true);
     }, [tv]);
     const onBlur = useCallback((event: React.FocusEvent) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOpen(false);
-    }, []);
+        const next = event.relatedTarget as Node | null;
+        if (!box.current?.contains(next) && !document.getElementById(popupId)?.contains(next)) setOpen(false);
+    }, [box, popupId]);
     const onKeyDown = useCallback((event: React.KeyboardEvent) => {
         if (event.key === 'Escape' && !tv && open) {
+            box.current?.querySelector<HTMLButtonElement>('[data-jfmod-ratings-group]')?.focus({ preventScroll: true });
             setOpen(false);
             event.stopPropagation();
         }
-    }, [open, tv]);
+    }, [box, open, tv]);
     const groupClass = 'jfmod-ratingsGroup' + (open ? ' jfmod-ratingsGroup-open' : '');
-    return { open, enter, leave, onPointerDown, toggle, onFocus, onBlur, onKeyDown, groupClass };
+    return { open, close, enter, leave, onPointerDown, toggle, onFocus, onBlur, onKeyDown, groupClass };
 };
 
 /** The answer, kept as shown: a new answer that shows the same changes nothing. */
@@ -480,7 +502,7 @@ const popupWidthOf = (node: HTMLElement | null, reserved: Reserve | null, standI
  * - Back is taken only while the popup is open, and the popup closes when there is nothing to show.
  */
 // eslint-disable-next-line sonarjs/cognitive-complexity -- existing rating/focus guards shared by two presentations.
-const RatingsGroup: FC<RatingsGroupProps> = ({ ratings, sources, ready, wanted, ownStar, onHidesStar }) => {
+const RatingsGroup: FC<RatingsGroupProps> = ({ ratings, sources, ready, wanted, ownStar, onHidesStar, title }) => {
     const design = useContext(DesignContext);
     const box = useRef<HTMLSpanElement>(null);
     const button = useRef<HTMLButtonElement>(null);
@@ -489,7 +511,9 @@ const RatingsGroup: FC<RatingsGroupProps> = ({ ratings, sources, ready, wanted, 
     const popupId = useId();
     const tv = design === 'tv' || (!design && layoutManager.tv);
 
-    const shown = useAnswer(ready && ratings && wanted !== false ? enabledOf(ratings.filter(rating => isKnownScale(rating.scale)), sources) : null);
+    const linksReady = tv || title !== undefined;
+    const linkable = (rating: Rating) => isKnownScale(rating.scale) && (tv || !!title && !!ratingHref(rating, title));
+    const shown = useAnswer(ready && linksReady && ratings && wanted !== false ? enabledOf(ratings.filter(linkable), sources) : null);
     const enabled = shown ?? [];
     const reservedFor = reserved ? reserved.sources : standInKey.split(',');
     const live = inlineWithin(enabled, reservedFor);
@@ -509,24 +533,32 @@ const RatingsGroup: FC<RatingsGroupProps> = ({ ratings, sources, ready, wanted, 
         focusLeft();
     }, [popup, focusLeft]);
 
+    const href = (rating: Rating) => !tv && title ? ratingHref(rating, title) : undefined;
+    const onClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+        const source = (event.target as Element).closest('[data-jfmod-rating]')?.getAttribute('data-jfmod-rating');
+        const rating = inline.find(value => value.source === source);
+        popup.toggle(event, rating ? href(rating) : undefined);
+    };
+    let resolvedSources = ready && linksReady ? enabled.map(rating => rating.source).join(',') : undefined;
+    if (wanted === false) resolvedSources = '';
     const standIn = measuring || !inline.length;
     const label = inline.length ? 'Ratings: ' + inline.map(ratingName).join(', ') + '. More ratings' : undefined;
     const { open, enter, leave } = popup;
     const popupWidth = popupWidthOf(box.current, reserved, standInKey);
     if (design) {
-        return <DesignRatings fullWidth={popupWidth ?? undefined} box={box} button={button} popup={popup} standIn={standIn} stack={standInKey === FALLBACK_KEY} label={label} id={popupId}
+        return <DesignRatings href={href} onClick={onClick} resolvedSources={resolvedSources} tv={tv} fullWidth={popupWidth ?? undefined} box={box} button={button} popup={popup} standIn={standIn} stack={standInKey === FALLBACK_KEY} label={label} id={popupId}
             standInList={standInList} inline={inline} enabled={enabled} onBlur={onBlur} />;
     }
     return <span ref={box} className={popup.groupClass} onPointerEnter={enter} onPointerLeave={leave}
-        data-jfmod-full-width={popupWidth ?? undefined}>
+        data-jfmod-full-width={popupWidth ?? undefined} data-jfmod-rating-sources={resolvedSources}>
         <button ref={button} type='button' className={'jfmod-groupButton noautofocus' + (standIn ? ' jfmod-groupButton-standIn' : '')}
             tabIndex={standIn ? -1 : undefined} aria-hidden={standIn || undefined} aria-label={label} aria-expanded={standIn ? undefined : open}
-            aria-describedby={open ? popupId : undefined} onPointerDown={popup.onPointerDown} onClick={standIn ? undefined : popup.toggle}
+            aria-describedby={open ? popupId : undefined} onPointerDown={popup.onPointerDown} onClick={standIn ? undefined : onClick}
             onFocus={popup.onFocus} onBlur={onBlur} onKeyDown={popup.onKeyDown} data-jfmod-ratings-group=''>
             <RowItems list={standIn ? standInList : inline} stack={standIn && standInKey === FALLBACK_KEY} />
         </button>
         {button.current && <span onPointerEnter={enter} onPointerLeave={leave}>
-            <Popup list={enabled} id={popupId} anchor={button.current} open={open} />
+            <Popup href={href} popup={popup} onBlur={onBlur} list={enabled} id={popupId} anchor={button.current} open={open} />
         </span>}
     </span>;
 };

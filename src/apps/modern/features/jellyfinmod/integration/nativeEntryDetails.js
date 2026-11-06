@@ -6,6 +6,7 @@ import { renderComponent } from 'utils/reactUtils';
 import { getEntries } from '../api/modApi';
 import { nativeItemFacts, nativeItemKey, prefetchNativeChildren, prefetchNativeEntry } from '../hooks/useEntries';
 import NativeEntryDetails from '../components/NativeEntryDetails';
+import { nativeRatingTitle } from '../utils/ratingLinks';
 import NativeRatingsLine, { prefetchItemRatings } from '../components/NativeRatingsLine';
 import TraktIndicator from '../components/TraktIndicator';
 import { TRAKT_ITEM_TYPES } from '../constants/trakt';
@@ -96,7 +97,7 @@ export default function initializeNativeEntryDetails(view, params) {
      * Play has focus, so the reserved space is there from the first paint; on a refill, at the same place, giving focus back
      * to the group if the refill took it away (web review 2026-10-08, P2 2).
      */
-    const watchRatingsRow = (itemRequest, api, userId) => {
+    const watchRatingsRow = (itemRequest, api, userId, title) => {
         const row = view.querySelector('[data-ds-slot="ratings"]') ?? view.querySelector('.detailRibbon .itemMiscInfo-primary');
         if (!row) return;
         ratingsMount = document.createElement('span');
@@ -132,7 +133,7 @@ export default function initializeNativeEntryDetails(view, params) {
             if (mountNode.parentNode === row && (!before || mountNode.nextSibling === before)) return;
             row.insertBefore(mountNode, before);
             if (!unmountRatings) {
-                unmountRatings = renderComponent(NativeRatingsLine, { api, userId, itemId: params.id, knownType,
+                unmountRatings = renderComponent(NativeRatingsLine, { api, userId, itemId: params.id, knownType, title,
                     itemType: itemRequest.then(found => found?.Type) }, mountNode);
             } else if (focused && (!document.activeElement || document.activeElement === document.body)) {
                 mountNode.querySelector('[data-jfmod-ratings-group]')?.focus({ preventScroll: true });
@@ -167,7 +168,13 @@ export default function initializeNativeEntryDetails(view, params) {
             const visit = generation;
             handleMissingNativeItem(view, params, error, () => visit === generation);
         };
-        const read = client.getItem(userId, params.id).then(fresh => {
+        const fullItem = client.getItem(userId, params.id);
+        const ratingTitle = fullItem.then(async fresh => {
+            const source = fresh.SeriesId ? await client.getItem(userId, fresh.SeriesId) : fresh;
+            return nativeRatingTitle(source);
+        });
+        ratingTitle.catch(() => undefined);
+        const read = fullItem.then(fresh => {
             if (currentGeneration === generation && fresh) {
                 titlePage(view, fresh.Type, getItemBackdropImageUrl(client, fresh, { maxWidth: window.innerWidth }) ?? '', fresh.MediaSources, fresh);
             }
@@ -192,7 +199,7 @@ export default function initializeNativeEntryDetails(view, params) {
         }
         if (currentGeneration !== generation) return;
         titlePage(view, item?.Type);
-        watchRatingsRow(Promise.resolve(item), api, userId);
+        watchRatingsRow(Promise.resolve(item), api, userId, ratingTitle);
         view.toggleAttribute(PLACEHOLDER_ATTRIBUTE, !!item?.IsPlaceHolder);
         if (item?.Type === 'Season' && item.SeriesId) prefetchNativeEntry(api, userId, item.SeriesId);
         prefetchNativeChildren(api, userId, params.id, item ?? {});

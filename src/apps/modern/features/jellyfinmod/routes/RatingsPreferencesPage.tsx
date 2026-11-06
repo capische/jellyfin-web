@@ -108,7 +108,7 @@ const RatingsPreferencesPage: FC = () => {
                     const index = sources.indexOf(source);
                     return <div key={source} className='srow2'>
                         <span className='tilei plain'><RatingIcon rating={{ source, value: 100, scale: 'percent' }} /></span>
-                        <span className='tx'><b>{SOURCE_LONG[source]}</b><small>{on ? 'Shown in the first metadata row.' : 'Not shown.'}</small></span>
+                        <span className='tx'><b>{SOURCE_LONG[source]}</b><small>{on && source === 'tmdb' ? 'Shown in the ratings popup.' : on && 'Shown in the first metadata row.'}{!on && 'Not shown.'}</small></span>
                         <span className='ctl'>
                             {on && <>
                                 <button className='rb focusable' type='button' data-jfmod-source={source} data-jfmod-move='up'

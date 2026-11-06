@@ -11,6 +11,7 @@ import { getDataAttributes } from 'utils/items';
 import type { ItemDto } from 'types/base/models/item-dto';
 import datetime from 'scripts/datetime';
 import { useQueryClient } from '@tanstack/react-query';
+import { nativeRatingTitle } from '../utils/ratingLinks';
 import NativeRatingsLine from '../components/NativeRatingsLine';
 import { Root, DesignContext, readEnvironment } from './Root';
 import { Action } from './Action';
@@ -91,7 +92,7 @@ const HeroBody: FC<Props> = ({ item, backdrop, overview, details, onPlay, error 
                 {!!item.RunTimeTicks && <span>{datetime.getDisplayDuration(item.RunTimeTicks)}</span>}
                 {item.OfficialRating && <span className='badge'>{item.OfficialRating}</span>}
                 {api && user?.Id && item.Id && <NativeRatingsLine key={item.Id} api={api} userId={user.Id} itemId={item.Id}
-                    knownType={item.Type} itemType={Promise.resolve(item.Type ?? undefined)} />}
+                    title={Promise.resolve(nativeRatingTitle(item))} knownType={item.Type} itemType={Promise.resolve(item.Type ?? undefined)} />}
             </div>
             {overview && <p>{overview}</p>}
             <ItemsContainer isPlain className='actbar glassy focuscontainer-x'>
