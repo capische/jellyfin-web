@@ -3,6 +3,7 @@ import { BaseItemKind } from '@jellyfin/sdk/lib/generated-client/models/base-ite
 import { ImageType } from '@jellyfin/sdk/lib/generated-client/models/image-type';
 import { ItemFields } from '@jellyfin/sdk/lib/generated-client/models/item-fields';
 import { ItemSortBy } from '@jellyfin/sdk/lib/generated-client/models/item-sort-by';
+import { LocationType } from '@jellyfin/sdk/lib/generated-client/models/location-type';
 import { SortOrder } from '@jellyfin/sdk/lib/generated-client/models/sort-order';
 import { getLibraryApi } from '@jellyfin/sdk/lib/utils/api/library-api';
 import { useQuery } from '@tanstack/react-query';
@@ -24,6 +25,9 @@ import { Hero } from '../design/Hero';
  * without a backdrop or without files, and a short list would leave the hero empty or stuck on one media type.
  */
 const HERO_CANDIDATES = 200;
+
+/** How many newest series to ask about their files before the hero gives up, so a big import of empty series cannot hold Home. */
+const SERIES_CHECKS = 24;
 
 /**
  * Whether this title has something to play behind it.
@@ -124,8 +128,21 @@ const HomeHero: FC = () => {
                 sortOrder: [SortOrder.Descending],
                 limit: HERO_CANDIDATES
             }, { signal });
-            return response.data.Items?.find(item =>
-                item.Id && item.BackdropImageTags?.length && isPlayable(item)) ?? null;
+            // A series' count includes the placeholder and missing episodes JellyfinMod and Jellyfin give it, so a series added
+            // without files counts as playable: ask for one real episode file before choosing it.
+            let checks = 0;
+            for (const item of response.data.Items ?? []) {
+                if (!item.Id || !item.BackdropImageTags?.length || !isPlayable(item)) continue;
+                if (item.Type !== BaseItemKind.Series) return item;
+                if (++checks > SERIES_CHECKS) return null;
+                const episodes = await getLibraryApi(api!).getItems({
+                    userId: user?.Id, parentId: item.Id, recursive: true, includeItemTypes: [BaseItemKind.Episode],
+                    isPlaceHolder: false, excludeLocationTypes: [LocationType.Virtual], limit: 1, enableTotalRecordCount: false,
+                    enableImages: false, enableUserData: false
+                }, { signal });
+                if (episodes.data.Items?.length) return item;
+            }
+            return null;
         },
         enabled: !!api && !!user?.Id,
         staleTime: 5 * 60 * 1000
