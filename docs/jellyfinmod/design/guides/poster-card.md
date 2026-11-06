@@ -2,7 +2,8 @@
 
 **Status — D281, approved by the user, 2026-11-06; implemented, live acceptance pending:** the Played pill asks before
 changing a Series or Season, including the title page's season posters. Episodes and movies still toggle immediately.
-Confirmation preserves the existing mutation and row invalidation described below; cancellation makes no change.
+Confirmation awaits the mutation for the item and direction captured at activation, preserving the row invalidation below;
+cancellation makes no change (review fix, 2026-11-06; built, live acceptance pending).
 The shared [confirm dialog](shared-chrome.md) owns the copy, server counts and safe TV focus.
 
 **Card geometry fixes (2026-11-05, user brief), built, not accepted:** `Cell` and title-page cards use

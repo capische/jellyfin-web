@@ -21,13 +21,29 @@ const readEpisodes = async (api: Api, user: UserDto, itemId: string, unplayed: b
     const library = getLibraryApi(api);
     const query = { userId: user.Id, parentId: itemId, recursive: true,
         includeItemTypes: [BaseItemKind.Episode], enableImages: false, enableUserData: false };
-    // Folder.MarkUnplayed visits every recursive non-folder. MarkPlayed skips virtual items when missing episodes are
-    // hidden, and always skips virtual unaired episodes. The server applies the unaired date in its own timezone.
-    if (unplayed) return (await library.getItems(query)).data.Items;
-    const real = (await library.getItems({ ...query, excludeLocationTypes: [LocationType.Virtual] })).data.Items;
-    if (!user.Configuration?.DisplayMissingEpisodes) return real;
-    const virtual = (await library.getItems({ ...query, locationTypes: [LocationType.Virtual], isUnaired: false })).data.Items;
-    return real && virtual ? [...real, ...virtual] : undefined;
+    const includeVirtual = unplayed || !!user.Configuration?.DisplayMissingEpisodes;
+    const { data, headers } = await library.getItems({ ...query,
+        ...(!includeVirtual && { excludeLocationTypes: [LocationType.Virtual] }) });
+    if (unplayed || !includeVirtual || !data.Items) return data.Items;
+    // Jellyfin v12.0 Folder.MarkPlayed skips virtual Episode.IsUnaired:
+    // PremiereDate.HasValue && PremiereDate.Value.ToLocalTime().Date >= DateTime.Now.Date.
+    // Undated virtual episodes are included. isUnaired=false instead compares instants and excludes null dates.
+    const now = Date.parse(headers.date);
+    const episodes: BaseItemDto[] = [];
+    for (const episode of data.Items) {
+        if (episode.LocationType !== LocationType.Virtual || !episode.PremiereDate) {
+            episodes.push(episode);
+            continue;
+        }
+        const premiere = Date.parse(episode.PremiereDate);
+        if (!Number.isFinite(now) || !Number.isFinite(premiere)) return undefined;
+        if (premiere >= now) continue;
+        // The API exposes neither the server timezone nor IsUnaired. Recent past dates may still be today there;
+        // use the no-count fallback rather than guess. Two days also covers a daylight-saving day boundary.
+        if (premiere >= now - 2 * 86400000) return undefined;
+        episodes.push(episode);
+    }
+    return episodes;
 };
 
 const confirmationFor = (item: PlayedItem, episodes: BaseItemDto[] | null | undefined, unplayed: boolean) => {
@@ -46,7 +62,7 @@ const confirmationFor = (item: PlayedItem, episodes: BaseItemDto[] | null | unde
         cancelText: 'Cancel', confirmText: `Mark ${action}` };
 };
 
-/** D281: only design-owned Series/Season actions ask; the existing toggle still owns the write and refresh. */
+/** D281: only design-owned Series/Season actions ask; the caller awaits the captured mutation and refresh. */
 export const usePlayedAction = () => {
     const { api, user } = useApi();
     const pending = useRef(false);

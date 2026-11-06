@@ -1,9 +1,10 @@
 # Title pages and art ground
 
 **Status — D281, approved by the user, 2026-11-06; implemented, live acceptance pending:** the Series/Season header's
-Played button and title-page poster pill ask through the [shared confirm](shared-chrome.md) before forwarding their native
-command. The same guard covers an episode row's Played action (immediate for an Episode). Native custom controls keep
-their state update and refresh event; cancellation never clicks them. Home hero Series/Season Played uses the same guard.
+Played button and title-page poster pill ask through the [shared confirm](shared-chrome.md) before awaiting an explicit
+mutation for the captured item and direction. The same guard covers an episode row's Played action (immediate for an Episode).
+Native custom controls keep their state update and refresh event; cancellation makes no change. Home hero Series/Season
+Played uses the same guard (review fix, 2026-11-06; built, live acceptance pending).
 
 **Review fixes (2026-11-04), built, not accepted:** painted episode rows and title cards forward cancellable remote `command` events with their detail to the original hidden card host, retaining the painted opener for menus. Consumption by upstream is reflected back to the original event so Play/Menu do not fall through to global playback actions. Click/context-menu behavior and approved markup stay unchanged.
 
@@ -29,7 +30,7 @@ source .618em. Native cells hold three caption lines even when empty. Row/still 
 no card paint containment is introduced. Lists and histories scroll to their final entry.
 
 Actions dispatch the existing controller handlers. Play reads the same original source/audio/subtitle selects and resume mode;
-card Play forwards the original shortcut command. Played/Favourite still click their existing custom controls. More carries the
+card Play forwards the original shortcut command. Played awaits its captured mutation; Favourite still clicks its existing custom control. More carries the
 real painted opener and retains mod registrations, deletion warnings/return and permissions. Get a Release uses the same picker.
 The existing playback black screen and spinner clean up on every success/error/cancel/rejection/navigation path.
 
