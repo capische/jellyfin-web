@@ -170,7 +170,9 @@
 
     .poster { filter: drop-shadow(0 var(--jfmod-s-1) var(--jfmod-s1) rgba(0, 0, 0, 0.618)); }
 
-    .poster:not(.wide) { width: var(--jfmod-s6); }
+    /* ds.t12 (the user 2026-11-07, "bigger i like more"): poster : column = 1 : φ² of the head's inner width, after the s1 gap.
+       A named exception: a proportion of the window, so it does not follow --jfmod-scale. */
+    .poster:not(.wide) { width: calc((100% - var(--jfmod-s1)) / 3.6180339887); }
 
     .poster .post,
     .poster img { border-radius: var(--jfmod-s-1); }
@@ -341,8 +343,10 @@
         height: var(--jfmod-s1);
     }
 
+    /* ds.t12 (the user 2026-11-07): s-1 under the pill; each field the caption's s0 line over the value's s1 line with s-2 above
+       and below (60.88 px), s1 corners. Video and Audio s6, Subtitles the rest, at least s5 (the stack test in FileChooser). */
     .gpk {
-        margin-top: var(--jfmod-s0);
+        margin-top: var(--jfmod-s-1);
         line-height: 1.618;
     }
 
@@ -350,33 +354,123 @@
         display: flex;
         flex-direction: column;
         justify-content: center;
-        min-height: var(--jfmod-s3);
-        padding: var(--jfmod-s-1) var(--jfmod-s0);
-        border-radius: var(--jfmod-s2);
+        min-height: 0;
+        padding: var(--jfmod-s-2) var(--jfmod-s0);
+        border-radius: var(--jfmod-s1);
     }
+
+    .gpk .seg.on { box-shadow: 0 0 0 var(--jfmod-s-4) var(--primary); }
 
     .gpk:not(.stacked) .seg { margin-left: var(--jfmod-s-2); }
 
-    .gpk:not(.stacked) .seg.v { margin-left: 0; }
+    .gpk:not(.stacked) .seg.v {
+        flex: none;
+        width: var(--jfmod-s6);
+        margin-left: 0;
+    }
 
     .gpk:not(.stacked) .seg.a { width: var(--jfmod-s6); }
 
-    .gpk:not(.stacked) .seg.s { width: var(--jfmod-s5); }
+    .gpk:not(.stacked) .seg.s {
+        flex: 1 1 auto;
+        width: auto;
+        min-width: var(--jfmod-s5);
+    }
 
     .gpk.stacked .seg { margin-top: var(--jfmod-s-2); }
 
     .gpk.stacked .seg.v { margin-top: 0; }
 
     .gpk .cap {
+        overflow: hidden;
         font-size: var(--jfmod-s-1);
         line-height: 1.618;
         letter-spacing: var(--jfmod-s-7);
+        white-space: nowrap;
+        text-overflow: ellipsis;
         opacity: 0.618;
     }
 
     .gpk .val {
         font-size: var(--jfmod-s0);
         line-height: 1.618;
+    }
+
+    /* ds.t12, the open lists in the fields' language: paper s0 corners, s-2 padding and gap; rows at least s2, s-2 s-1 s-2 s0,
+       s-1 corners; the name s0, marks, Atmos run and size s-1 as in the field; the second line s-1 at an s0 pitch. */
+    .gpk .seg > .vlist {
+        margin-top: var(--jfmod-s-2);
+        padding: var(--jfmod-s-2);
+        border-radius: var(--jfmod-s0);
+        box-shadow: 0 var(--jfmod-s-2) var(--jfmod-s1) rgba(0, 0, 0, 0.45);
+    }
+
+    .gpk .vrow {
+        min-height: var(--jfmod-s2);
+        padding: var(--jfmod-s-2) var(--jfmod-s-1) var(--jfmod-s-2) var(--jfmod-s0);
+        border-radius: var(--jfmod-s-1);
+        line-height: 1.618;
+    }
+
+    .gpk .vrow .r {
+        margin-right: var(--jfmod-s-1);
+        font-size: var(--jfmod-s0);
+    }
+
+    .gpk .vrow .marks { font-size: var(--jfmod-s-1); }
+
+    .gpk .vrow .marks .mk {
+        margin-right: var(--jfmod-s-3);
+        font-size: 1em;
+        letter-spacing: 0;
+    }
+
+    .gpk .vrow .sz2 {
+        padding-left: var(--jfmod-s-1);
+        font-size: var(--jfmod-s-1);
+        font-weight: 600;
+        letter-spacing: 0;
+    }
+
+    .gpk .vrow .atm {
+        margin-right: var(--jfmod-s-1);
+        font-size: var(--jfmod-s-1);
+        letter-spacing: var(--jfmod-s-7);
+    }
+
+    .gpk .vrow .atm svg { margin-right: var(--jfmod-s-3); }
+
+    .gpk .vrow .atm .n { margin-left: var(--jfmod-s-2); }
+
+    .gpk .vrow .trackextra {
+        font-size: var(--jfmod-s-1);
+        line-height: var(--jfmod-s0);
+        color: var(--jfmod-head-muted);
+        opacity: 1;
+    }
+
+    .gpk .vrow.sel::before {
+        left: var(--jfmod-s-3);
+        width: var(--jfmod-s-1);
+        height: var(--jfmod-s-1);
+        margin-top: calc(var(--jfmod-s-1) / -2);
+    }
+
+    .gpk .vrow.foc,
+    .gpk .vrow:focus { box-shadow: inset 0 0 0 var(--jfmod-s-4) var(--primary); }
+
+    /* The commentary bubble: an s0 glyph, its own 16:14, no frame (other role words keep their outline). */
+    .gpk .rflag.glyph {
+        height: var(--jfmod-s0);
+        padding: 0;
+        border: 0;
+        font-size: 1em;
+    }
+
+    .gpk .rflag.glyph svg {
+        width: auto;
+        height: var(--jfmod-s0);
+        fill: currentColor;
     }
 
     .gpk .val .r { margin-right: var(--jfmod-s-1); }
@@ -393,13 +487,6 @@
     .gpk .seg.v .val .marks { max-height: 1.2em; }
 
     .gpk .seg.v .val .marks::before { height: 1.2em; }
-
-    .gpk .val .size2 {
-        padding-left: var(--jfmod-s-1);
-        font-size: var(--jfmod-s-1);
-        font-weight: 600;
-        letter-spacing: 0;
-    }
 
     .gpk .val .chev {
         width: var(--jfmod-s0);
@@ -418,6 +505,14 @@
     .gpk .val .atm svg { margin-right: var(--jfmod-s-3); }
 
     .gpk .val .atm .n { margin-left: var(--jfmod-s-2); }
+
+    /* The subtitle format chip, the same in the field and the list. */
+    .gpk .marks .mk.tag {
+        height: var(--jfmod-s0);
+        padding: 0 var(--jfmod-s-3);
+        border-radius: var(--jfmod-s-4);
+        font-size: var(--jfmod-s-1);
+    }
 
     .jfmod-titleReading {
         max-width: var(--jfmod-s8);
@@ -458,5 +553,25 @@
     .poster { filter: drop-shadow(0 var(--jfmod-s-1) var(--jfmod-s1) rgba(0, 0, 0, 0.3)); }
 }
 
+/* A click that opened a list leaves no ring on its selected row (the keyboard's ring above). */
+.ds-pointer .jfds.dev-computer:not(.layout-tv) .jfmod-titleTop .jfmod-titleHead .gpk .vrow.foc,
+.ds-pointer .jfds.dev-computer:not(.layout-tv) .jfmod-titleTop .jfmod-titleHead .gpk .vrow:focus { box-shadow: none; }
+
 /* A pointer click that opened a source leaves the pill's own glass, not a lit pill (ratings.md, one highlight). */
 .ds-pointer .jfds.dev-computer:not(.layout-tv) .jfmod-titleTop .jfmod-titleHead .rgwrap:not(.on) .rgroup.foc { background: var(--card-glass-bg); }
+
+/* ds.t12: the title More menu's Selected Version group (History, Keep, Remove): its caption is the menu's own .cap0, then what it
+   acts on, the resolution in 600 and its video and size quieter, at the caption's inset (menus.md). */
+.jfds .pmenu .jfmod-menuContext {
+    display: block;
+    padding: 0 0.72em 0.382em;
+    line-height: 1.618;
+
+    .jfmod-menuLead { font-weight: 600; }
+
+    small {
+        margin-left: 0.618em;
+        font-size: 0.854em;
+        opacity: 0.7;
+    }
+}

@@ -12,6 +12,7 @@ import { mountDialog } from './dialogHost';
 import { menuPosition } from './menuPosition';
 import { Icon } from './Icon';
 import { titleCase } from './titleModel';
+import type { MoreMenuSection } from '../integration/moreMenuItem';
 
 const aliases: Record<string, string> = {
     play_arrow: 'play', play_circle: 'play', shuffle: 'shuffle', playlist_add: 'add', add: 'add',
@@ -34,7 +35,8 @@ const Sheet: FC<{ options: Options;
     useLayoutEffect(() => {
         if (ref.current?.closest('.opened')) ref.current.classList.add('open');
     }, [phone]);
-    const items = Array.from(options.items);
+    // A mod item may carry a group heading and error ink (`integration/moreMenuItem.ts`, the title's selected-version group).
+    const items: (Options['items'][number] & { danger?: boolean; section?: MoreMenuSection })[] = Array.from(options.items);
     const ordered = [...items.filter(item => item.id !== 'delete'), ...items.filter(item => item.id === 'delete')];
     return <div ref={ref} className={'pmenu focuscontainer-y ' + (phone ? 'sheet bottom msheet' : 'mn from-top')} role='menu' aria-label={options.title || 'Menu'} data-ds-actionsheet=''>
         {phone && <span className='sgrab' />}
@@ -46,8 +48,10 @@ const Sheet: FC<{ options: Options;
             }}>
             <MenuIcon name={options.titleButton.icon} /><span className='tx0'>{options.titleButton.title}</span></div><div className='mhr' /></>}
         {options.text && <p className='mnote'>{options.text}</p>}
-        {ordered.map((item, index) => item.divider ? <div className='mhr' key={index} /> :
-            <div key={index} className={`mi focusable${item.selected ? ' sel' : ''}${item.disabled ? ' dim' : ''}${item.id === 'delete' ? ' redrow' : ''}`}
+        {ordered.map((item, index) => item.divider ? <div className='mhr' key={index} /> : <React.Fragment key={index}>
+            {item.section && <div className='jfmod-menuSection'><span className='cap0'>{item.section.caption}</span>
+                <span className='jfmod-menuContext'><span className='jfmod-menuLead'>{item.section.lead}</span>{item.section.rest && <small>{item.section.rest}</small>}</span></div>}
+            <div className={`mi focusable${item.selected ? ' sel' : ''}${item.disabled ? ' dim' : ''}${item.id === 'delete' || item.danger ? ' redrow' : ''}`}
                 role='menuitem' tabIndex={0} data-id={item.id == null || item.id === '' ? item.value : item.id} ref={node => {
                     if (item.selected && !options.titleButton) node?.setAttribute('autofocus', '');
                 }}
@@ -65,7 +69,7 @@ const Sheet: FC<{ options: Options;
                 <span className='tx0'>{titleCase(item.name || item.textContent || item.innerText || '')}{item.secondaryText && <small>{item.secondaryText}</small>}</span>
                 {item.asideText && <span className='sub'>{item.asideText}</span>}
                 {['aspectratio', 'playbackrate', 'quality', 'repeatmode'].includes(item.id || '') && <Icon name='right' className='nx' />}
-            </div>)}
+            </div></React.Fragment>)}
         {options.showCancel && <Button onClick={() => choose(null)}>{globalize.translate('ButtonCancel')}</Button>}
     </div>;
 };

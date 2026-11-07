@@ -1,5 +1,10 @@
 # Media marks
 
+**Golden list marks (ds.t12): approved by the user 2026-11-07, built, not accepted.** In the computer title head's open lists the
+marks match the closed field: video marks s-1, s-3 apart, no tracking; the Atmos run s-1 with s-7 tracking (glyph 0.82em, s-3
+after it, channels s-2 after the format); the subtitle chip s-1 type, s0 high, s-3 side padding, s-4 corners, in the field and the
+list; the commentary role an s0 glyph, its own 16:14, no frame. Other role words keep their outline. See [track-dropdown.md](track-dropdown.md).
+
 **Golden closed Video value (ds.t10): approved by the user 2026-11-07, built, not accepted.** On a computer title head the closed
 Video marks are s-1 (base × φ⁻¹, 11.1 px at the 18px base), s-3 apart, without tracking; the Atmos run s-1. See
 [track-dropdown.md](track-dropdown.md). Everywhere else the sizes below stay.

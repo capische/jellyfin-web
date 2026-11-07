@@ -11,8 +11,14 @@ import { PHONE_COPY_LABEL } from './PhoneMark';
 
 const SOURCE_SELECTOR = '.selectSource';
 const FORM_SELECTOR = '.trackSelections';
-/** Audio's and Subtitles' fixed cells (17.8em and 13.2em, `ds.css`), which the Video cell's width is left after. */
+/** Audio's and Subtitles' fixed cells (17.8em and 13.2em, `ds.css`) on the phone, tablet and TV, which Video's width is left after. */
 const TRACK_CELLS_EMS = 31;
+/**
+ * The computer's strip (ds.t12, the user 2026-11-07): Video and Audio φ⁶ of the head's base each, Subtitles the rest but at least
+ * φ⁵, two φ⁻² gaps. Under this many of the strip's em (the head's base) it stacks: a 1440 px window keeps a row beside the φ²
+ * poster (a 952.7 px column), 1280 stacks (836.9 px).
+ */
+const GOLDEN_ROW_EMS = 2 * 17.94427191 + 11.0901699437 + 2 * 0.3819660113;
 /**
  * Under this Video cell width the strip stacks as on the phone (D199). 11.7em is a named exception to the golden ratio (φ⁵, 11.09em,
  * until D238): it is where the pending entry's quality stays on its line: a 996 px window keeps 11.74em
@@ -20,7 +26,7 @@ const TRACK_CELLS_EMS = 31;
  */
 const STACK_EMS = 11.7;
 
-/** The pin on a file's row: per-file Keep, or the episode's or title's Keep where that is what the plugin offers. */
+/** The selected file's Keep (in the title's More menu): per-file Keep, or the episode's or title's Keep where that is what the plugin offers. */
 export interface PinState {
     kept: boolean;
     /** Read-only (`aria-disabled`) with this reason, for a Keep the page cannot undo. */
@@ -34,15 +40,6 @@ export interface FileChooserProps {
     versions: VersionDto[];
     /** The copy this device starts with (V1 decision 4); null leaves Jellyfin's default. */
     preferred?: VersionDto | null;
-    busy: boolean;
-    /** Opens one file's history; absent when the plugin does not stamp files on history events (`history.files`). */
-    onHistory?: (version: VersionDto, opener: HTMLElement) => void;
-    /** The pin for one file, or null where this viewer has none. */
-    pin: (version: VersionDto) => PinState | null;
-    onPin: (version: VersionDto, opener: HTMLElement) => void;
-    /** Whether this viewer may remove exactly this file. */
-    canRemove: (version: VersionDto) => boolean;
-    onRemove: (version: VersionDto, opener: HTMLElement) => void;
     /** `12 Oct` when the file has a scheduled removal. */
     removeDate: (version: VersionDto) => string | null;
     /** A line under the rows for administrators, such as what stock Delete removes (V1). */
@@ -78,6 +75,13 @@ const useSelectedSource = (view: HTMLElement) => {
     }, [view]);
     return value;
 };
+
+/** The file the stock select has selected (its default, else the first, before it is read): what the More menu's version group acts on. */
+export const selectedVersion = (versions: VersionDto[], current: string) => versions.find(version => sameItemId(version.mediaSourceId, current))
+    ?? versions.find(version => version.isDefault) ?? versions[0];
+
+/** The selected file as the stock select holds it now, read when the More menu opens. */
+export const currentVersion = (view: HTMLElement, versions: VersionDto[]) => selectedVersion(versions, findSelect(view)?.value ?? '');
 
 /**
  * The media source ids upstream's Version select lists for this page's item, or null when the page has no such select.
@@ -169,11 +173,13 @@ export interface StripHosts {
 }
 
 /**
- * Whether the strip stacks: on the phone (D4), and where the Video cell would be narrower than `STACK_EMS` (D199). It reads the
+ * Whether the strip stacks: on the phone (D4); on a computer where the three φ⁶ cells do not fit (ds.t12); elsewhere where the
+ * Video cell would be narrower than `STACK_EMS` (D199). It reads the
  * strip's own width, which does not depend on the stacking, so the strip never flips back and forth at the switch.
  */
 const stacks = (strip: HTMLElement) => document.documentElement.classList.contains('layout-mobile')
-    || strip.clientWidth < (TRACK_CELLS_EMS + STACK_EMS + 2 * 0.382) * parseFloat(getComputedStyle(strip).fontSize);
+    || strip.clientWidth < (strip.closest('.jfds.dev-computer:not(.layout-tv)') ? GOLDEN_ROW_EMS : TRACK_CELLS_EMS + STACK_EMS + 2 * 0.382)
+        * parseFloat(getComputedStyle(strip).fontSize);
 
 /**
  * The track strip (D4–D9, user-approved 2026-10-28, `reviews/upgrade-status-options/all-in-one`): Video, Audio and Subtitles as
@@ -232,20 +238,22 @@ export const useTrackStrip = (view: HTMLElement, enabled: boolean): StripHosts |
     return enabled ? result : null;
 };
 
-/** The native Video picker uses the same select mutation and device preference as the former chooser. */
-const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, onHistory, pin, onPin, canRemove,
-    onRemove, removeDate, note, sources, strip, pending }) => {
+/**
+ * The native Video picker uses the same select mutation and device preference as the former chooser. Its rows only choose a
+ * file (ds.t12, the user 2026-11-07): History, Keep and Remove act on the selected file from the title's More menu.
+ */
+const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, removeDate, note, sources, strip, pending }) => {
     const current = useSelectedSource(view);
     const chosen = useRef(false);
     useViewerChoice(view, chosen);
     useDevicePreference(view, versions.length > 1 ? preferred : null, chosen);
     const [open, setOpen] = useState(false);
-    const selected = versions.find(version => sameItemId(version.mediaSourceId, current))
-        ?? versions.find(version => version.isDefault) ?? versions[0];
+    const selected = selectedVersion(versions, current);
+    // The size moved to the caption (`VIDEO · 13.2 GB`, the user 2026-11-07); each row keeps its own.
     const summary = (version: VersionDto, closed = false) => <>
         <span className='r'>{describeVersion(version).resolution}{version.phoneCopy && <span className='pm' title={PHONE_COPY_LABEL}><Icon name='phone' /></span>}</span>
         <span className='marks'><DesignMediaMarks parsed={fileMarks(version, findSource(sources, version.mediaSourceId)).video} /></span>
-        <span className={closed ? 'size2' : 'sz2'}>{describeVersion(version).size}</span>
+        {!closed && <span className='sz2'>{describeVersion(version).size}</span>}
     </>;
     const choose = (version: VersionDto) => {
         chosen.current = true;
@@ -255,35 +263,12 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, on
     const opening = useCallback(() => setOpen(true), []);
     const closing = useCallback(() => setOpen(false), []);
     return <>
-        {createPortal(<TrackField kind='v' name='Video' value={summary(selected, true)} stacked={strip.stacked} onOpen={opening} onClose={closing}>
-            {bestFirst(versions).map(version => {
-                const keep = pin(version);
-                const history = !!onHistory && version.tracked !== false && /[1-9a-f]/i.test(version.bindingId ?? '');
-                return <ChooseRow key={version.mediaSourceId} sourceId={version.mediaSourceId} selected={version === selected}
-                    onChoose={() => choose(version)} title={[version.episodeRange, removeDate(version)].filter(Boolean).join(' · ')}>
-                    {summary(version)}<span className='icons'>
-                        {history && <button type='button' className='rb focusable' title='History' aria-label={'History of the ' + describeVersion(version).resolution + ' file'} data-jfmod-file-history={version.bindingId}
-                            onClick={event => {
-                                event.stopPropagation();
-                                onHistory?.(version, event.currentTarget);
-                            }}><Icon name='history' /></button>}
-                        {keep && <button type='button' className='rb focusable' title={keep.locked ?? keep.title} aria-label={(keep.title === 'Stop Keeping' ? 'Stop keeping' : keep.title) + ' the ' + describeVersion(version).resolution + ' file'}
-                            aria-pressed={keep.kept} aria-disabled={busy || !!keep.locked} data-jfmod-file-pin={version.bindingId}
-                            style={keep.kept ? { color: 'var(--primary)' } : undefined}
-                            onClick={event => {
-                                event.stopPropagation();
-                                if (!busy && !keep.locked) onPin(version, event.currentTarget);
-                            }}><Icon name='pin' /></button>}
-                        {canRemove(version) && <button type='button' className='rb red focusable' title='Remove This Version' aria-label={'Remove the ' + describeVersion(version).resolution + ' file'}
-                            aria-disabled={busy} data-jfmod-file-remove={version.bindingId}
-                            onClick={event => {
-                                event.stopPropagation();
-                                if (!busy) onRemove(version, event.currentTarget);
-                            }}><Icon name='x' /></button>}
-                    </span>
-                    {(version.episodeRange || removeDate(version)) && <span className='trackextra'>{[version.episodeRange, removeDate(version) && 'removes ' + removeDate(version)].filter(Boolean).join(' · ')}</span>}
-                </ChooseRow>;
-            })}
+        {createPortal(<TrackField kind='v' name='Video' extra={describeVersion(selected).size ?? undefined} value={summary(selected, true)} stacked={strip.stacked} onOpen={opening} onClose={closing}>
+            {bestFirst(versions).map(version => <ChooseRow key={version.mediaSourceId} sourceId={version.mediaSourceId} selected={version === selected}
+                onChoose={() => choose(version)} title={[version.episodeRange, removeDate(version)].filter(Boolean).join(' · ')}>
+                {summary(version)}
+                {(version.episodeRange || removeDate(version)) && <span className='trackextra'>{[version.episodeRange, removeDate(version) && 'removes ' + removeDate(version)].filter(Boolean).join(' · ')}</span>}
+            </ChooseRow>)}
             {pending}{note && <div className='vnote'>{note}</div>}
         </TrackField>, strip.video)}
         {!open && createPortal(pending, strip.below)}

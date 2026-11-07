@@ -1,8 +1,33 @@
 # Track strip and dropdown (the custom dropdown)
 
+**Golden track dropdowns and choice-only Video rows (ds.t12): approved by the user 2026-11-07 ("I like it. Let's keep what codex
+suggested"; field height "Codex version"; "file size should be moved to Video similarly like 576 KBPS"), built, not accepted,
+gate 1 on beta.** Reference: workspace `reviews/dropdown-golden/` and its `NOTES.md`; where they differ on height the user's later
+60.88 px wins. Computer title head (`.jfds.dev-computer:not(.layout-tv)`, `design/titleTop.scss`), tokens `sN` = `--jfmod-s<n>`:
+- **Strip:** s-1 under the action pill, fields s-2 apart. Each field the caption's s0 line over the value's s1 line with s-2 above
+  and below: **60.88 px** (Bφ⁰ + Bφ¹ + 2·Bφ⁻²), padding s-2 / s0, **s1 corners**, open ring s-4. **Video s6, Audio s6, Subtitles
+  the rest, at least s5** (323 / 323 / 293 px at a 1440 window beside the φ² poster, 640 px at 1920). The computer stack test
+  (`GOLDEN_ROW_EMS` in `FileChooser.tsx`) is 2·φ⁶ + φ⁵ + 2·φ⁻² of the strip's em: a 1440 window is a row, **1280 stacks**. s5 rather
+  than the proposal's s6 minimum is forced by the bigger poster (title-pages.md): with s6 the 952.7 px column at 1440 would stack.
+- **Captions** s-1 at an s0 pitch, s-7 tracking, 61.8 %, one line (`nowrap`, an ellipsis only as a fallback; the Philosopher's
+  captions fit: 287 of 323 px, 257 of 293 px). **The Video caption carries the file size** (`VIDEO · 13.2 GB`, on every layout); the
+  closed value is the resolution and its marks only, its chevron at the end like Audio's.
+- **Open lists:** s-2 under their field, exactly its width, paper s0 corners, s-2 padding, shadow 0 s-2 s1 black 45 %. Rows at least
+  s2 (47.12 px), padding s-2 s-1 s-2 s0, s-1 corners; a row with a second line 60.88 px. Name s0/600, s-1 after it; marks, the Atmos
+  run (glyph still 0.82em of its words) and the size s-1/600 without tracking; the second line (bitrate, extra words, episode
+  range, removal date) s-1 at an s0 pitch in the head's muted ink. Check s-1, s-3 from the left. Keyboard ring s-4 inside, none after
+  a click. The subtitle chip s-1 type, s0 high, s-3 padding, s-4 corners (field and list); the commentary bubble an s0 glyph without
+  a frame (`.rflag.glyph`). Each Video row keeps its own size, also the selected one under the caption that repeats it: the rows
+  compare versions, and one rule for one or many files is simpler than dropping it for a single file.
+- **The Video rows only choose, on every layout:** no History, Keep or Remove on a row. They act on the selected file from the
+  title's More menu ([menus.md](menus.md), *Selected Version*). The TV's Right/Left along a row (D199) is gone: on a choice row they
+  keep the focus, so the remote never leaves the open list sideways; the pending entry still walks to its X. The one-file Video
+  field stays a dropdown (its list holds the pending entry and the admin note).
+Phone, tablet and TV keep their sizes below (only the size's move to the caption and the rows' actions apply there).
+
 **Golden closed strip (ds.t10): approved by the user 2026-11-07, 18px base, built, not accepted.** Title head, computer layout only;
 phone, tablet and TV keep the values below. Tokens `--jfmod-s<n>` from `design/_golden.scss` ([title-pages.md](title-pages.md)).
-Strip s0 below the action pill, fields s-2 apart; each field at least s3 high, padding s-1 / s0, s2 corners, caption over value,
+Superseded by ds.t12 above for the strip's gap, height, corners and widths. Strip s0 below the action pill, fields s-2 apart; each field at least s3 high, padding s-1 / s0, s2 corners, caption over value,
 centred. Audio s6 wide, Subtitles s5 (their ratio is φ), Video the rest. Caption s-1 at pitch φ, tracking s-7, 61.8%; value s0 at
 pitch φ; s-1 between the value's parts; Video's marks s-1, s-3 apart, no tracking; size s-1/600; chevron s0. The Atmos run s-1 with
 s-7 tracking, glyph still 0.82em with s-3 after it, channels s-2 after the format. Open lists read the head's 18px base. The stack
