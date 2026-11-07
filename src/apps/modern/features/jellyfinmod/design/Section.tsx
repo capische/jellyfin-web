@@ -8,7 +8,7 @@ import { RowRefreshContext, useRowMotion } from './useRowMotion';
 export const Section: FC<PropsWithChildren<{ title: ReactNode; name?: string; queryKey?: QueryKey; reload?: () => void; motionIds?: string[]; motionReady?: boolean }>> = ({ title, name, children, queryKey, reload, motionIds, motionReady }) => {
     const motion = useRowMotion(children, motionIds, motionReady);
     return <RowRefreshContext.Provider value={motion.refresh}><div ref={motion.root} className='sect plain' data-ds-section={name}
-        hidden={motionReady && motionIds?.length === 0 && !motion.active}>
+        hidden={motionIds?.length === 0 && !motion.active}>
         <h2 className='rowt'>{title}</h2>
         <Scroller className='ds-rowframe' isCenterFocusEnabled isAllowNativeSmoothScrollEnabled>
             <ItemsContainer isPlain className='rowx scrollSlider focuscontainer-x' queryKey={queryKey} reloadItems={reload}>{motion.content}</ItemsContainer>

@@ -63,7 +63,7 @@ const RowShell: FC<{ title: string; rows: BrowseRow[]; wide?: boolean; loading?:
     setCardData(rows.flatMap(row => row.kind === 'native' ? [row.nativeItem] : []), options);
     if (!rows.length && !loading && motionReady === undefined) return null;
     return <Root><Section title={title} queryKey={options.queryKey}
-        motionIds={motionReady === undefined ? undefined : rows.map(row => row.kind === 'native' ? row.nativeItem.Id! : row.entry.id)} motionReady={motionReady}>
+        motionIds={motionReady === undefined || loading ? undefined : rows.map(row => row.kind === 'native' ? row.nativeItem.Id! : row.entry.id)} motionReady={motionReady}>
         {rows.map(row => <Cell key={row.kind === 'native' ? row.nativeItem.Id : row.entry.id} row={row} options={options} />)}
         {loading && !rows.length && Array.from({ length: 6 }, (_, index) => <CellSkeleton key={index} wide={wide} library />)}
         <LibraryCast rows={rows} />
