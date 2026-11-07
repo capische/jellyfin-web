@@ -13,13 +13,13 @@ import { type EntryDetail, getMediaSources, keepEntry, keepEpisode, setEpisodeRe
 import { announce } from '../integration/announce';
 import { HISTORY_FILES_CAPABILITY, playedBadge, shortDate, showsRetentionStatus } from '../constants/detailPage';
 import { EPISODE_CONTROLS_CAPABILITY, EPISODE_RETENTION_CAPABILITY, VERSION_KEEP_CAPABILITY } from '../constants/fileState';
-import { type DevicePreference, deleteWarningText, isEpisodeItem, preferredVersion, sameItemId, VERSIONS_CAPABILITY, VERSIONS_REMOVE_CAPABILITY,
+import { type DevicePreference, deleteWarningText, describeVersion, isEpisodeItem, preferredVersion, sameItemId, VERSIONS_CAPABILITY, VERSIONS_REMOVE_CAPABILITY,
     VERSIONS_V1_CAPABILITY, videoRangeTypes } from '../constants/versions';
 import { PACKS_CAPABILITY, RELEASES_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisition';
 import { entryDetailQuery, entryIdQuery } from '../hooks/useEntries';
 import { useDeleteWarning } from '../hooks/useDeleteWarning';
 import { useVersionRemoval } from '../hooks/useVersionRemoval';
-import { registerDeleteReturn, registerMoreMenuItem } from '../integration/moreMenuItem';
+import { type MoreMenuItem, registerDeleteReturn, registerMoreMenuItem } from '../integration/moreMenuItem';
 import { usePlayedBadge, usePlayedRefresh } from '../integration/playedBadge';
 import { openReleasePicker, useEpisodeListLoad } from '../integration/releasePicker';
 import { restoreFocusTo, useStockHeaderButton } from '../integration/stockHeaderButton';
@@ -27,7 +27,7 @@ import { type EntryEpisode, FileState } from '../types/entry';
 import type { VersionDto } from '../types/versions';
 import DownloadBlock, { type DownloadTarget } from './DownloadBlock';
 import EpisodeWindowDialog, { windowDays } from './EpisodeWindowDialog';
-import FileChooser, { type PinState, useStockSourceIds, useTrackStrip } from './FileChooser';
+import FileChooser, { currentVersion, type PinState, useStockSourceIds, useTrackStrip } from './FileChooser';
 import FileHistoryPopover from './FileHistoryPopover';
 import HistoryToggle from './HistoryToggle';
 import LibraryUndo from './LibraryUndo';
@@ -307,6 +307,102 @@ const usePageMenuItem = (view: HTMLElement, { enabled, id, itemIds, name, icon, 
             run: () => runRef.current()
         }) ?? undefined;
     }, [view, enabled, id, ids, name, icon]);
+};
+
+/** What the More menu's selected-version group reads when the menu opens. */
+interface VersionMenuState {
+    versions: VersionDto[];
+    busy: boolean;
+    /** The plugin stamps files on history events (`history.files`). */
+    history: boolean;
+    pin: (version: VersionDto) => PinState | null;
+    onPin: (version: VersionDto) => void;
+    canRemove: (version: VersionDto) => boolean;
+    onRemove: (version: VersionDto) => void;
+    onHistory: (version: VersionDto, anchor: HTMLElement) => void;
+}
+
+/** A per-file Keep names the version it keeps; the episode's and title's Keep keep their own words. */
+const KEEP_NAMES: Record<string, string> = { Keep: 'Keep This Version', 'Stop Keeping': 'Stop Keeping This Version' };
+
+type VersionAction = 'history' | 'keep' | 'remove';
+
+/**
+ * File History, Keep and Remove for the file the Video field has selected, as a group at the end of the title's More menu (ds.t12,
+ * the user 2026-11-07: the Video rows only choose). Registered once, in this order; every entry reads the page when the menu
+ * opens, so its file, label, refusal and the group's heading always follow the current selection. History opens from the More
+ * button and gives the focus back to it.
+ */
+const useVersionMenu = (view: HTMLElement, enabled: boolean, itemIds: string[], state: VersionMenuState) => {
+    const stateRef = useRef(state);
+    stateRef.current = state;
+    const ids = itemIds.join(',');
+    useEffect(() => {
+        if (!enabled) return;
+        const own = ids.split(',');
+        const selected = () => currentVersion(view, stateRef.current.versions);
+        const offers: Record<VersionAction, (version: VersionDto) => boolean> = {
+            history: version => stateRef.current.history && version.tracked !== false && /[1-9a-f]/i.test(version.bindingId ?? ''),
+            keep: version => !!stateRef.current.pin(version),
+            remove: version => stateRef.current.canRemove(version)
+        };
+        const shown = () => {
+            const version = selected();
+            return version ? (['history', 'keep', 'remove'] as const).filter(action => offers[action](version)) : [];
+        };
+        // Getters, never a spread: the registry reads each value when the menu opens.
+        const entry = (action: VersionAction, item: Omit<MoreMenuItem, 'matches' | 'section' | 'divider'>): MoreMenuItem => Object.defineProperties(item as MoreMenuItem, {
+            matches: { value: (options: Parameters<MoreMenuItem['matches']>[0]) => isOwnHeaderMore(view, own, options) && shown().includes(action) },
+            // The first entry shown carries the group's divider and heading; Remove has its own divider after another entry.
+            divider: { get: () => {
+                const now = shown();
+                return now[0] === action || (action === 'remove' && now.length > 1);
+            } },
+            section: { get: () => {
+                if (shown()[0] !== action) return undefined;
+                const described = describeVersion(selected());
+                return { caption: 'Selected Version', lead: described.resolution, rest: [described.video, described.size].filter(Boolean).join(' · ') };
+            } }
+        });
+        const keepPlan = () => stateRef.current.pin(selected());
+        const unregister = [
+            entry('history', {
+                id: 'jfmod-version-history', icon: 'clock', name: 'File History',
+                run: opener => {
+                    const anchor = opener instanceof HTMLElement && opener.isConnected ? opener : view.querySelector<HTMLElement>('.gpk .seg.v');
+                    if (anchor) stateRef.current.onHistory(selected(), anchor);
+                }
+            }),
+            entry('keep', {
+                id: 'jfmod-version-keep', icon: 'pin',
+                get name() {
+                    const plan = keepPlan();
+                    return plan ? KEEP_NAMES[plan.title] ?? plan.title : '';
+                },
+                get disabled() {
+                    return stateRef.current.busy || !!keepPlan()?.locked;
+                },
+                get title() {
+                    return keepPlan()?.locked;
+                },
+                run: () => {
+                    if (!stateRef.current.busy && !keepPlan()?.locked) stateRef.current.onPin(selected());
+                }
+            }),
+            entry('remove', {
+                id: 'jfmod-version-remove', icon: 'close', name: 'Remove This Version…', danger: true,
+                get disabled() {
+                    return stateRef.current.busy;
+                },
+                run: () => {
+                    if (!stateRef.current.busy) stateRef.current.onRemove(selected());
+                }
+            })
+        ].map(registerMoreMenuItem);
+        return () => unregister.forEach(remove => {
+            remove?.();
+        });
+    }, [view, enabled, ids]);
 };
 
 /**
@@ -724,6 +820,10 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
         ...versions.flatMap(version => [version.jellyfinItemId, version.mediaSourceId])].filter((id): id is string => !!id));
     // Video, Audio and Subtitles as one strip with the pending download under it (D4–D9), on a page that lists files.
     const strip = useTrackStrip(view, versions.length > 0);
+    useVersionMenu(view, !!strip && isFilePage, [itemId, ...(stockIds?.split(',') ?? []),
+        ...versions.flatMap(version => [version.jellyfinItemId, version.mediaSourceId])].filter((id): id is string => !!id), {
+        versions, busy, history: capabilities.includes(HISTORY_FILES_CAPABILITY), pin, onPin, canRemove, onRemove: remove, onHistory: showHistory
+    });
     const pendingFinished = usePendingFinished(view, refetch, serverId, itemId, episode?.id);
 
     if (!detail.data) return null;
@@ -759,9 +859,7 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
     }
     return <section aria-label='JellyfinMod' data-jfmod-entry-id={entry.id} data-jfmod-episode-id={episode?.id}>
         <LibraryUndo entryId={entry.id} view={view} />
-        {strip && <FileChooser view={view} versions={versions} preferred={preferred} busy={busy}
-            onHistory={capabilities.includes(HISTORY_FILES_CAPABILITY) ? showHistory : undefined}
-            pin={pin} onPin={onPin} canRemove={canRemove} onRemove={remove} removeDate={removeDate}
+        {strip && <FileChooser view={view} versions={versions} preferred={preferred} removeDate={removeDate}
             note={isAdmin ? deleteWarning : null} sources={sources.data} strip={strip}
             pending={<PendingVersion entryId={entry.id} episodeId={episode?.id} versions={versions} isAdmin={isAdmin}
                 onFinished={pendingFinished} />} />}

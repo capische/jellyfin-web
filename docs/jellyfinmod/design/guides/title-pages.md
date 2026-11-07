@@ -1,5 +1,12 @@
 # Title pages and art ground
 
+**Bigger poster and golden track strip (ds.t12): approved by the user 2026-11-07 ("bigger i like more"), built, not accepted,
+gate 1 on beta.** On a computer the poster is no longer s6: **poster : column = 1 : φ²** of the head's inner width after the s1
+gap (`width: calc((100% - s1) / 3.618)`, 2:3 kept): 319.7 / 837.0 px at a 1280 window, 363.9 / 952.8 at 1440, 496.6 / 1300.1 at
+1920 (measured; reference `reviews/title-golden/`, "Poster 1 : φ²"). **Named exception:** a proportion of the window, so it does
+not follow `--jfmod-scale`. The reading measure stays at most s8 (845.6 px); the track strip takes the whole column
+([track-dropdown.md](track-dropdown.md), ds.t12: 60.88 px fields s-1 under the pill). An episode's 16:9 still keeps its rule.
+
 **Golden title head (ds.t10): approved by the user 2026-11-07, 18px base, built, not accepted.** Computer layout only (gate 1
 on beta); phone, tablet and TV keep the D288–D295 values below. Reference: workspace `reviews/title-golden/`, its 18px proposal
 and `NOTES.md`. Every length is a token of the golden scale in `design/_golden.scss`, declared on `.jfds.dev-computer:not(.layout-tv)`:
@@ -7,7 +14,7 @@ and `NOTES.md`. Every length is a token of the golden scale in `design/_golden.s
 root) and `--jfmod-s<n>` = base × φⁿ for n = −7 … 8 (written `sN` below; `s0` is the base). Plain px, so nothing compounds.
 Code: `design/titleTop.scss` (the ds.t10 block), `Ratings.tsx`, `TitlePage.tsx`.
 
-- Head: padding s1 / s2, font s0 (every em inside the head now reads 18px). Poster s6 wide (2:3; an episode's 16:9 still keeps 27.6%),
+- Head: padding s1 / s2, font s0 (every em inside the head now reads 18px). Poster s6 wide until ds.t12, now 1 : φ² of the head (above) (2:3; an episode's 16:9 still keeps 27.6%),
   s-1 corners, shadow 0 s-1 s1 black 61.8%; column s1 from the poster.
 - Title s2, weight 700, line height 1. Directed by s-2 below it, s0 at pitch φ, label and names in full ink, names underlined
   in currentColor, thickness s-6, offset s-5.

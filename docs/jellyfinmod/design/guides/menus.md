@@ -1,5 +1,16 @@
 # Menus and action sheets
 
+**Selected Version group (ds.t12): approved by the user 2026-11-07, built, not accepted, gate 1 on beta.** The title's More menu
+ends with a group for the file the Video field has selected: a divider, the caption **Selected Version** (`.cap0`), a context line
+(the resolution in 600, then its video and size at .854em, 70 %; `.jfmod-menuContext`), then **File History**, **Keep This Version**
+/ **Stop Keeping This Version** (the episode's or title's Keep keeps its own words: Keep the Episode, Keep the Movie, Kept …), a
+divider and **Remove This Version…** in error ink, before Delete Media. Entries a viewer may not use are absent (History needs
+`history.files`; Keep and Remove are an administrator's); a refused Keep (locked, or busy) stays `aria-disabled` at 45 % with its
+reason as the tooltip. File History opens the popover from the More button and Back returns the focus there. The group's rows keep
+this guide's row values (2.618em, 1.4em icons); the proposal's golden rows (s2, s0 icons, s6 width) wait for the menus' own golden
+pass. The same group shows in the phone's bottom sheet and the TV's anchored menu. Code: `integration/moreMenuItem.ts` (`divider`,
+`section`, `disabled`, `title`, `danger`, `run(opener)`), `design/ActionSheet.tsx`, `useVersionMenu` in `components/NativeEntryDetails.tsx`.
+
 **Entry card More (2026-11-05, user brief), built, not accepted:** a non-pending design `Cell` with an entry and no
 Jellyfin item uses the existing action sheet for **More Info** (its title page, where entry management remains) and,
 when available, **View Queue**. Native-item More and the existing in-flight context menu retain their handlers.

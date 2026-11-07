@@ -5,6 +5,15 @@ import { getKeyName } from 'scripts/keyboardNavigation';
 import { isBackKey } from '../shell/dpadModals';
 import { Icon } from './Icon';
 
+/**
+ * Left/Right inside an open list: only the pending entry has a button (its X), walked from the entry; a choice row keeps the
+ * focus (itself), so a TV remote never leaves the open list sideways.
+ */
+const sideStop = (row: HTMLElement, key: string) => {
+    const stops = [row, ...Array.from(row.querySelectorAll<HTMLElement>('button.focusable'))];
+    return stops[stops.indexOf(document.activeElement as HTMLElement) + (key === 'ArrowLeft' ? -1 : 1)] ?? (row.matches('.vrow') ? row : undefined);
+};
+
 /** ds2.js stripAt/seg: open lists are paper, inline on narrow screens, anchored to their cell otherwise. */
 export const TrackField: FC<{ kind: 'v' | 'a' | 's'; name: string; value: ReactNode; enabled?: boolean; stacked: boolean;
     children?: ReactNode; onOpen?: () => void; onClose?: () => void; closeOnChoose?: boolean; title?: string; extra?: string }> = ({ kind, name, value, enabled = true, stacked, children, onOpen, onClose, closeOnChoose = true, title, extra }) => {
@@ -74,17 +83,14 @@ export const TrackField: FC<{ kind: 'v' | 'a' | 's'; name: string; value: ReactN
             const target = event.target as HTMLElement;
             const row = target.closest<HTMLElement>('.vrow');
             focused.current = { source: row?.dataset.jfmodMediaSourceId, track: row?.dataset.jfmodTrack,
-                control: ['data-jfmod-file-history', 'data-jfmod-file-pin', 'data-jfmod-file-remove', 'data-jfmod-pending-remove'].find(attribute => target.hasAttribute(attribute)) };
+                control: target.hasAttribute('data-jfmod-pending-remove') ? 'data-jfmod-pending-remove' : undefined };
         }}
         onKeyDown={event => {
             const key = getKeyName(event.nativeEvent);
             const row = (event.target as HTMLElement).closest<HTMLElement>('.vrow, .pend');
             if (!row) return;
             let next: HTMLElement | null | undefined;
-            if (key === 'ArrowLeft' || key === 'ArrowRight') {
-                const stops = [row, ...Array.from(row.querySelectorAll<HTMLElement>('button.focusable'))];
-                next = stops[stops.indexOf(document.activeElement as HTMLElement) + (key === 'ArrowLeft' ? -1 : 1)];
-            }
+            if (key === 'ArrowLeft' || key === 'ArrowRight') next = sideStop(row, key);
             if (key === 'ArrowUp' || key === 'ArrowDown') {
                 const rows = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('.vrow, .pend'));
                 const destination = rows[rows.indexOf(row) + (key === 'ArrowUp' ? -1 : 1)];
@@ -119,7 +125,7 @@ export const TrackField: FC<{ kind: 'v' | 'a' | 's'; name: string; value: ReactN
                 toggle();
             }
         }}>
-        <span className='cap'>{name}{extra && ' · ' + extra}</span><span className='val'>{value}{enabled && <Icon name={open ? 'up' : 'down'} className={kind === 'v' ? 'chev' : 'chev end'} />}</span>
+        <span className='cap'>{name}{extra && ' · ' + extra}</span><span className='val'>{value}{enabled && <Icon name={open ? 'up' : 'down'} className='chev end' />}</span>
         {!inCard && sheet}
     </div>{inCard && sheet}</>;
 };

@@ -2624,3 +2624,18 @@ card: "Remove Get Another Release from the toolbar, too many download icons". Th
 every card and on the title pages' season and episode cards; Download stays on the centre disc of a card with no file, and
 Download / Get Another Quality stay in the card's More menu (a title with no Jellyfin item gets Download at the top of its own
 menu). Guide: [poster card](design/guides/poster-card.md). Light theme, real Chrome and the Codex review are later gates.
+
+## ds.t12 — golden track dropdowns, choice-only Video rows, the φ² poster (2026-11-07)
+
+**Built (not accepted), gate 1: computer first look on beta (main-items line only).** The user kept Codex's dropdown proposal
+(workspace `reviews/dropdown-golden/`): "I like it. Let's keep what codex suggested"; field height "Codex version" (60.88 px, after
+"dropdowns a bit too big comparing with Play row"); "file size should be moved to Video similarly like 576 KBPS"; and the bigger
+poster, "bigger i like more" (poster : column = 1 : φ²). On a computer title head: fields 60.88 px with s1 corners, s-1 under the
+pill, Video and Audio s6 and Subtitles the rest (at least s5, so 1440 stays a row beside the bigger poster; 1280 stacks), captions
+one line, the Video caption carries the size, the open lists and their marks on the golden scale. On every layout the Video rows
+only choose: History, Keep and Remove act on the selected file from the title's More menu (a Selected Version group). Runners
+`ds-d`, `detail-design`, `episode-retention` and `whole-review-web` drive those entries (not run yet). Guides:
+[track dropdown](design/guides/track-dropdown.md), [menus](design/guides/menus.md),
+[buttons and row actions](design/guides/buttons-and-row-actions.md), [media marks](design/guides/media-marks.md),
+[title pages](design/guides/title-pages.md), [pending version](design/guides/pending-version.md). The full suites, phone/TV
+matrix, light theme, real Chrome and the Codex review are later gates.

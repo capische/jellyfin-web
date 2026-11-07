@@ -1,5 +1,9 @@
 # Pending version (another copy on its way for a title that plays)
 
+**ds.t12 (2026-11-07), built, not accepted:** the Video rows lost their History, Keep and Remove (now the title More menu's
+Selected Version entries, [menus.md](menus.md)); the pending entry is unchanged and keeps its own X, which Left/Right still reach
+from the entry inside an open list.
+
 **dsD (2026-11-04), built, not accepted:** `design/Pending.tsx` now draws source `pend/pb/l1/l2/r/marks/sz2/dlf/flag/rb`.
 `PendingVersion.tsx` retains its queue, scope, cancellation and import-handoff logic. The deleted `pendingVersion.scss` is replaced
 by copied source CSS plus the explicit D236 survivor in `design/_runtime.scss`: three wrapping lines in lists under 24em, flag

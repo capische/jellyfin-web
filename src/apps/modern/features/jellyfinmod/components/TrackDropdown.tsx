@@ -91,7 +91,7 @@ const CommentaryGlyph: FC = () => <svg viewBox='0 0 16 14' aria-hidden='true' fo
 </svg>;
 
 /** The row's one role mark (D61, D63, D79, D80): outlined like the channel tag, the commentary bubble as a glyph. */
-const RoleMark: FC<{ role: TrackRole }> = ({ role }) => <span className='rflag' title={TRACK_ROLE_NAME[role]}>
+const RoleMark: FC<{ role: TrackRole }> = ({ role }) => <span className={role === 'comm' ? 'rflag glyph' : 'rflag'} title={TRACK_ROLE_NAME[role]}>
     {role === 'comm' ? <CommentaryGlyph /> : role}
 </span>;
 

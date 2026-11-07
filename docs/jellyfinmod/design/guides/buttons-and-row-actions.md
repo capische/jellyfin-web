@@ -1,5 +1,10 @@
 # Buttons and row actions
 
+**Video row actions moved to More (ds.t12): approved by the user 2026-11-07, built, not accepted.** A Video list row has no
+History, Keep or Remove buttons any more, on every layout; they are the title More menu's Selected Version entries
+([menus.md](menus.md)). The `data-jfmod-file-history|pin|remove` hooks are gone; the entries are
+`[data-ds-actionsheet] .mi[data-id="jfmod-version-history|keep|remove"]`. Text below about the Video row's round actions is history.
+
 **Golden action pill (ds.t10): approved by the user 2026-11-07, 18px base, built, not accepted.** Title head, computer layout only:
 values in [title-pages.md](title-pages.md) (Play s0 words and min width s4, icon buttons s2 with s1 glyphs, pill padding s-2 on every side so the ends nest;
 Play's 3.333em / 3em / 85.4% and the 40 px minimum kept). Phone, tablet and TV keep the values below.

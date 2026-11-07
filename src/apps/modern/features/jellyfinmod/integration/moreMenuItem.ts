@@ -54,6 +54,15 @@ export interface DeleteReturn {
     target: () => { Id?: string | null } | null | undefined;
 }
 
+/** A heading the design sheet draws over an item: a group caption and what the group acts on (the selected version). */
+export interface MoreMenuSection {
+    caption: string;
+    /** The context line's lead in 600, such as `2160p`. */
+    lead: string;
+    /** The rest of the context line, such as `AV1 10-bit HDR10 · 13.2 GB`. */
+    rest?: string;
+}
+
 export interface MoreMenuItem {
     /** True when this call of the menu is the registered page's own header More menu for its own item. */
     matches: (options: MenuOptions) => boolean;
@@ -61,7 +70,16 @@ export interface MoreMenuItem {
     icon?: string;
     /** The sheet item's `data-id`; `jfmod-more-item` when absent. Unique among the items one menu can show. */
     id?: string;
-    run: () => void;
+    /** Refused: drawn `aria-disabled` and dimmed, still reachable, its reason in `title` (menus.md). */
+    disabled?: boolean;
+    title?: string;
+    /** Destructive: error ink, as Delete Media. */
+    danger?: boolean;
+    /** A divider before the item. */
+    divider?: boolean;
+    section?: MoreMenuSection;
+    /** Runs the choice; `opener` is the More button the menu opened from. */
+    run: (opener?: Element | null) => void;
 }
 
 /** What a card item adds to one card's menu; null adds nothing. */
@@ -82,6 +100,11 @@ interface SheetItem {
     id?: string;
     name?: string;
     icon?: string;
+    disabled?: boolean;
+    title?: string;
+    danger?: boolean;
+    divider?: boolean;
+    section?: MoreMenuSection;
 }
 
 type Show = (options: MenuOptions) => Promise<unknown>;
@@ -120,10 +143,14 @@ const cardOf = (positionTo: Element | null | undefined) => {
 };
 
 /** Shows the stock sheet with the given items appended and returns what was chosen (the mod item, if it was one). */
-const showWith = <T extends { id?: string; name: string; icon?: string }>(stock: SheetShow, self: unknown,
+const showWith = <T extends Omit<SheetItem, 'name'> & { name: string }>(stock: SheetShow, self: unknown,
     options: Parameters<SheetShow>[0], added: T[]) => stock.call(self, {
     ...options,
-    items: [...options.items, ...added.map(item => ({ id: sheetIdOf(item), name: item.name, icon: item.icon }))]
+    items: [...options.items, ...added.flatMap(item => [
+        ...(item.divider ? [{ divider: true }] : []),
+        { id: sheetIdOf(item), name: item.name, icon: item.icon, disabled: item.disabled, title: item.title, danger: item.danger,
+            section: item.section }
+    ])]
 }).then(id => ({ id, chosen: added.find(item => sheetIdOf(item) === id) ?? null }));
 
 /** A card's menu: the registered card items that claim this card, appended; the chosen one runs once the sheet closes. */
@@ -172,7 +199,7 @@ const showWithItems: Show = async function (this: unknown, options) {
     } catch (error) {
         if (!invocation.chosen) throw error;
         // Only the invocation whose own sheet showed the item can have it chosen; the item runs for that call alone.
-        invocation.chosen.run();
+        invocation.chosen.run(invocation.positionTo);
         return {};
     } finally {
         pending.splice(pending.indexOf(invocation), 1);
