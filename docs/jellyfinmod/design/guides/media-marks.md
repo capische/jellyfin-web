@@ -18,6 +18,10 @@ code `constants/tracks.ts` (`trackRole`), `components/TrackDropdown.tsx` (`RoleM
 Dropdown - accepted, go implement it."; D197, mockup workspace `reviews/video-dropdown-phone/mockup/`): built 2026-11-01, gate 1. The same in the
 computer's and TV's two-line Video rows (the user, 2026-11-01; D198): built 2026-11-01, gate 1.
 
+**Lighter audio marks in the Audio field and list** (option B, one glyph; the user, 2026-11-07: "Lighter audio marks - B one
+glyph - implement it"; mockup workspace `reviews/dolby-marks/`): **built 2026-11-07, gate 1, awaiting the user's approval**. See
+*Audio run (track field and list)* below. Code: `design/MediaMarks.tsx` (`AudioTrackMarks`), `design/_ds.scss` (`.atm`).
+
 ## What it is
 
 The codec, HDR and audio facts of a file or a release as small uppercase marks on one line, brand-style rather than boxed
@@ -74,6 +78,26 @@ The first matching audio format wins; Atmos is a mark of its own beside it. A fo
   marks that do not fit go to a hidden second line (the Audio cell's trick, D78); an empty first item (`::before`, a mark's
   height) sends even the first mark there when it alone does not fit. The size and the chevron never shrink.
 - The assets are trademarks drawn monochrome; the text-only fallback is the same chip without the icon.
+
+## Audio run (track field and list)
+
+The Audio field and its list draw a track's audio with `AudioTrackMarks`, not `MediaMarks`: smaller, lighter, one glyph at most
+(option B, 2026-11-07). Video marks, the release picker, the download block and the pending entry keep `MediaMarks` as above.
+
+- **Words:** the stream's short format as `streamAudio` words it, uppercase: `DD+ ATMOS`, `DD`, `TRUEHD ATMOS`, `DTS-HD MA`,
+  `DTS:X`, `AAC`, `OPUS`; Atmos is part of the format, never a mark of its own. Then the channels (`5.1`, `7.1`, `2.0`).
+- **Glyph:** the Dolby half-disc before a Dolby format (DD, DD+, TrueHD), the DTS wave before a DTS one, none before any other.
+  No chip, no box, no channel tag.
+- **Sizes: the Video marks' own** (the user, 2026-11-07: "much better but can you make them a bit bigger the size of video
+  marks"): words and channels **.78em** of the row (11.6 px on the computer, the marks' 130 % × `.mk`'s 60 %), glyph → word .25em, format → channels .3em, .6em after the run, language → run the `.r`'s .8em, letter-spacing
+  .05em: all `.mk`'s values, a **named exception** to the golden ratio, so audio and video marks read at one size in the strip
+  (the first look's .618em, φ⁻¹, 9.2 px, was too small). Lighter than `.mk`: weight 600, not 700.
+- **Glyph: half a φ step under `.mk`'s** (the user, 2026-11-07: "can D be a bit smaller?", then of .65em "A bit bigger it's too
+  small", 0.82em approved the same day): **.82em** of the words (`.mk`'s 1.05em ÷ √φ; 9.5 px on the computer, about the words'
+  capital height; 12.2 px was too big, 7.5 px too small), centred on the words (`align-items: center`, the words at `line-height: 1`).
+- **Ink:** `currentColor`; glyph and words at **.854** (1 − φ⁻⁴), channels at **.618** (φ⁻¹) (`.mk` is .82, codec .7). The chosen row's run keeps the
+  text colour, not the primary (`.vrow.sel .atm`), as the marks did.
+- `role="img"`, `aria-label` the spoken name and channels (`Dolby Digital Plus Atmos 5.1`, `DTS-HD Master Audio 5.1`).
 
 ## Role marks (Audio and Subtitles rows)
 

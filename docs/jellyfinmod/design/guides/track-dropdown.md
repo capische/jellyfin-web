@@ -96,7 +96,8 @@ three fields are **one strip** of three segments; the Predefined picker keeps it
   **Phone** (D197): the Video chevron takes Audio's and Subtitles' `margin-right -.25em`, so the three chevrons share one column
   (measured equal at 360, 390 and 430 px).
 - **A track's run** (D59, D76): the language in 600 with its short modifier `(BR)` in 400 at 70 % (a fixed table only, D60),
-  .6em, the format marks (audio: the media marks; subtitles: the format chip `SRT`, `PGS`), then **at most one role mark**
+  .6em, the format marks (audio: the lighter audio run of [media-marks.md](media-marks.md), *Audio run*, one glyph, the short
+  format and the channels at the Video marks' size, option B 2026-11-07; subtitles: the format chip `SRT`, `PGS`), then **at most one role mark**
   ([media-marks.md](media-marks.md), *Role marks*). A track's own title is never drawn in the run; Default, Original, External
   and Full are not shown (the blue bar marks the current entry). When the run is too long for its cell the modifier goes first
   (it wraps onto a hidden second line of the 1.5em box), then the language is cut with an ellipsis; the marks, the role mark

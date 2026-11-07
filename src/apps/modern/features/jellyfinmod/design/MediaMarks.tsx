@@ -9,6 +9,25 @@ const Chip: FC<{ children: ReactNode }> = ({ children }) => <span className='mk 
 const Format: FC<{ name: string; channels?: string | null; dts?: boolean }> = ({ name, channels, dts }) => <span className='mk' aria-label={dts ? name.replace('DTS-HD MA', 'DTS-HD Master Audio') : 'Dolby ' + name.replace('Digital+', 'Digital Plus')}>
     {dts ? WAVE : HALF}{name}{channels && <span className='chs'>{channels}</span>}</span>;
 
+const SPOKEN: [RegExp, string][] = [[/^DD\+/, 'Dolby Digital Plus'], [/^DD\b/, 'Dolby Digital'], [/^TrueHD/, 'Dolby TrueHD'], [/^DTS-HD MA/, 'DTS-HD Master Audio']];
+
+/**
+ * The Audio field's and list's run (option B, the user's pick 2026-11-07): one Dolby or DTS glyph, the stream's short format
+ * as `streamAudio` words it (`DD+ Atmos`, `TrueHD`, `DTS-HD MA`, `AAC`) and the channels, as small plain words with no box.
+ */
+export const AudioTrackMarks: FC<{ parsed: MarkSource }> = ({ parsed }) => {
+    const audio = parsed.audio ?? '';
+    const channels = parsed.audioChannels;
+    if (!audio && !channels) return null;
+    let glyph: ReactNode = null;
+    if (/^(DD|TrueHD)/.test(audio)) glyph = HALF;
+    else if (audio.startsWith('DTS')) glyph = WAVE;
+    const spoken = SPOKEN.reduce((text, [match, name]) => text.replace(match, name), audio);
+    return <span className='atm' role='img' aria-label={[spoken, channels].filter(Boolean).join(' ')}>
+        {glyph}{audio && <span className='w'>{audio}</span>}{channels && <span className='n'>{channels}</span>}
+    </span>;
+};
+
 /** ds2.js mk/chip/join/dolby/dts; data stays the existing parsed stream/release facts. */
 export const DesignMediaMarks: FC<{ parsed: MarkSource }> = ({ parsed }) => {
     const hdr = (parsed.hdr ?? '').split(' ').filter(Boolean);
