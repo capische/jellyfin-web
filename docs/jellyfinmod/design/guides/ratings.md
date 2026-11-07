@@ -1,5 +1,17 @@
 # Ratings: the group, its popup and the card rating
 
+**Golden ratings pill (ds.t10): approved by the user 2026-11-07, 18px base, built, not accepted.** Computer layout only; phone, tablet
+and TV keep the line below. This departs from the earlier "one group in the first metadata row, no pills" wording by the user's
+approval of the 18px proposal. Tokens `--jfmod-s<n>` from `design/_golden.scss` ([title-pages.md](title-pages.md)).
+The group leaves the metadata words for its own line s0 below them (the slot stays in `.meta` and is ordered last, so the stock
+star/tomato hiding and the row hold are unchanged): one card-glass pill s2 high, padding 0 s0, s2 corners, in full ink. Each
+mark (s0 high) sits beside its value (s0, 600) with s-2 between; marks s0 apart; a chevron (`.jfmod-rchev`, s0, 76.4%) s0 after
+the last. One highlight: the whole pill takes the 12% tint while the popup shows or under the pointer; keyboard focus 18% white
+and the ring; after a pointer click opened a source the pill is its plain glass again. The popup hangs s-2 below the pill and
+is at least as wide (no bleed now); its 1.236em words are a retained exception, now of the 18px base. On its own line Trakt gives way only
+when the pill is wider than the column. Links, rows, counts, focus order, Back and the TV are unchanged.
+
+
 **Status: approved 2026-11-06, D288–D295, built, not accepted.** Computer first look only; phone/TV specifics and full acceptance follow the user's first look. These values supersede the older presentation notes below.
 
 ## Clickable ratings (D274/D276/D277)

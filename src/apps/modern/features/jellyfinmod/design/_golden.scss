@@ -1,0 +1,28 @@
+/* The golden scale (the user, 2026-11-07: "keep css easier to zoom out or zoom in the whole design"; "use new golden rules
+   for ALL pages"). One knob, one base, the base's powers of φ ≈ 1.618 (workspace rule, 2026-11-01).
+   --jfmod-scale  unitless zoom, default 1. Set it on `.jfds` (or any ancestor) and every surface that reads these tokens zooms:
+                  the tokens are computed here, so a value set below `.jfds` does not reach them.
+   --jfmod-base   the surface's body size: 18px on a computer (1.2097 × the 14.88px root) × --jfmod-scale. Plain px, never em,
+                  so a smaller caption never compounds it.
+   --jfmod-s<n>   --jfmod-base × φⁿ, n = -7 … 8 (--jfmod-s0 is the base).
+   Computer only for now: phone, tablet and TV bases are designed separately. Read by the title head (title-pages.md).
+   webOS-safe: calc() with var() only, no min()/max()/clamp(). */
+&.dev-computer:not(.layout-tv) {
+    --jfmod-base: calc(18px * var(--jfmod-scale, 1));
+    --jfmod-s-7: calc(var(--jfmod-base) * 0.0344418537);
+    --jfmod-s-6: calc(var(--jfmod-base) * 0.05572809);
+    --jfmod-s-5: calc(var(--jfmod-base) * 0.0901699437);
+    --jfmod-s-4: calc(var(--jfmod-base) * 0.1458980338);
+    --jfmod-s-3: calc(var(--jfmod-base) * 0.2360679775);
+    --jfmod-s-2: calc(var(--jfmod-base) * 0.3819660113);
+    --jfmod-s-1: calc(var(--jfmod-base) * 0.6180339887);
+    --jfmod-s0: var(--jfmod-base);
+    --jfmod-s1: calc(var(--jfmod-base) * 1.6180339887);
+    --jfmod-s2: calc(var(--jfmod-base) * 2.6180339887);
+    --jfmod-s3: calc(var(--jfmod-base) * 4.2360679775);
+    --jfmod-s4: calc(var(--jfmod-base) * 6.8541019662);
+    --jfmod-s5: calc(var(--jfmod-base) * 11.0901699437);
+    --jfmod-s6: calc(var(--jfmod-base) * 17.94427191);
+    --jfmod-s7: calc(var(--jfmod-base) * 29.0344418537);
+    --jfmod-s8: calc(var(--jfmod-base) * 46.9787137637);
+}

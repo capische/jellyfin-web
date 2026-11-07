@@ -1,5 +1,9 @@
 # Card glass
 
+**Ratings pill (ds.t10): approved by the user 2026-11-07, built, not accepted.** The title head's ratings line on a computer is a
+card-glass pill with the same `--card-glass-bg` / `--card-glass-filter` as the action pill ([ratings.md](ratings.md)).
+
+
 **rd2 top-bar reuse (built, not accepted):** the redesigned scrolled bar reads the same five light-glass tokens as the card,
 behind the same two capability checks, with solid theme-paper fallback. TV bar stays transparent; its search field is paper
 on plain ground and black 66% on art. The track cells now use this mixin too. Dark and Apple TV recipes below stay unchanged.

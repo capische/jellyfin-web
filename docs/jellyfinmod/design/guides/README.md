@@ -13,7 +13,7 @@ The design rulebook, how the components fit together: [GUIDELINES.md](../GUIDELI
 
 | Guide | Component | Used by |
 | --- | --- | --- |
-| [title-pages.md](title-pages.md) | art-ground title head, stable poster/still boxes, action pill, person facts and Add/Undo notice | movie, series, season, episode, person and TMDB browse pages |
+| [title-pages.md](title-pages.md) | art-ground title head (golden scale tokens of `design/_golden.scss`, ds.t10), stable poster/still boxes, action pill, person facts and Add/Undo notice | movie, series, season, episode, person and TMDB browse pages |
 | [shared-chrome.md](shared-chrome.md) | scoped type, colour, dialogs, switches, existing settings/list rows, motion and focus | signed-in mod shell, excluding admin and wizard |
 | [menus.md](menus.md) | paper menus, anchored lists and scrolling phone sheets | More, user, library and player menus |
 | [skip-button.md](skip-button.md) | Skip Intro, Skip Outro and Skip Recap in the player, drawn as Play | video player |
@@ -35,7 +35,7 @@ The design rulebook, how the components fit together: [GUIDELINES.md](../GUIDELI
 | [tabs.md](tabs.md) | the tab control: a field-high outlined rail whose selected tab has a soft blue thumb (D273) | the player's Subtitle Appearance panel and the Preferences Subtitles page (Primary, Secondary) |
 | [info-tip.md](info-tip.md) | the (i) that explains a short state: tooltip on a computer, popover on a click, the TV and the phone | the picker's Sources checklist (an indexer's failure); the Queue page's state discs on the phone |
 | [release-picker-sources.md](release-picker-sources.md) | the picker's Sources icon, its dot and train, the checklist, and the searching ring's indexer colours | the release picker (Download, Get Another Quality) |
-| [ratings.md](ratings.md) | the ratings group in the first metadata row, its linked popup, the card rating and Refresh Ratings (D276/D277 built, not accepted; earlier Phase 9 accepted) | the movie and series detail pages, Movies and TV cards, the settings area's Ratings section |
+| [ratings.md](ratings.md) | the ratings group (on a computer its own glass pill under the metadata, ds.t10), its linked popup, the card rating and Refresh Ratings (D276/D277 built, not accepted; earlier Phase 9 accepted) | the movie and series detail pages, Movies and TV cards, the settings area's Ratings section |
 | [search-card.md](search-card.md) | the search grid's card: seamless cells padded 1em, lit paper on hover and TV focus, the + shown on hover as a library poster's Play or cloud, the three-line caption, full matches with 100 or more votes first by date, the rest by votes (D253); the same cell with a two-line caption in the browse pages' rows (approved 2026-11-01, D200–D203; first look approved D232; built, not accepted) | the search page, the browse pages of a TMDB title |
 | [trakt-direction-mark.md](trakt-direction-mark.md) | the Trakt disc with the direction: up sent to Trakt, down brought from it, pending dashed, failed red (accepted 2026-10-31) | Settings › Trakt's Activity rows |
 | [sign-in.md](sign-in.md) | native glass sign-in form, wrong-password state and public users | the mod login route |
