@@ -9,7 +9,7 @@ import { getLanguageNames } from '../api/modApi';
 import { TRACK_ROLE_NAME, trackExtraWords, trackModifier, trackRole, type TrackRole } from '../constants/tracks';
 import { findSource, streamMarks, subtitleFormat } from '../constants/versions';
 import { type StripHosts } from './FileChooser';
-import { DesignMediaMarks } from '../design/MediaMarks';
+import { AudioTrackMarks } from '../design/MediaMarks';
 import { TrackField, ChooseRow } from '../design/TrackField';
 
 // The media marks' own styles.
@@ -115,10 +115,9 @@ const TrackText: FC<{ stream: MediaStream; names: Record<string, string> | undef
     const role = trackRole(stream);
     return <>
         <TrackLanguage language={language} modifier={trackModifier(stream)} />
-        <span className='marks'>
-            {stream.Type === 'Audio' && <DesignMediaMarks parsed={streamMarks(stream)} />}
+        {stream.Type === 'Audio' ? <AudioTrackMarks parsed={streamMarks(stream)} /> : <span className='marks'>
             {format && <span className='mk tag'><span>{format}</span></span>}
-        </span>
+        </span>}
         {role && <RoleMark role={role} />}
     </>;
 };
