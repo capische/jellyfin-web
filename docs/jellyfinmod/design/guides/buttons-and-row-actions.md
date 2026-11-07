@@ -2,6 +2,8 @@
 
 **Status: approved 2026-11-06, D288–D295, built, not accepted.** Computer first look only; phone/TV specifics and full acceptance follow the user's first look. These values supersede the older presentation notes below.
 
+**Prowlarr disconnect (no Remove Prowlarr button):** approved by the user 2026-11-07 ("Approve", ds.t9); built, not accepted, gate 1 on beta.
+
 ## Download and Watched (D288–D295)
 
 Every release-start action now says **Download**, including card tips, row actions and More. The picker retains its own
@@ -70,7 +72,14 @@ foot pill, 2em each ([poster-card.md](poster-card.md)).
 | --- | --- | --- |
 | main | blue, the primary `#00a4dc` | the one main action of a view: Save, Add Profile, Continue, Download |
 | other | grey | everything else: Cancel, Add Predefined Profiles, Cancel Download, View Queue as a button |
-| destroy | red, the error `#c62828` | Remove, Remove Prowlarr (it removes the connection and its indexers; the key's red bin removes only the key), Search Again after a failure, Replace in the picker |
+| destroy | red, the error `#c62828` | Remove, Search Again after a failure, Replace in the picker, a confirmation's destructive action (Disconnect) |
+
+**Prowlarr has no remove button** (the user, 2026-11-07, ds.t9): emptying its address, clearing its key with the red bin and
+pressing Save asks **Disconnect Prowlarr?** in the settings confirmation ("The indexers synced from it are removed. Indexers
+added by hand stay, and grabs keep their recorded source name.", Cancel and a red **Disconnect**); a key cleared while an
+address stays says to empty the address too. Saving another Prowlarr's address (another scheme, host, port or path) replaces the
+old one's synced indexers with the new one's at once, and says so beside Save: "Saved. The old Prowlarr's indexers are removed
+and 7 indexers synced from this one."; a failed sync says it at the top with its code.
 
 Labels in **Title Case** (a short article, conjunction or preposition stays lower case unless first or last: *Add from
 TMDB*, *Turn Grabbing On*); product names keep their spelling. Help, status lines, field labels and notices are sentence case.
