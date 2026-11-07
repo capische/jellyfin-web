@@ -15,7 +15,9 @@ Code: `design/titleTop.scss` (the ds.t10 block), `Ratings.tsx`, `TitlePage.tsx`.
   ink with s-1 either side, lines s-2 apart. The watched check s0, s-3 before its words, same ink.
 - Ratings on their own line s0 below the metadata ([ratings.md](ratings.md)), then the action pill s0 below them.
 - Action pill padding s-2 on every side, so Play's round end nests in the pill's (the user, 2026-11-07: "Bad padding" on
-  the proposal's s-2 / s-1). Play s0 words, min width s4, side padding s0, glyph s0 with s-2 before its word, s-2 before the
+  the proposal's s-2 / s-1). The end after the last round action is s-2 + (Play's 3.333em − s2) / 2 (13.31 px at 18 px), so that action's hover
+  circle is as far from the pill's end as from its top and bottom (the user, 2026-11-07: "Padding"); a pill with no Play (`.short`)
+  keeps s-2. Play s0 words, min width s4, side padding s0, glyph s0 with s-2 before its word, s-2 before the
   first icon; Play keeps 3.333em / 3em / 85.4% white. Icon buttons s2 round (40 px minimum), glyphs s1.
 - Tracks s0 below the pill ([track-dropdown.md](track-dropdown.md)). Reading s1 below them, at most s8 wide: tagline s0/600 in full
   ink, s-2 to the overview, s0 at pitch φ in 76.4% ink; facts s0 below, s0 at pitch φ in full ink, s-2 apart, labels 61.8% with
