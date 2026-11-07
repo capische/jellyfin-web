@@ -15,6 +15,8 @@ side of the existing 0.6em gap, with 0.382em corners; the group's reservation an
 The pointer lights only its mark or row with the 12% `--tint`, never the group too. Keyboard, touch and TV
 keep the group's lit state. Touch anywhere on the group opens the popup; TV OK does the same.
 
+The popup is at least as wide as the ratings line above it and its words are one φ step larger (1.236em), counts right-aligned
+(option B, the user, 2026-11-07: it read small under the line).
 Popup rows are whole-row `<a target="_blank" rel="noreferrer">` links, with the same mark/value/count columns
 and no arrow. The popup is a labelled group, never a tooltip. Each accessible row label retains source,
 value, votes, provenance and staleness and adds "Open on <Source>". Neither marks nor rows use native tooltips.
