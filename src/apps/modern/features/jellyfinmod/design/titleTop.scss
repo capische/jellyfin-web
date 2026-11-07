@@ -344,7 +344,8 @@
     }
 
     /* ds.t12 (the user 2026-11-07): s-1 under the pill; each field the caption's s0 line over the value's s1 line with s-2 above
-       and below (60.88 px), s1 corners. Video and Audio s6, Subtitles the rest, at least s5 (the stack test in FileChooser). */
+       and below (60.88 px), s1 corners. Three s6 fields in one row; a window too narrow for them shrinks all three alike, and
+       the computer never stacks (the user, 2026-11-07: "No stacking, stacking for mobile, and probably tablet portrait"). */
     .gpk {
         margin-top: var(--jfmod-s-1);
         line-height: 1.618;
@@ -363,21 +364,15 @@
 
     .gpk:not(.stacked) .seg { margin-left: var(--jfmod-s-2); }
 
-    .gpk:not(.stacked) .seg.v {
-        flex: none;
-        width: var(--jfmod-s6);
-        margin-left: 0;
-    }
-
-    .gpk:not(.stacked) .seg.a { width: var(--jfmod-s6); }
-
+    .gpk:not(.stacked) .seg.v,
+    .gpk:not(.stacked) .seg.a,
     .gpk:not(.stacked) .seg.s {
-        flex: 1 1 auto;
+        flex: 0 1 var(--jfmod-s6);
         width: auto;
-        min-width: var(--jfmod-s5);
-        /* Never wider than Video and Audio; a wide window leaves the rest of the row empty (the user, 2026-11-07: option A) */
-        max-width: var(--jfmod-s6);
+        min-width: 0;
     }
+
+    .gpk:not(.stacked) .seg.v { margin-left: 0; }
 
     .gpk.stacked .seg { margin-top: var(--jfmod-s-2); }
 
@@ -507,6 +502,22 @@
     .gpk .val .atm svg { margin-right: var(--jfmod-s-3); }
 
     .gpk .val .atm .n { margin-left: var(--jfmod-s-2); }
+
+    /* A narrow field drops the Audio mark's parts whole, 5.1 first, then DD+ Atmos, as Video drops its marks (D242); the zero-wide
+       ::before holds the first line at 1em so the dropped ones stay hidden. */
+    .gpk .seg.a .val .atm {
+        flex: 0 1 auto;
+        flex-wrap: wrap;
+        align-content: flex-start;
+        min-width: 0;
+        height: 1em;
+        overflow: hidden;
+    }
+
+    .gpk .seg.a .val .atm::before {
+        content: '';
+        height: 1em;
+    }
 
     /* The subtitle format chip, the same in the field and the list. */
     .gpk .marks .mk.tag {
