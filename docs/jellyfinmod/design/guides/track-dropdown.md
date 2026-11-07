@@ -1,5 +1,10 @@
 # Track strip and dropdown (the custom dropdown)
 
+**A stacked strip's lists are dropdowns** (the user, 2026-11-07: "It supposed to be dropdown"; first look approved 2026-11-07): on the
+computer and the TV every open list hangs under its own field over the page, stacked or not (the open field takes `z-index: 7`, since
+each glass pill is its own stacking context). Only the phone opens it in the card (D197), now right under its own field: the list
+carries `data-list="v|a|s"` and the stacked strip orders fields and lists with `order`, because a portal appends it after Subtitles.
+
 **dsD (2026-11-04), built, not accepted:** title pages now draw the mockup's `gpk/seg/cap/val/vlist/vrow` through
 `design/TrackField.tsx`, `components/FileChooser.tsx` and `TrackDropdown.tsx`. The source CSS replaces rd2/rd3 restyling and MUI
 lists. Original selects/change events, device preference and viewer-choice protection remain authoritative. The original form's

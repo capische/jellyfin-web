@@ -66,7 +66,10 @@ export const TrackField: FC<{ kind: 'v' | 'a' | 's'; name: string; value: ReactN
             trigger.current?.focus();
         }
     };
-    const sheet = open && <div ref={list} className='vlist focuscontainer-y' role='listbox' tabIndex={-1} aria-label={name} onClick={choose}
+    // A dropdown over the page under its own field, stacked or not; only the phone opens it in the card (D197), right
+    // under its field (`data-list` orders it there, since a portal appends it after the strip's last field).
+    const inCard = stacked && document.documentElement.classList.contains('layout-mobile');
+    const sheet = open && <div ref={list} className='vlist focuscontainer-y' data-list={kind} role='listbox' tabIndex={-1} aria-label={name} onClick={choose}
         onFocusCapture={event => {
             const target = event.target as HTMLElement;
             const row = target.closest<HTMLElement>('.vrow');
@@ -117,8 +120,8 @@ export const TrackField: FC<{ kind: 'v' | 'a' | 's'; name: string; value: ReactN
             }
         }}>
         <span className='cap'>{name}{extra && ' · ' + extra}</span><span className='val'>{value}{enabled && <Icon name={open ? 'up' : 'down'} className={kind === 'v' ? 'chev' : 'chev end'} />}</span>
-        {!stacked && sheet}
-    </div>{stacked && sheet}</>;
+        {!inCard && sheet}
+    </div>{inCard && sheet}</>;
 };
 
 export const ChooseRow: FC<{ selected: boolean; onChoose: () => void; title?: string; children: ReactNode; sourceId?: string; trackValue?: string }> = ({ selected, onChoose, title, children, sourceId, trackValue }) =>
