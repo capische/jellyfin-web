@@ -1226,7 +1226,11 @@ const prowlarrKeyPage = (address: unknown) => {
     return { href, title: 'Open Prowlarr\'s General settings, where its API key is', text: 'Key Page' };
 };
 
-const ProwlarrCard: FC<SectionProps> = ({ api, data, reload }) => {
+/**
+ * Prowlarr's form and its actions (ds.t9). The form draws in the Indexers card; Save, Sync Now and the sync's state go in the
+ * section's bottom bar beside Next, and Remove Prowlarr in Advanced with the indexers it removes (the user, 2026-11-07).
+ */
+const useProwlarrCard = ({ api, data, reload }: SectionProps) => {
     const source = data.prowlarr?.[0];
     const section = useSectionState(reload, PROWLARR_READS);
     const [draft, set, , sourceSaved] = useDraft(source, { baseUrl: '', enabled: true, syncIntervalMinutes: 360 }, section);
@@ -1301,41 +1305,41 @@ const ProwlarrCard: FC<SectionProps> = ({ api, data, reload }) => {
             void run(() => request(api, 'DELETE', `Settings/Prowlarr/${source.id}`), 'Removed.');
         }
     }), [ask, run, api, source]);
-    if (!data.prowlarr) return null;
-    return (
-        // Capture only: an edit inside the card hides its "Saved." (ds.t9).
-        <div className='jfmod-group' data-prowlarr='card' onChangeCapture={savedNote.onEdit} onClickCapture={savedNote.onEdit}>
-            <h3 className='jfmod-grouptitle'>Prowlarr</h3>
-            <Notice notice={savedNote.rest} />
-            {/* The address and how often to sync share a row (ds.t9); one column on a phone. */}
-            <div className='jfmod-fieldrow jfmod-fieldrow-wide'>
-                <FieldForm fields={[
-                    { key: 'baseUrl', label: 'Prowlarr address', type: 'text', required: true,
-                        help: <>For example <FillExample value={PROWLARR_EXAMPLE} onFill={fillAddress} />, without credentials.</> },
-                    { key: 'syncIntervalMinutes', label: 'Sync every (minutes)', type: 'int', optional: true, placeholder: 'Off' }
-                ]} draft={scheduleView} onChange={editSchedule} />
+    if (!data.prowlarr) return { body: null, footer: null, remove: null };
+    const synced = source && `${source.indexerCount} synced indexer${source.indexerCount === 1 ? '' : 's'} · last sync ${when(source.lastSyncAt)}`
+        + (source.lastSyncOutcome && source.lastSyncOutcome !== 'ok' ? ` · ${source.lastSyncOutcome}` : '');
+    return {
+        body: (
+            // Capture only: an edit inside the card hides its "Saved." (ds.t9).
+            <div className='jfmod-group' data-prowlarr='card' onChangeCapture={savedNote.onEdit} onClickCapture={savedNote.onEdit}>
+                <h3 className='jfmod-grouptitle'>Prowlarr</h3>
+                <Notice notice={savedNote.rest} />
+                {/* The address and how often to sync share a row (ds.t9); one column on a phone. */}
+                <div className='jfmod-fieldrow jfmod-fieldrow-wide'>
+                    <FieldForm fields={[
+                        { key: 'baseUrl', label: 'Prowlarr address', type: 'text', required: true,
+                            help: <>For example <FillExample value={PROWLARR_EXAMPLE} onFill={fillAddress} />, without credentials.</> },
+                        { key: 'syncIntervalMinutes', label: 'Sync every (minutes)', type: 'int', optional: true, placeholder: 'Off' }
+                    ]} draft={scheduleView} onChange={editSchedule} />
+                </div>
+                <SecretField key={source?.revision ?? 'new'} id='jfmodProwlarrKey' label='API key' required={!source?.apiKeyConfigured} configured={!!source?.apiKeyConfigured} change={key} onChange={setKey}
+                    keyPage={keyPage} test={sourceTest} save={keySave} />
+                {confirmDialog}
             </div>
-            <SecretField key={source?.revision ?? 'new'} id='jfmodProwlarrKey' label='API key' required={!source?.apiKeyConfigured} configured={!!source?.apiKeyConfigured} change={key} onChange={setKey}
-                keyPage={keyPage} test={sourceTest} save={keySave} />
-            <div className='jfmod-inlineactions'>
-                <Button variant='contained' color='inherit' disabled={section.busy} onClick={save}>{source ? 'Save' : 'Add Prowlarr'}</Button>
+        ),
+        footer: (
+            <>
+                <Button variant='contained' color='inherit' disabled={section.busy} onClick={save} data-prowlarr='save'>{source ? 'Save' : 'Add Prowlarr'}</Button>
                 <SavedNote notice={savedNote.saved} id='prowlarr' />
                 {source && <Button variant='contained' disabled={section.busy} onClick={syncNow} data-prowlarr='sync'>Sync Now</Button>}
                 {/* The sync's state beside Sync Now, as Saved. sits beside Save (user, 2026-11-07). */}
-                {source && (
-                    <span className='jfmod-savemeta' data-prowlarr='last-sync'>
-                        {source.indexerCount} synced indexer(s) · last sync {when(source.lastSyncAt)}{source.lastSyncOutcome ? ` (${source.lastSyncOutcome})` : ''}
-                    </span>
-                )}
-                {source && (
-                    <Button variant='contained' color='error' disabled={section.busy} data-prowlarr='remove' className='jfmod-inlineactions-end' onClick={remove}>
-                        Remove Prowlarr
-                    </Button>
-                )}
-            </div>
-            {confirmDialog}
-        </div>
-    );
+                {synced && <span className='jfmod-savemeta' data-prowlarr='last-sync'>{synced}</span>}
+            </>
+        ),
+        remove: source && (
+            <Button variant='contained' color='error' disabled={section.busy} data-prowlarr='remove' className='jfmod-inlineactions-end' onClick={remove}>Remove Prowlarr</Button>
+        )
+    };
 };
 
 const indexerKind = (indexer: any): StateKind => {
@@ -1424,8 +1428,8 @@ export const IndexersSection: FC<SectionProps> = props => {
     const [confirmDialog, ask] = useConfirm();
     const [editing, setEditing] = useState<any | null | undefined>(undefined);
     const add = useCallback(() => setEditing(null), []);
-    const synced = data.indexers.filter(indexer => indexer.managedBy === 'prowlarr');
-    const manual = data.indexers.filter(indexer => indexer.managedBy !== 'prowlarr');
+    // Synced ones first, then those added by hand: one list, all of it advanced (the user, 2026-11-07).
+    const indexers = [...data.indexers.filter(indexer => indexer.managedBy === 'prowlarr'), ...data.indexers.filter(indexer => indexer.managedBy !== 'prowlarr')];
     // Follows the Prowlarr source until the administrator opens or closes it.
     const [advancedChoice, setAdvancedChoice] = useState<boolean | null>(null);
     const advancedOpen = advancedChoice ?? !prowlarrSource;
@@ -1437,41 +1441,28 @@ export const IndexersSection: FC<SectionProps> = props => {
         if (close) setEditing(undefined);
         if (saved) void reload();
     }, [reload]);
+    const prowlarr = useProwlarrCard(props);
     return (
         <SectionFrame id='indexers' eyebrow={props.eyebrow} title='Indexers' state={summarise('indexers', data)} notice={section.notice}
-            next={props.next} onGo={props.onGo}
+            footerAction={prowlarr.footer} next={props.next} onGo={props.onGo}
         >
-            {/* Prowlarr first: one address and a key is all most people give; the indexers it syncs follow it, and the ones
-                added by hand are the advanced part (user, 2026-10-10 and 2026-11-07). */}
-            <ProwlarrCard {...props} />
-            {prowlarrSource && (
-                <>
-                    <div className='jfmod-grouphead'>
-                        <h3 className='jfmod-grouptitle' data-indexers='title'>Indexers</h3>
-                    </div>
-                    <div className='jfmod-blist' data-indexers='synced'>
-                        {synced.length === 0 && <div className='jfmod-empty'>No indexer synced from Prowlarr yet.</div>}
-                        {synced.map(indexer => (
-                            <IndexerRow key={indexer.id} api={api} indexer={indexer} busy={section.busy} test={section.test} run={section.run} ask={ask}
-                                onEdit={setEditing} />
-                        ))}
-                    </div>
-                </>
-            )}
-            {/* Indexers added by hand and Add Indexer, in the quality profile dialog's Advanced look; open by default only while
-                there is no Prowlarr source, when Add Indexer is the section's main action. Add Indexer sits with the list it
-                adds to (user, 2026-10-17). */}
+            {/* Prowlarr first: one address and a key is all most people give; its Save and Sync Now are the section's bottom
+                bar. The indexers, synced or added by hand, Add Indexer and Remove Prowlarr are the advanced part, in the quality
+                profile dialog's Advanced look, open by default only while there is no Prowlarr source (user, 2026-10-10 and
+                2026-11-07). */}
+            {prowlarr.body}
             <details className='jfmod-qp-adv jfmod-group' data-indexers='advanced' open={advancedOpen} onToggle={toggleAdvanced}>
                 <summary>Advanced</summary>
-                <div className='jfmod-grouphead'>
-                    <Button variant='contained' color={prowlarrSource ? 'inherit' : 'primary'} onClick={add}>Add Indexer</Button>
-                </div>
-                <div className='jfmod-blist' data-indexers='manual'>
-                    {manual.length === 0 && <div className='jfmod-empty'>No indexer added by hand.</div>}
-                    {manual.map(indexer => (
+                <div className='jfmod-blist' data-indexers='list'>
+                    {indexers.length === 0 && <div className='jfmod-empty'>No indexer yet.</div>}
+                    {indexers.map(indexer => (
                         <IndexerRow key={indexer.id} api={api} indexer={indexer} busy={section.busy} test={section.test} run={section.run} ask={ask}
                             onEdit={setEditing} />
                     ))}
+                </div>
+                <div className='jfmod-inlineactions'>
+                    <Button variant='contained' color={prowlarrSource ? 'inherit' : 'primary'} onClick={add} data-indexers='add'>Add Indexer</Button>
+                    {prowlarr.remove}
                 </div>
             </details>
             {editing !== undefined && <IndexerDialog api={api} indexer={editing} onClose={closeDialog} />}
