@@ -375,6 +375,8 @@
         flex: 1 1 auto;
         width: auto;
         min-width: var(--jfmod-s5);
+        /* Never wider than Video and Audio; a wide window leaves the rest of the row empty (the user, 2026-11-07: option A) */
+        max-width: var(--jfmod-s6);
     }
 
     .gpk.stacked .seg { margin-top: var(--jfmod-s-2); }
