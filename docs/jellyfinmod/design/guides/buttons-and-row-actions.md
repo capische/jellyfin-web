@@ -111,8 +111,8 @@ and "the sync line moves next to Sync Now"); built, not accepted. Code: `setting
   `#81c784`, light `#2e7d32`) then the save's own words ("Saved.", or "Saved." and what to do next). It goes at the next edit in
   that card (a typed value, a switch, a ticked box, a picked option, a row's move). A section that saves as it changes and has
   no Save (Interface) keeps its notice.
-- The sync line beside **Sync Now**: "7 synced indexer(s) · last sync …", updated after a sync; on a narrow window it wraps
-  under the buttons.
+- The sync line beside **Sync Now**, in the Indexers section's bottom bar with Prowlarr's Save: "7 synced indexers · last sync
+  …", with the outcome added only when it is not ok; updated after a sync; on a narrow window it wraps under the buttons.
 - Errors that need action (a refused save, a conflict with its Reload) stay where they are, at the top.
 
 ## A disclosure in the group title's look

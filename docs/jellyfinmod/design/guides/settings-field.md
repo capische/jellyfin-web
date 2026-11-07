@@ -78,7 +78,7 @@ Approved with the Ratings and Prowlarr mockup (`reviews/ratings-settings/` in th
   quality profile dialog's (`<details className='jfmod-qp-adv'>`, summary **Advanced** in bold, no note beside it in the
   settings cards; 1.618em above it in a section, and no top line of its own there, since the list above it ends with its
   divider). Status and counters a user rarely reads go in it too. Ratings: the two numbers, the free-tier line and Fetching
-  (today's calls, titles without ratings, the last run), after Ratings Shown. Indexers: the indexers added by hand and Add Indexer, after the synced list. It opens by itself when it
+  (today's calls, titles without ratings, the last run), after Ratings Shown. Indexers: the whole indexer list, synced and added by hand, then Add Indexer and Remove Prowlarr; Prowlarr's Save and Sync Now, with the sync's state, are the section's bottom bar beside Next (the user, 2026-11-07). It opens by itself when it
   holds an error (a save refused over one of its fields) or the only way forward (Indexers without a Prowlarr source).
 
 ## Spec in code

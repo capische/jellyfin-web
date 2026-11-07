@@ -56,6 +56,8 @@ interface SectionFrameProps {
     onSave?: () => void;
     saving?: boolean;
     saveMeta?: string;
+    /** A section's own main button in the footer's Save place, for a section without a Save (Indexers' Add Indexer); `saveMeta` is its status. */
+    footerAction?: ReactNode;
     next?: { id: string; title: string };
     onGo: (id: string) => void;
 }
@@ -102,7 +104,7 @@ export const SavedNote: FC<{ notice: NoticeState | null; id?: string }> = ({ not
 
 /** One section of the checklist: eyebrow, heading, state, body, and the footer with Save and "Next". */
 export const SectionFrame: FC<SectionFrameProps> = ({
-    id, eyebrow, title, state, actions, notice, children, onSave, saving, saveMeta, next, onGo
+    id, eyebrow, title, state, actions, notice, children, onSave, saving, saveMeta, footerAction, next, onGo
 }) => {
     const wizardContinue = useContext(WizardContinueContext);
     // Only a section with a Save shows its confirmation beside it; one that saves as it changes (Interface) keeps the notice.
@@ -127,7 +129,7 @@ export const SectionFrame: FC<SectionFrameProps> = ({
                 <Notice notice={topNotice} />
                 {children}
             </div>
-            {(onSave || next || wizardContinue) && (
+            {(onSave || footerAction || next || wizardContinue) && (
                 <footer className={wizardContinue ? 'jfmod-check-secfoot jfmod-wizardfoot focuscontainer-right' : 'jfmod-check-secfoot'}>
                     {wizardContinue?.blockers && (
                         <span className='jfmod-blockers' id='jfmod-blockers' data-wizard-blockers=''>
@@ -143,6 +145,7 @@ export const SectionFrame: FC<SectionFrameProps> = ({
                             {saving ? 'Saving…' : 'Save'}
                         </Button>
                     )}
+                    {footerAction}
                     {savedNote.saved ? <SavedNote notice={savedNote.saved} id={id} /> : saveMeta && <span className='jfmod-savemeta' data-savemeta={id}>{saveMeta}</span>}
                     {next && <NextButton next={next} onGo={onGo} />}
                     {wizardContinue && (
