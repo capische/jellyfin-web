@@ -16,7 +16,7 @@ No field contents, validation, secret handling or save behavior changes. See [sh
 §12.1. Code: `settings/settingsWidgets.tsx` (`FieldSpec`, `FieldForm`, `FieldControl`, `ListField`, `SecretField`,
 `REQUIRED_SLOTS`, `FillExample`), `settings/settings.scss` (`.jfmod-required`, `.jfmod-example`, `.jfmod-fieldrow`). The clickable
 example: user 2026-10-24 (P7.FU9). The secret's Key Page link now lives in [secret-field.md](secret-field.md). The layout rules
-(fields sharing a row, a number field that carries its switch, Advanced): user 2026-11-07, below.
+(fields sharing a row, a number field that carries its switch, Advanced): user 2026-11-07, below; Advanced without Remove Prowlarr: user 2026-11-07 ("Approve", ds.t9).
 
 ## What it is
 
@@ -78,7 +78,7 @@ Approved with the Ratings and Prowlarr mockup (`reviews/ratings-settings/` in th
   quality profile dialog's (`<details className='jfmod-qp-adv'>`, summary **Advanced** in bold, no note beside it in the
   settings cards; 1.618em above it in a section, and no top line of its own there, since the list above it ends with its
   divider). Status and counters a user rarely reads go in it too. Ratings: the two numbers, the free-tier line and Fetching
-  (today's calls, titles without ratings, the last run), after Ratings Shown. Indexers: the whole indexer list, synced and added by hand, then Add Indexer and Remove Prowlarr; Prowlarr's Save and Sync Now, with the sync's state, are the section's bottom bar beside Next (the user, 2026-11-07). It opens by itself when it
+  (today's calls, titles without ratings, the last run), after Ratings Shown. Indexers: the whole indexer list, synced and added by hand, then Add Indexer (no Remove Prowlarr: a cleared address and key disconnect, [buttons-and-row-actions.md](buttons-and-row-actions.md)); Prowlarr's Save and Sync Now, with the sync's state, are the section's bottom bar beside Next (the user, 2026-11-07). It opens by itself when it
   holds an error (a save refused over one of its fields) or the only way forward (Indexers without a Prowlarr source).
 
 ## Spec in code

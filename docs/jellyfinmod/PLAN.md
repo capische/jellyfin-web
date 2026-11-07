@@ -2508,3 +2508,10 @@ three Test endpoints accept an optional typed value (`API.md`). Guides: [secret 
 [settings field](design/guides/settings-field.md), [buttons and row actions](design/guides/buttons-and-row-actions.md),
 [wizard step footer](design/guides/wizard-step-footer.md), [ratings](design/guides/ratings.md). Not ported to main-stubs;
 phone, TV, light theme, real Chrome and the Codex review are later gates.
+
+**Prowlarr reconnect (the user, 2026-11-07, "Approve"); built (not accepted), gate 1 on beta.** Saving an address that names
+another Prowlarr (scheme, host, port or path; a trailing slash ignored) removes the old one's synced indexers in the same save
+and syncs the new one at once; emptying the address and clearing the key, then Save, asks "Disconnect Prowlarr?" and removes the
+source and its synced indexers (hand-added indexers and grab history stay); an indexer deleted in Prowlarr keeps the 30-day
+window; the Remove Prowlarr button is gone. Plugin `PATCH`/`DELETE Settings/Prowlarr` ([API.md](API.md)); guides
+[buttons and row actions](design/guides/buttons-and-row-actions.md), [settings field](design/guides/settings-field.md).

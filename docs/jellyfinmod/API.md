@@ -503,6 +503,21 @@ sync with it.". `POST /JellyfinMod/Settings/Prowlarr/Test` tests a source not ye
 field, and there is one source): a new source without a name is called `Prowlarr`, an edit without one keeps the stored name,
 and a name that is sent is still stored (unique, at most 64 characters). The old `invalid_name` answer is gone.
 
+`PATCH /JellyfinMod/Settings/Prowlarr/{id}` with an address that names **another Prowlarr** (ds.t9, the user, 2026-11-07) is a
+new source: another scheme, host (compared without case), port (a default port written or not) or path, a trailing slash
+ignored. In the same save the indexers synced from the old address are removed (grabs keep their recorded `indexerName`), the
+source's sync state and empty-answer count start again, and the new address is synced at once, whether the schedule is on or
+off; the answer carries that sync's `lastSyncOutcome` and `indexerCount`. Nothing is matched across the two by Prowlarr's
+indexer id, so admin overrides on the old rows (budget, off-switch) do not carry over. A refused save (`revision_conflict`,
+or 409 `prowlarr_indexer_in_use` while a grab through a synced indexer is active) removes nothing; a sync that then fails is
+fail-closed as any sync and leaves its code on the source with no synced indexer. The same address spelt another way keeps
+its indexers. This replaces the earlier rule that re-pointed the synced rows at the new host (S9-R3).
+
+`DELETE /JellyfinMod/Settings/Prowlarr/{id}` disconnects: the source, its synced indexers and its key go, indexers added by
+hand and grab history stay, and it is refused with 409 `prowlarr_indexer_in_use` while a grab through a synced indexer is
+active. The settings form sends it when the address and the key are both cleared and saved, after a confirmation (ds.t9);
+there is no Remove Prowlarr button.
+
 `GET /JellyfinMod/Settings/Prowlarr/{id}/DownloadClients` (P6.FU1, administrator-only like every Prowlarr route)
 reads Prowlarr's `api/v1/downloadclient` with the source's saved key, on the server: the key never reaches the browser.
 It uses the acquisition HTTP client (no redirects, 20 s timeout) and refuses a body over 256 KiB (`response_too_large`).

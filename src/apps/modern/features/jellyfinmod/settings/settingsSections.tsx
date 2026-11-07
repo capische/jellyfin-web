@@ -1227,8 +1227,27 @@ const prowlarrKeyPage = (address: unknown) => {
 };
 
 /**
+ * Whether two addresses name the same Prowlarr, as the plugin decides (ds.t9): scheme, host, port and path, a trailing slash
+ * ignored. Saving another one replaces the old one's synced indexers with the new one's.
+ */
+const sameProwlarr = (saved: string, typed: string) => {
+    try {
+        const [before, after] = [new URL(saved), new URL(typed)];
+        const path = (url: URL) => {
+            let value = url.pathname;
+            while (value.endsWith('/')) value = value.slice(0, -1);
+            return value;
+        };
+        return before.protocol === after.protocol && before.hostname === after.hostname && before.port === after.port && path(before) === path(after);
+    } catch {
+        return saved === typed;
+    }
+};
+
+/**
  * Prowlarr's form and its actions (ds.t9). The form draws in the Indexers card; Save, Sync Now and the sync's state go in the
- * section's bottom bar beside Next, and Remove Prowlarr in Advanced with the indexers it removes (the user, 2026-11-07).
+ * section's bottom bar beside Next. There is no Remove button: saving with the address emptied and the key cleared disconnects,
+ * after a confirmation, and saving another Prowlarr's address replaces the old one's synced indexers (the user, 2026-11-07).
  */
 const useProwlarrCard = ({ api, data, reload }: SectionProps) => {
     const source = data.prowlarr?.[0];
@@ -1255,6 +1274,15 @@ const useProwlarrCard = ({ api, data, reload }: SectionProps) => {
         }
     }, [set, source?.syncIntervalMinutes]);
     const keyPage = useMemo(() => prowlarrKeyPage(draft.baseUrl), [draft.baseUrl]);
+    let address = typeof draft.baseUrl === 'string' ? draft.baseUrl.trim() : '';
+    while (address.endsWith('/')) address = address.slice(0, -1);
+    const disconnect = useCallback(() => ask({
+        title: 'Disconnect Prowlarr?', text: 'The indexers synced from it are removed. Indexers added by hand stay, and grabs keep their recorded source name.',
+        action: 'Disconnect',
+        onConfirm: () => {
+            void run(() => request(api, 'DELETE', `Settings/Prowlarr/${source.id}`), 'Disconnected.');
+        }
+    }), [ask, run, api, source]);
     // `source` is undefined until one is added; the handlers that read its id are only reachable once it exists.
     const save = useCallback(() => {
         // A key typed for another source (or for a new one before this one appeared) is never sent to this one, and neither
@@ -1267,8 +1295,18 @@ const useProwlarrCard = ({ api, data, reload }: SectionProps) => {
             });
             return;
         }
+        // The address emptied and the key cleared disconnect (ds.t9); a key cleared alone would leave a source without one.
+        if (source && key.action === 'clear') {
+            if (address) {
+                setSourceNotice({ kind: 'err', text: 'To disconnect Prowlarr, empty its address as well, then Save. To keep it, undo the cleared key.' });
+            } else {
+                disconnect();
+            }
+            return;
+        }
         const revision = source ? keySecret.revisionFor((draft.revision as number | undefined) ?? source.revision) : undefined;
         const origin = keySecret.origin(revision);
+        const another = !!source && !!address && !sameProwlarr(source.baseUrl, address);
         void run(async () => {
             const body = { ...pick(draft, ['baseUrl', 'enabled', 'syncIntervalMinutes']), apiKey: key };
             const saved = source ?
@@ -1276,8 +1314,16 @@ const useProwlarrCard = ({ api, data, reload }: SectionProps) => {
                 await request<any>(api, 'POST', 'Settings/Prowlarr', body);
             sourceSaved(draft, sameRevision(saved), saved);
             keySecret.saved(key, { id: saved?.id, revision: saved?.revision, created: !source }, origin);
-        }, 'Saved. Sync to import its indexers.');
-    }, [run, api, source, draft, key, keySecret, sourceSaved, setSourceNotice, reloadSource]);
+            if (!another) return undefined;
+            // Another Prowlarr: the plugin removed the old one's indexers and synced this one in the same save.
+            const count = `${saved.indexerCount} indexer${saved.indexerCount === 1 ? '' : 's'}`;
+            return {
+                jfmodNotice: saved.lastSyncOutcome === 'ok' ?
+                    { kind: 'ok', text: `Saved. The old Prowlarr's indexers are removed and ${count} synced from this one.` } :
+                    { kind: 'err', text: `Saved. The old Prowlarr's indexers are removed, but the sync with this one changed nothing (${saved.lastSyncOutcome}). Sync Now tries again.` }
+            };
+        }, another ? undefined : 'Saved. Sync to import its indexers.');
+    }, [run, api, source, draft, key, keySecret, sourceSaved, setSourceNotice, reloadSource, address, disconnect]);
     const syncNow = useCallback(() => run(async () => {
         const outcome = await request<any>(api, 'POST', `Settings/Prowlarr/${source.id}/Sync`);
         return { jfmodNotice: syncNotice(outcome) };
@@ -1285,8 +1331,6 @@ const useProwlarrCard = ({ api, data, reload }: SectionProps) => {
     // The key field's Test (ds.t9) tests the address and the key in the form, typed or saved, and stores neither; without a
     // source yet both must be typed.
     const typedKey = typedValue(key);
-    let address = typeof draft.baseUrl === 'string' ? draft.baseUrl.trim() : '';
-    while (address.endsWith('/')) address = address.slice(0, -1);
     const typedAddress = address && address !== source?.baseUrl ? address : '';
     const testBody = useMemo(() => (typedKey || typedAddress ? { apiKey: typedKey || undefined, baseUrl: typedAddress || undefined } : undefined),
         [typedKey, typedAddress]);
@@ -1298,14 +1342,7 @@ const useProwlarrCard = ({ api, data, reload }: SectionProps) => {
     }), [keyTest.run, keyTest.result, keyTest.state, section.busy]);
     const keySave = useMemo(() => ({ label: 'Save Prowlarr Key', run: save, busy: section.busy }), [save, section.busy]);
     const savedNote = useSavedNote(section.notice);
-    const remove = useCallback(() => ask({
-        title: 'Remove Prowlarr?', text: 'Every indexer it synced is removed with it. Grabs keep their recorded source name.',
-        action: 'Remove',
-        onConfirm: () => {
-            void run(() => request(api, 'DELETE', `Settings/Prowlarr/${source.id}`), 'Removed.');
-        }
-    }), [ask, run, api, source]);
-    if (!data.prowlarr) return { body: null, footer: null, remove: null };
+    if (!data.prowlarr) return { body: null, footer: null };
     const synced = source && `${source.indexerCount} synced indexer${source.indexerCount === 1 ? '' : 's'} · last sync ${when(source.lastSyncAt)}`
         + (source.lastSyncOutcome && source.lastSyncOutcome !== 'ok' ? ` · ${source.lastSyncOutcome}` : '');
     return {
@@ -1335,9 +1372,6 @@ const useProwlarrCard = ({ api, data, reload }: SectionProps) => {
                 {/* The sync's state beside Sync Now, as Saved. sits beside Save (user, 2026-11-07). */}
                 {synced && <span className='jfmod-savemeta' data-prowlarr='last-sync'>{synced}</span>}
             </>
-        ),
-        remove: source && (
-            <Button variant='contained' color='error' disabled={section.busy} data-prowlarr='remove' className='jfmod-inlineactions-end' onClick={remove}>Remove Prowlarr</Button>
         )
     };
 };
@@ -1447,7 +1481,7 @@ export const IndexersSection: FC<SectionProps> = props => {
             footerAction={prowlarr.footer} next={props.next} onGo={props.onGo}
         >
             {/* Prowlarr first: one address and a key is all most people give; its Save and Sync Now are the section's bottom
-                bar. The indexers, synced or added by hand, Add Indexer and Remove Prowlarr are the advanced part, in the quality
+                bar. The indexers, synced or added by hand, and Add Indexer are the advanced part, in the quality
                 profile dialog's Advanced look, open by default only while there is no Prowlarr source (user, 2026-10-10 and
                 2026-11-07). */}
             {prowlarr.body}
@@ -1462,7 +1496,6 @@ export const IndexersSection: FC<SectionProps> = props => {
                 </div>
                 <div className='jfmod-inlineactions'>
                     <Button variant='contained' color={prowlarrSource ? 'inherit' : 'primary'} onClick={add} data-indexers='add'>Add Indexer</Button>
-                    {prowlarr.remove}
                 </div>
             </details>
             {editing !== undefined && <IndexerDialog api={api} indexer={editing} onClose={closeDialog} />}
