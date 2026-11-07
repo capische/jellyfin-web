@@ -311,6 +311,10 @@
         padding: var(--jfmod-s-2);
     }
 
+    /* The last round action sits as far from the pill's end as from its top and bottom, so its hover circle is concentric with
+       the end (the user, 2026-11-07: "Padding"): Bφ⁻² plus half the difference between Play's 3.333em and the Bφ² action. */
+    .actbar:not(.short) { padding-right: calc(var(--jfmod-s-2) + (3.333 * var(--jfmod-s0) - var(--jfmod-s2)) / 2); }
+
     .actbar .play {
         min-width: var(--jfmod-s4);
         padding: 0 var(--jfmod-s0);
