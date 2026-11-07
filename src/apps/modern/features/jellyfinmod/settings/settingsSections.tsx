@@ -29,8 +29,8 @@ import {
 } from './settingsApi';
 import { profileSummary, QualityProfileDialog, usePresets } from './qualityProfiles';
 import {
-    type Draft, FieldForm, FillExample, REQUIRED_SLOTS, type FieldSpec, IconAction, Notice, type NoticeState, pick, SecretField, SectionFrame, type StateKind, StatePill,
-    ScrollList, type TestState, TestIcon, useConfirm, WhenLine
+    type Draft, FieldForm, FillExample, REQUIRED_SLOTS, type FieldSpec, IconAction, Notice, type NoticeState, pick, SavedNote, SecretField, SectionFrame, type StateKind,
+    StatePill, ScrollList, type TestState, TestIcon, useConfirm, useSavedNote, WhenLine
 } from './settingsWidgets';
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- the settings DTOs are the plugin's own and are read field by field */
@@ -302,6 +302,44 @@ const useSectionState = (reload: () => Promise<unknown>, reads: readonly string[
     }, [reload]);
     return { notice, setNotice, busy, run, test, resets, reloadNow: runReload };
 };
+
+/**
+ * The Test of a key field (ds.t9): the saved key, or one being typed, which the server tests without storing it. `subject`
+ * names what is in the field now (the typed key, and for Prowlarr the address with it; empty for the saved values) and
+ * `revision` the record: a result shows only while both are what was tested, so typing again or a save hides it. The words
+ * are the server's sentence alone, without its code. `saved` is the icon's state when nothing was tested here.
+ */
+const useKeyTest = (api: Api, reload: () => Promise<unknown>, path: string, body: unknown, subject: string, revision: unknown, saved: TestState) => {
+    const [result, setResult] = useState<{ subject: string; revision: unknown; notice: NoticeState; at: string } | null>(null);
+    const [testing, setTesting] = useState(false);
+    // Only the latest run ends the spinner and is shown: a test that a newer one has superseded must not.
+    const testRun = useRef(0);
+    const run = useCallback(async () => {
+        testRun.current += 1;
+        const mine = testRun.current;
+        setTesting(true);
+        let notice: NoticeState;
+        try {
+            const answer = await request<ConnectionTest>(api, 'POST', path, body);
+            notice = { kind: answer.ok ? 'ok' : 'err', text: answer.message };
+            // A saved key's pass is recorded on the server: read it again so the section's state says so.
+            if (!subject) await reload();
+        } catch (error) {
+            notice = { kind: 'err', text: problemText(error) };
+        }
+        if (mine !== testRun.current) return;
+        setResult({ subject, revision, notice, at: new Date().toISOString() });
+        setTesting(false);
+    }, [api, reload, path, body, subject, revision]);
+    const shown = result && result.subject === subject && result.revision === revision ? result : null;
+    let state: TestState = saved;
+    if (testing) state = { kind: 'testing' };
+    else if (shown) state = { kind: shown.notice.kind === 'ok' ? 'ok' : 'fail', reason: shown.notice.kind === 'ok' ? null : shown.notice.text, checkedAt: shown.at };
+    return { run, state, result: shown?.notice ?? null };
+};
+
+/** What a key field has typed in it, or '' when nothing is. */
+const typedValue = (change: SecretChange) => (change.action === 'replace' && change.value ? change.value : '');
 
 interface DraftOwner {
     resets: number;
@@ -753,7 +791,7 @@ export const DiscoverySection: FC<SectionProps> = props => {
     const tokenSecret = useSecretChange('discovery', discovery.revision, section.resets);
     const token = tokenSecret.change;
     const setToken = tokenSecret.set;
-    const { run, test } = section;
+    const { run } = section;
     const saveWork = useCallback(async () => {
         let savedRevision: number | undefined;
         const revision = tokenSecret.revisionFor(discovery.revision);
@@ -764,24 +802,15 @@ export const DiscoverySection: FC<SectionProps> = props => {
         tokenSecret.saved(token, { id: 'discovery', revision: savedRevision }, origin);
     }, [api, token, tokenSecret, discovery.revision]);
     const save = useCallback(() => run(saveWork, 'Saved.'), [run, saveWork]);
-    // Test sits in the token's box as an icon, its words and its result under the box (user, 2026-10-07). A result belongs
-    // to the revision it tested: a saved replacement or clear, or a change being typed, hides it (Codex review 1, P2 2).
-    const [testResult, setTestResult] = useState<{ revision: unknown; notice: NoticeState; at: string } | null>(null);
-    const [testing, setTesting] = useState(false);
-    const testedRevision = discovery.revision;
-    const sayTest = useCallback((notice: NoticeState | null) => setTestResult(notice && { revision: testedRevision, notice, at: new Date().toISOString() }), [testedRevision]);
-    // Only the latest run ends the spinner: a test that a newer one has superseded must not stop it early.
-    const testRun = useRef(0);
-    const testToken = useCallback(async () => {
-        testRun.current += 1;
-        const mine = testRun.current;
-        setTesting(true);
-        try {
-            await test('Settings/Discovery/Test', api, sayTest);
-        } finally {
-            if (mine === testRun.current) setTesting(false);
-        }
-    }, [test, api, sayTest]);
+    // Test sits in the token's box as an icon, its words and its result under the box (user, 2026-10-07); while a token is
+    // typed, in the field beside its Save, testing the typed token without saving it (ds.t9). A result belongs to the
+    // revision and the value it tested: a saved replacement or clear, or typing again, hides it (Codex review 1, P2 2).
+    const typedToken = typedValue(token);
+    const testBody = useMemo(() => (typedToken ? { apiKey: typedToken } : undefined), [typedToken]);
+    const savedTest: TestState = useMemo(() => (!typedToken && discovery.verified ? { kind: 'ok', checkedAt: discovery.verifiedAt } : { kind: 'idle' }),
+        [typedToken, discovery.verified, discovery.verifiedAt]);
+    const keyTest = useKeyTest(api, reload, 'Settings/Discovery/Test', testBody, typedToken, discovery.revision, savedTest);
+    const testToken = keyTest.run;
     // The Save at the end of the input saves just the token, then starts its Test (user, 2026-10-09). The test waits until the
     // save has landed and the record has been read again, so it is the new token that is tested, and its result is kept.
     const [testAfterSave, setTestAfterSave] = useState<{ from: unknown } | null>(null);
@@ -808,16 +837,10 @@ export const DiscoverySection: FC<SectionProps> = props => {
         if (!active || active === document.body) document.querySelector<HTMLElement>('.jfmod-check-section[data-section="discovery"] [data-secret-action="test"]')?.focus();
         void testToken();
     }, [testAfterSave, section.busy, discovery.revision, discovery.tokenConfigured, testToken]);
-    const shownResult = testResult && testResult.revision === discovery.revision && token.action === 'unchanged' && discovery.tokenConfigured ?
-        testResult : null;
-    const testState: TestState = useMemo(() => {
-        if (testing) return { kind: 'testing' };
-        if (shownResult) return { kind: shownResult.notice.kind === 'ok' ? 'ok' : 'fail', reason: shownResult.notice.kind === 'ok' ? null : shownResult.notice.text, checkedAt: shownResult.at };
-        return discovery.verified ? { kind: 'ok', checkedAt: discovery.verifiedAt } : { kind: 'idle' };
-    }, [testing, shownResult, discovery.verified, discovery.verifiedAt]);
     const tokenTest = useMemo(() => ({
-        id: 'discovery', label: 'Test Token', run: testToken, disabled: section.busy, result: shownResult?.notice ?? null, state: testState
-    }), [testToken, section.busy, shownResult, testState]);
+        id: 'discovery', label: 'Test Token', run: testToken, disabled: section.busy, typed: true,
+        result: typedToken || discovery.tokenConfigured ? keyTest.result : null, state: keyTest.state
+    }), [testToken, section.busy, typedToken, discovery.tokenConfigured, keyTest.result, keyTest.state]);
     const tokenSave = useMemo(() => ({ label: 'Save TMDB Token', run: saveToken, busy: section.busy }), [saveToken, section.busy]);
     return (
         <SectionFrame id='discovery' eyebrow={props.eyebrow} title='Discovery' state={summarise('discovery', data)} notice={section.notice}
@@ -1200,7 +1223,7 @@ const prowlarrKeyPage = (address: unknown) => {
     if (url.protocol !== 'http:' && url.protocol !== 'https:') return undefined;
     // Relative to the address with one trailing slash, so a Prowlarr under a path (http://host/prowlarr) keeps it.
     const href = new URL('settings/general', url.href.endsWith('/') ? url.href : url.href + '/').href;
-    return { href, title: 'Open Prowlarr\'s General settings, where its API key is' };
+    return { href, title: 'Open Prowlarr\'s General settings, where its API key is', text: 'Key Page' };
 };
 
 const ProwlarrCard: FC<SectionProps> = ({ api, data, reload }) => {
@@ -1211,8 +1234,22 @@ const ProwlarrCard: FC<SectionProps> = ({ api, data, reload }) => {
     const key = keySecret.change;
     const setKey = keySecret.set;
     const [confirmDialog, ask] = useConfirm();
-    const { run, test, setNotice: setSourceNotice, reloadNow: reloadSource } = section;
+    const { run, setNotice: setSourceNotice, reloadNow: reloadSource } = section;
     const fillAddress = useCallback((address: string) => set('baseUrl', address), [set]);
+    // Sync every carries the schedule (user, 2026-11-07, option B): a number turns it on at that interval, an empty field
+    // turns it off ("Off") and leaves the saved interval as it is. The draft keeps the server's two fields.
+    const scheduleView = useMemo(() => ({ ...draft, syncIntervalMinutes: draft.enabled ? draft.syncIntervalMinutes : null }), [draft]);
+    const editSchedule = useCallback((field: string, value: unknown) => {
+        if (field !== 'syncIntervalMinutes') {
+            set(field, value);
+        } else if (value === null) {
+            set('enabled', false);
+            set('syncIntervalMinutes', source?.syncIntervalMinutes ?? 360);
+        } else {
+            set('enabled', true);
+            set('syncIntervalMinutes', value);
+        }
+    }, [set, source?.syncIntervalMinutes]);
     const keyPage = useMemo(() => prowlarrKeyPage(draft.baseUrl), [draft.baseUrl]);
     // `source` is undefined until one is added; the handlers that read its id are only reachable once it exists.
     const save = useCallback(() => {
@@ -1241,7 +1278,22 @@ const ProwlarrCard: FC<SectionProps> = ({ api, data, reload }) => {
         const outcome = await request<any>(api, 'POST', `Settings/Prowlarr/${source.id}/Sync`);
         return { jfmodNotice: syncNotice(outcome) };
     }), [run, api, source]);
-    const testSource = useCallback(() => test(`Settings/Prowlarr/${source.id}/Test`, api), [test, api, source]);
+    // The key field's Test (ds.t9) tests the address and the key in the form, typed or saved, and stores neither; without a
+    // source yet both must be typed.
+    const typedKey = typedValue(key);
+    let address = typeof draft.baseUrl === 'string' ? draft.baseUrl.trim() : '';
+    while (address.endsWith('/')) address = address.slice(0, -1);
+    const typedAddress = address && address !== source?.baseUrl ? address : '';
+    const testBody = useMemo(() => (typedKey || typedAddress ? { apiKey: typedKey || undefined, baseUrl: typedAddress || undefined } : undefined),
+        [typedKey, typedAddress]);
+    const savedTest: TestState = useMemo(() => ({ kind: 'idle' }), []);
+    const keyTest = useKeyTest(api, reload, source ? `Settings/Prowlarr/${source.id}/Test` : 'Settings/Prowlarr/Test', testBody,
+        typedKey || typedAddress ? JSON.stringify([typedKey, typedAddress]) : '', source?.revision, savedTest);
+    const sourceTest = useMemo(() => ({
+        id: 'prowlarr', label: 'Test Prowlarr', run: keyTest.run, disabled: section.busy, typed: true, result: keyTest.result, state: keyTest.state
+    }), [keyTest.run, keyTest.result, keyTest.state, section.busy]);
+    const keySave = useMemo(() => ({ label: 'Save Prowlarr Key', run: save, busy: section.busy }), [save, section.busy]);
+    const savedNote = useSavedNote(section.notice);
     const remove = useCallback(() => ask({
         title: 'Remove Prowlarr?', text: 'Every indexer it synced is removed with it. Grabs keep their recorded source name.',
         action: 'Remove',
@@ -1251,28 +1303,34 @@ const ProwlarrCard: FC<SectionProps> = ({ api, data, reload }) => {
     }), [ask, run, api, source]);
     if (!data.prowlarr) return null;
     return (
-        <div className='jfmod-group' data-prowlarr='card'>
+        // Capture only: an edit inside the card hides its "Saved." (ds.t9).
+        <div className='jfmod-group' data-prowlarr='card' onChangeCapture={savedNote.onEdit} onClickCapture={savedNote.onEdit}>
             <h3 className='jfmod-grouptitle'>Prowlarr</h3>
-            <Notice notice={section.notice} />
-            {source && (
-                <p className='jfmod-lead fieldDescription'>
-                    {source.indexerCount} synced indexer(s) · last sync {when(source.lastSyncAt)}{source.lastSyncOutcome ? ` (${source.lastSyncOutcome})` : ''}
-                </p>
-            )}
-            <FieldForm fields={[
-                { key: 'baseUrl', label: 'Prowlarr address', type: 'text', required: true,
-                    help: <>For example <FillExample value={PROWLARR_EXAMPLE} onFill={fillAddress} />, without credentials.</> },
-                { key: 'syncIntervalMinutes', label: 'Sync every (minutes)', type: 'int' },
-                { key: 'enabled', label: 'Sync on a schedule', type: 'bool' }
-            ]} draft={draft} onChange={set} />
+            <Notice notice={savedNote.rest} />
+            {/* The address and how often to sync share a row (ds.t9); one column on a phone. */}
+            <div className='jfmod-fieldrow jfmod-fieldrow-wide'>
+                <FieldForm fields={[
+                    { key: 'baseUrl', label: 'Prowlarr address', type: 'text', required: true,
+                        help: <>For example <FillExample value={PROWLARR_EXAMPLE} onFill={fillAddress} />, without credentials.</> },
+                    { key: 'syncIntervalMinutes', label: 'Sync every (minutes)', type: 'int', optional: true, placeholder: 'Off' }
+                ]} draft={scheduleView} onChange={editSchedule} />
+            </div>
             <SecretField key={source?.revision ?? 'new'} id='jfmodProwlarrKey' label='API key' required={!source?.apiKeyConfigured} configured={!!source?.apiKeyConfigured} change={key} onChange={setKey}
-                keyPage={keyPage} />
+                keyPage={keyPage} test={sourceTest} save={keySave} />
             <div className='jfmod-inlineactions'>
                 <Button variant='contained' color='inherit' disabled={section.busy} onClick={save}>{source ? 'Save' : 'Add Prowlarr'}</Button>
-                {source && <Button variant='contained' color='inherit' disabled={section.busy} onClick={testSource}>Test</Button>}
+                <SavedNote notice={savedNote.saved} id='prowlarr' />
                 {source && <Button variant='contained' disabled={section.busy} onClick={syncNow} data-prowlarr='sync'>Sync Now</Button>}
+                {/* The sync's state beside Sync Now, as Saved. sits beside Save (user, 2026-11-07). */}
                 {source && (
-                    <Button variant='contained' color='error' disabled={section.busy} data-prowlarr='remove' onClick={remove}>Remove</Button>
+                    <span className='jfmod-savemeta' data-prowlarr='last-sync'>
+                        {source.indexerCount} synced indexer(s) · last sync {when(source.lastSyncAt)}{source.lastSyncOutcome ? ` (${source.lastSyncOutcome})` : ''}
+                    </span>
+                )}
+                {source && (
+                    <Button variant='contained' color='error' disabled={section.busy} data-prowlarr='remove' className='jfmod-inlineactions-end' onClick={remove}>
+                        Remove Prowlarr
+                    </Button>
                 )}
             </div>
             {confirmDialog}
@@ -1366,6 +1424,15 @@ export const IndexersSection: FC<SectionProps> = props => {
     const [confirmDialog, ask] = useConfirm();
     const [editing, setEditing] = useState<any | null | undefined>(undefined);
     const add = useCallback(() => setEditing(null), []);
+    const synced = data.indexers.filter(indexer => indexer.managedBy === 'prowlarr');
+    const manual = data.indexers.filter(indexer => indexer.managedBy !== 'prowlarr');
+    // Follows the Prowlarr source until the administrator opens or closes it.
+    const [advancedChoice, setAdvancedChoice] = useState<boolean | null>(null);
+    const advancedOpen = advancedChoice ?? !prowlarrSource;
+    const toggleAdvanced = useCallback((event: React.SyntheticEvent<HTMLDetailsElement>) => {
+        const open = event.currentTarget.open;
+        setAdvancedChoice(current => (current === null && open === !prowlarrSource ? null : open));
+    }, [prowlarrSource]);
     const closeDialog = useCallback((saved: boolean, close = true) => {
         if (close) setEditing(undefined);
         if (saved) void reload();
@@ -1374,21 +1441,39 @@ export const IndexersSection: FC<SectionProps> = props => {
         <SectionFrame id='indexers' eyebrow={props.eyebrow} title='Indexers' state={summarise('indexers', data)} notice={section.notice}
             next={props.next} onGo={props.onGo}
         >
-            {/* Prowlarr first: one address and a key is all most people give; the indexers it syncs, and the ones added by
-                hand, are the advanced part and follow it (user, 2026-10-10). */}
+            {/* Prowlarr first: one address and a key is all most people give; the indexers it syncs follow it, and the ones
+                added by hand are the advanced part (user, 2026-10-10 and 2026-11-07). */}
             <ProwlarrCard {...props} />
-            {/* Add Indexer sits with the list it adds to (user, 2026-10-17), not in the step header. */}
-            <div className='jfmod-grouphead'>
-                {data.prowlarr && <h3 className='jfmod-grouptitle' data-indexers='title'>Indexers</h3>}
-                <Button variant='contained' color={prowlarrSource ? 'inherit' : 'primary'} onClick={add}>Add Indexer</Button>
-            </div>
-            <div className='jfmod-blist'>
-                {data.indexers.length === 0 && <div className='jfmod-empty'>No indexer yet.</div>}
-                {data.indexers.map(indexer => (
-                    <IndexerRow key={indexer.id} api={api} indexer={indexer} busy={section.busy} test={section.test} run={section.run} ask={ask}
-                        onEdit={setEditing} />
-                ))}
-            </div>
+            {prowlarrSource && (
+                <>
+                    <div className='jfmod-grouphead'>
+                        <h3 className='jfmod-grouptitle' data-indexers='title'>Indexers</h3>
+                    </div>
+                    <div className='jfmod-blist' data-indexers='synced'>
+                        {synced.length === 0 && <div className='jfmod-empty'>No indexer synced from Prowlarr yet.</div>}
+                        {synced.map(indexer => (
+                            <IndexerRow key={indexer.id} api={api} indexer={indexer} busy={section.busy} test={section.test} run={section.run} ask={ask}
+                                onEdit={setEditing} />
+                        ))}
+                    </div>
+                </>
+            )}
+            {/* Indexers added by hand and Add Indexer, in the quality profile dialog's Advanced look; open by default only while
+                there is no Prowlarr source, when Add Indexer is the section's main action. Add Indexer sits with the list it
+                adds to (user, 2026-10-17). */}
+            <details className='jfmod-qp-adv jfmod-group' data-indexers='advanced' open={advancedOpen} onToggle={toggleAdvanced}>
+                <summary>Advanced</summary>
+                <div className='jfmod-grouphead'>
+                    <Button variant='contained' color={prowlarrSource ? 'inherit' : 'primary'} onClick={add}>Add Indexer</Button>
+                </div>
+                <div className='jfmod-blist' data-indexers='manual'>
+                    {manual.length === 0 && <div className='jfmod-empty'>No indexer added by hand.</div>}
+                    {manual.map(indexer => (
+                        <IndexerRow key={indexer.id} api={api} indexer={indexer} busy={section.busy} test={section.test} run={section.run} ask={ask}
+                            onEdit={setEditing} />
+                    ))}
+                </div>
+            </details>
             {editing !== undefined && <IndexerDialog api={api} indexer={editing} onClose={closeDialog} />}
             {confirmDialog}
         </SectionFrame>
@@ -1933,14 +2018,6 @@ interface RatingsRun {
     stopReason?: string | null;
 }
 
-/** The provider's state in words: stopped, paused and why, or ready. */
-const providerState = (status: { blocker?: string | null; breaker: { open: boolean; until?: string | null; reason?: string | null } }) => {
-    if (status.blocker === 'unauthorized') return 'Stopped: MDBList refused the key';
-    if (!status.breaker.open) return 'Ready';
-    const why = status.breaker.reason === 'rate_limited' ? 'daily limit reached' : 'repeated errors';
-    return `Paused until ${when(status.breaker.until)} (${why})`;
-};
-
 /** The last run in one line. */
 const lastRunText = (run: RatingsRun | null | undefined) => {
     if (!run) return 'No run yet';
@@ -1949,6 +2026,9 @@ const lastRunText = (run: RatingsRun | null | undefined) => {
 };
 
 const ratingsRead = (data: SettingsData) => data.ratings !== undefined && data.ratings !== null;
+
+/** Where an MDBList key is found (ds.t9). */
+const MDBLIST_KEY_PAGE = { href: 'https://mdblist.com/preferences/', title: 'Open MDBList\'s Preferences, where your API key is', text: 'Get a Key' };
 
 /** What started a pass in progress (user decision 8). */
 const PASS_KINDS: Record<string, string> = { daily: 'the daily run', arrivals: 'new titles', setup: 'setup', startup: 'the first start' };
@@ -2007,15 +2087,17 @@ const RatingsFetching: FC<{ status: RatingsStatusView | undefined }> = ({ status
     if (!status) return null;
     return <div className='jfmod-group'>
         <h3 className='jfmod-grouptitle'>Fetching</h3>
-        <dl className='jfmod-kv'>
-            {status.running && <><dt>Now</dt><dd role='status' data-jfmod-ratings-running={status.running.kind}>
+        {status.running && <dl className='jfmod-kv'>
+            <dt>Now</dt><dd role='status' data-jfmod-ratings-running={status.running.kind}>
                 Fetching, {status.running.remaining} title(s) left · started by {PASS_KINDS[status.running.kind] ?? status.running.kind} {when(status.running.startedAt)}
-            </dd></>}
-            <dt>Today</dt><dd>{status.budget.used} of {status.budget.limit} calls</dd>
-            <dt>Titles without ratings</dt><dd>{status.entriesWithoutRatings} of {status.entries}</dd>
-            <dt>Provider</dt><dd>{providerState(status)}</dd>
-            <dt>Last run</dt><dd>{lastRunText(status.lastRun)}</dd>
-        </dl>
+            </dd>
+        </dl>}
+        {/* One wrapped line (ds.t9); the provider's state is the section's own status line. */}
+        <p className='jfmod-fetchline'>
+            <span>Today <b>{status.budget.used} of {status.budget.limit} calls</b></span>
+            <span>Without ratings <b>{status.entriesWithoutRatings} of {status.entries} titles</b></span>
+            <span>Last run <b>{lastRunText(status.lastRun)}</b></span>
+        </p>
     </div>;
 };
 
@@ -2061,7 +2143,7 @@ export const RatingsSection: FC<SectionProps> = props => {
     const [draft, set, , ratingsSaved] = useDraft(ratings, {}, section);
     const keySecret = useSecretChange('ratings', ratings?.revision, section.resets);
     const apiKey = keySecret.change;
-    const { run, test } = section;
+    const { run } = section;
     const chosen: string[] = useMemo(() => Array.isArray(draft.defaultSources) ? draft.defaultSources as string[] : ratings?.defaultSources ?? [],
         [draft.defaultSources, ratings?.defaultSources]);
     const available: string[] = ratings?.availableSources ?? [];
@@ -2076,47 +2158,43 @@ export const RatingsSection: FC<SectionProps> = props => {
         [next[index], next[target]] = [next[target], next[index]];
         set('defaultSources', next);
     }, [chosen, set]);
+    // Fetch again and calls per day are the Advanced part (user, 2026-11-07): closed until opened, or until a save is refused
+    // over one of them, so the refusal's field is in sight.
+    const [advancedOpen, setAdvancedOpen] = useState(false);
+    const toggleAdvanced = useCallback((event: React.SyntheticEvent<HTMLDetailsElement>) => setAdvancedOpen(event.currentTarget.open), []);
     const save = useCallback(() => run(async () => {
         const revision = keySecret.revisionFor((draft.revision as number | undefined) ?? ratings.revision);
         const origin = keySecret.origin(revision);
-        const saved = await request<{ revision?: number }>(api, 'PATCH', 'Settings/Ratings', {
-            ...pick(draft, ['enabled', 'refreshDays', 'dailyBudget']), defaultSources: chosen, apiKey, revision
-        });
+        let saved: { revision?: number } | undefined;
+        try {
+            saved = await request<{ revision?: number }>(api, 'PATCH', 'Settings/Ratings', {
+                ...pick(draft, ['enabled', 'refreshDays', 'dailyBudget']), defaultSources: chosen, apiKey, revision
+            });
+        } catch (error) {
+            const refused = error as { type?: string; fields?: string[] };
+            if (['invalid_refresh_days', 'invalid_daily_budget'].includes(refused.type ?? '')
+                || refused.fields?.some(field => /refreshDays|dailyBudget/i.test(field))) setAdvancedOpen(true);
+            throw error;
+        }
         keySecret.saved(apiKey, { id: 'ratings', revision: saved?.revision }, origin);
         ratingsSaved(draft, sameRevision(saved), saved);
         // Detail pages and grids read the defaults (order, on/off) and the ratings themselves from the shared cache; a save
         // marks them stale so this browser shows the change at once and others within RATINGS_STALE_MS (web review 2026-10-07, P2 1).
         queryClient.invalidateQueries({ predicate: query => isRatingsQuery(query.queryKey, api.basePath) }).catch(() => undefined);
     }, 'Saved.'), [run, api, draft, chosen, apiKey, keySecret, ratings, ratingsSaved]);
-    // Test sits in the key's box as an icon, its words and its result under the box, as the TMDB token's does (UX §12.1). A
-    // result belongs to the revision it tested: a saved replacement or clear, or a key being typed, hides it.
-    const [testResult, setTestResult] = useState<{ revision: unknown; notice: NoticeState } | null>(null);
-    const testedRevision = ratings?.revision;
-    const sayTest = useCallback((notice: NoticeState | null) => setTestResult(notice && { revision: testedRevision, notice }), [testedRevision]);
-    // The icon shows the test's state as the TMDB token's does: testing, the shown result, else the saved key's last pass.
-    const [testing, setTesting] = useState(false);
-    const testRun = useRef(0);
-    const testKey = useCallback(async () => {
-        testRun.current += 1;
-        const mine = testRun.current;
-        setTesting(true);
-        try {
-            await test('Settings/Ratings/Test', api, sayTest);
-        } finally {
-            if (mine === testRun.current) setTesting(false);
-        }
-    }, [test, api, sayTest]);
-    const shownResult = testResult && testResult.revision === ratings?.revision && apiKey.action === 'unchanged' && ratings?.apiKeyConfigured ?
-        testResult.notice : null;
-    const testState: TestState = useMemo(() => {
-        if (testing) return { kind: 'testing' };
-        if (shownResult) return { kind: shownResult.kind === 'ok' ? 'ok' : 'fail', reason: shownResult.kind === 'ok' ? null : shownResult.text };
-        return ratings?.verified && ratings.apiKeyConfigured ? { kind: 'ok', checkedAt: ratings.verifiedAt } : { kind: 'idle' };
-    }, [testing, shownResult, ratings?.verified, ratings?.apiKeyConfigured, ratings?.verifiedAt]);
+    // Test sits in the key's box as an icon, its words and its result under the box, as the TMDB token's does (UX §12.1); while
+    // a key is typed, in the field beside its Save, testing the typed key without saving it (ds.t9). A result belongs to the
+    // revision and the value it tested: a saved replacement or clear, or typing again, hides it.
+    const typedKey = typedValue(apiKey);
+    const testBody = useMemo(() => (typedKey ? { apiKey: typedKey } : undefined), [typedKey]);
+    const savedTest: TestState = useMemo(() => (!typedKey && ratings?.verified && ratings.apiKeyConfigured ? { kind: 'ok', checkedAt: ratings.verifiedAt } : { kind: 'idle' }),
+        [typedKey, ratings?.verified, ratings?.apiKeyConfigured, ratings?.verifiedAt]);
+    const keyTestRun = useKeyTest(api, reload, 'Settings/Ratings/Test', testBody, typedKey, ratings?.revision, savedTest);
     const keyTest = useMemo(() => ({
-        id: 'ratings', label: 'Test Key', run: testKey, disabled: section.busy, result: shownResult, state: testState,
-        help: 'Makes one real MDBList call for a well-known title. Save a new key first. A key that passes starts fetching every title at once, within the daily budget.'
-    }), [testKey, section.busy, shownResult, testState]);
+        id: 'ratings', label: 'Test Key', run: keyTestRun.run, disabled: section.busy, typed: true,
+        result: typedKey || ratings?.apiKeyConfigured ? keyTestRun.result : null, state: keyTestRun.state
+    }), [keyTestRun.run, keyTestRun.result, keyTestRun.state, section.busy, typedKey, ratings?.apiKeyConfigured]);
+    const keySave = useMemo(() => ({ label: 'Save MDBList Key', run: save, busy: section.busy }), [save, section.busy]);
     if (!ratings) {
         return <SectionFrame id='ratings' eyebrow={props.eyebrow} title='Ratings' notice={{ kind: 'warn', text: 'Unavailable in this plugin build.' }} onGo={props.onGo}><span /></SectionFrame>;
     }
@@ -2125,32 +2203,32 @@ export const RatingsSection: FC<SectionProps> = props => {
         <SectionFrame id='ratings' eyebrow={props.eyebrow} title='Ratings' state={summarise('ratings', data)} notice={section.notice}
             onSave={save} saving={section.busy} next={props.next} onGo={props.onGo}
         >
-            <FieldForm fields={[
-                { key: 'enabled', label: 'Fetch and show title ratings', type: 'bool', help: 'Display only: ratings never steer searching, grabbing or retention.' },
-                { key: 'refreshDays', label: 'Fetch a title again after (days)', type: 'int' },
-                { key: 'dailyBudget', label: 'MDBList calls per day', type: 'int', help: 'Stay below your MDBList tier (the free tier allows 1,000 a day); manual refreshes and Test count too.' }
-            ]} draft={draft} onChange={set} />
+            <FieldForm fields={[{ key: 'enabled', label: 'Fetch and show title ratings', type: 'bool' }]} draft={draft} onChange={set} />
             <div className='jfmod-group'>
                 <SecretField key={ratings.revision} id='jfmodMdbListKey' label='MDBList API Key' configured={!!ratings.apiKeyConfigured} change={apiKey} onChange={keySecret.set}
-                    test={keyTest} />
+                    test={keyTest} save={keySave} keyPage={MDBLIST_KEY_PAGE} />
                 {ratings.providerOverride && <Notice notice={{ kind: 'warn', text: 'This server fetches ratings from a test address set in its configuration file, not from MDBList.' }} />}
-                <div className='fieldDescription jfmod-lead'>
-                    One MDBList key brings IMDb, Rotten Tomatoes critics and audience, TMDB, Trakt, Metacritic, Letterboxd and Roger Ebert. TMDB&apos;s own score comes
-                    from the title&apos;s TMDB metadata, and on-disk titles fall back to what this server&apos;s own metadata stored. MDBList is a cache of those sites,
-                    so its numbers can lag or differ from what each site shows today.
-                </div>
             </div>
             <div className='jfmod-group'>
                 <h3 className='jfmod-grouptitle'>Ratings Shown</h3>
                 <div className='fieldDescription'>
-                    Ticked ratings show for every user who has not chosen their own in Ratings Display. IMDb and Rotten Tomatoes show
-                    beside the title, and Trakt when the line has room; every ticked rating shows with its votes, in this order, in the
-                    popup that opens on hover, a tap or OK. Fetching is the same either way.
+                    For everyone who has not picked their own. The first two show beside the title, all of them in the popup.
                 </div>
                 {rows.map(source => <SourceRow key={source} source={source} index={chosen.indexOf(source)} count={chosen.length}
                     on={chosen.includes(source)} onToggle={toggleSource} onMove={moveSource} />)}
             </div>
-            <RatingsFetching status={status} />
+            <details className='jfmod-qp-adv jfmod-group' data-ratings='advanced' open={advancedOpen} onToggle={toggleAdvanced}>
+                <summary>Advanced</summary>
+                <div className='jfmod-fieldrow'>
+                    <FieldForm fields={[
+                        { key: 'refreshDays', label: 'Fetch again after (days)', type: 'int' },
+                        { key: 'dailyBudget', label: 'MDBList calls per day', type: 'int' }
+                    ]} draft={draft} onChange={set} />
+                </div>
+                <div className='fieldDescription'>MDBList&apos;s free tier allows 1,000 calls a day.</div>
+                {/* The fetcher's numbers are for the rare look, so they sit in Advanced too (the user, 2026-11-07). */}
+                <RatingsFetching status={status} />
+            </details>
         </SectionFrame>
     );
 };

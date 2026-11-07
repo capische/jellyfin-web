@@ -152,10 +152,13 @@ accessible labels and hidden text, with no native tooltip.
 
 ## Settings and actions
 
-- Settings area → **Ratings** (`settingsSections.tsx`): on/off, refresh days (14), MDBList calls per day (500), the write-only
-  **MDBList API Key** field with its Test icon ([settings-field.md](settings-field.md), [buttons-and-row-actions.md](buttons-and-row-actions.md)),
-  and **Ratings Shown**: one checkbox per source with round Move Up / Move Down icons. Default ticked: IMDb, RT critics,
-  RT audience, TMDB, Trakt.
+- Settings area → **Ratings** (`settingsSections.tsx`; layout and copy user 2026-11-07, ds.t9, built, not accepted): on/off, the
+  write-only **MDBList API Key** with Get a Key ↗, Test and Save in the field ([secret-field.md](secret-field.md)),
+  **Ratings Shown** ("For everyone who has not picked their own. The first two show beside the title, all of them in the
+  popup.") with one checkbox per source and round Move Up / Move Down icons (default ticked: IMDb, RT critics, RT audience,
+  TMDB, Trakt), then a closed **Advanced** with *Fetch again after (days)* (14) and *MDBList calls per day* (500) side by side
+  and "MDBList's free tier allows 1,000 calls a day." ([settings-field.md](settings-field.md)), then **Fetching** as one wrapped
+  line: "Today 5 of 500 calls · Without ratings 7 of 7 titles · Last run …" (the provider's state is the section's status).
 - **Refresh Ratings** (administrators, where the plugin offers it): an item in the More menu of a movie's and a series' native
   page (its own sheet id, `jfmod-more-refresh-ratings`) and of a file-less movie's page; a button beside Refresh Metadata on the
   file-less series page. Its result is the app's toast.

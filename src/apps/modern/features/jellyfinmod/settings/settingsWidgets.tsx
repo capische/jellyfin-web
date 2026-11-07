@@ -77,16 +77,44 @@ const NextButton: FC<{ next: { id: string; title: string }; onGo: (id: string) =
     );
 };
 
+/**
+ * A save's confirmation beside its Save (ds.t9, user 2026-11-07): the notice a save ends with ("Saved.", or "Saved." and what
+ * to do next) shows there with a green check instead of at the top, until the next edit in the same area. `onEdit` goes on
+ * the area as a change and click capture: an input, a switch, a ticked box, a picked option or a row's move counts as an edit.
+ */
+export const useSavedNote = (notice: NoticeState | null) => {
+    const saved = notice?.kind === 'ok' && notice.text.startsWith('Saved.') ? notice : null;
+    const [dismissed, setDismissed] = useState<NoticeState | null>(null);
+    const onEdit = useCallback((event: React.SyntheticEvent) => {
+        if (!saved) return;
+        const target = event.target as HTMLElement;
+        if (event.type === 'change' || target.closest?.('[data-row-action], [role="option"]')) setDismissed(saved);
+    }, [saved]);
+    return { saved: saved && saved !== dismissed ? saved : null, rest: saved ? null : notice, onEdit };
+};
+
+export const SavedNote: FC<{ notice: NoticeState | null; id?: string }> = ({ notice, id }) => (notice ? (
+    <span className='jfmod-savemeta jfmod-saved' role='status' data-savemeta={id}>
+        <svg viewBox='0 0 24 24' aria-hidden='true' focusable='false'><path d='M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z' /></svg>
+        {notice.text}
+    </span>
+) : null);
+
 /** One section of the checklist: eyebrow, heading, state, body, and the footer with Save and "Next". */
 export const SectionFrame: FC<SectionFrameProps> = ({
     id, eyebrow, title, state, actions, notice, children, onSave, saving, saveMeta, next, onGo
 }) => {
     const wizardContinue = useContext(WizardContinueContext);
+    // Only a section with a Save shows its confirmation beside it; one that saves as it changes (Interface) keeps the notice.
+    const savedNote = useSavedNote(onSave ? notice : null);
+    const topNotice = onSave ? savedNote.rest : notice;
     // With a Continue, the footer is a focuscontainer-right: on the TV, Right from Save lands on Continue, not on the token box's Test
     // icon, which sits up and to the right and was nearer. Left is left alone, so Save still reaches the rail (a focuscontainer-x
     // footer trapped it).
     return (
-        <section className='jfmod-check-section' data-section={id} aria-labelledby={`jfmod-h-${id}`}>
+        <section className='jfmod-check-section' data-section={id} aria-labelledby={`jfmod-h-${id}`}
+            onChangeCapture={savedNote.onEdit} onClickCapture={savedNote.onEdit}
+        >
             <header className='jfmod-check-sechead'>
                 <div>
                     <div className='jfmod-eyebrow'>{eyebrow}</div>
@@ -96,7 +124,7 @@ export const SectionFrame: FC<SectionFrameProps> = ({
                 {actions && <div className='jfmod-sec-actions'>{actions}</div>}
             </header>
             <div className='jfmod-check-secbody'>
-                <Notice notice={notice} />
+                <Notice notice={topNotice} />
                 {children}
             </div>
             {(onSave || next || wizardContinue) && (
@@ -115,7 +143,7 @@ export const SectionFrame: FC<SectionFrameProps> = ({
                             {saving ? 'Saving…' : 'Save'}
                         </Button>
                     )}
-                    {saveMeta && <span className='jfmod-savemeta' data-savemeta={id}>{saveMeta}</span>}
+                    {savedNote.saved ? <SavedNote notice={savedNote.saved} id={id} /> : saveMeta && <span className='jfmod-savemeta' data-savemeta={id}>{saveMeta}</span>}
                     {next && <NextButton next={next} onGo={onGo} />}
                     {wizardContinue && (
                         // Refused with aria-disabled, never `disabled`, so a remote keeps its focus on it; pressing it does nothing.
@@ -147,15 +175,18 @@ interface SecretFieldProps {
     configured: boolean;
     change: SecretChange;
     onChange: (change: SecretChange) => void;
-    /** A test of the saved secret, offered as the first icon in its box; its words and result sit under the box. */
-    test?: { id: string; label: string; run: () => void; disabled?: boolean; help?: ReactNode; result: NoticeState | null; state: TestState };
+    /**
+     * A test of the saved secret, offered as the first icon in its box; its words and result sit under the box. With `typed`,
+     * the field being typed holds the Test too (ds.t9): `run` then tests the typed value without saving it.
+     */
+    test?: { id: string; label: string; run: () => void; disabled?: boolean; help?: ReactNode; result: NoticeState | null; state: TestState; typed?: boolean };
     /** A Save at the end of the input (user, 2026-10-09): it saves just this secret, and the caller then starts the field's test. */
     save?: { label: string; run: () => void; busy?: boolean };
     /**
-     * The page where the secret is found (Prowlarr's General settings, P7.FU9): a *Key Page* link inside the empty field,
-     * opened in a new tab, only while nothing is configured. `title` is its tooltip.
+     * The page where the secret is found (Prowlarr's General settings, P7.FU9; MDBList's Preferences, ds.t9): a link at the
+     * right end of the field's label line, in every state, opened in a new tab. `text` is its words, `title` its tooltip.
      */
-    keyPage?: { href: string; title: string };
+    keyPage?: { href: string; title: string; text: string };
 }
 
 /**
@@ -228,9 +259,10 @@ const TestSignal: FC = () => (
 );
 
 export const TestIcon: FC<{
-    label: string; test: TestState; busy?: boolean; onClick: () => void; data: Record<string, string | undefined>;
-}> = ({ label, test, busy, onClick, data }) => (
-    <IconAction label={label} tip={testTip(label, test)} disabled={busy || test.kind === 'testing'} onClick={onClick} data={{ ...data, 'test-state': test.kind }}
+    label: string; test: TestState; busy?: boolean; refused?: boolean; onClick: () => void; data: Record<string, string | undefined>;
+}> = ({ label, test, busy, refused, onClick, data }) => (
+    <IconAction label={label} tip={refused ? label : testTip(label, test)} disabled={busy || test.kind === 'testing'} refused={refused} onClick={onClick}
+        data={{ ...data, 'test-state': test.kind }}
         className={`jfmod-iconbtn-test${test.kind === 'testing' ? ' jfmod-testing' : ''}${test.kind === 'ok' ? ' jfmod-test-ok' : ''}${test.kind === 'fail' ? ' jfmod-test-fail' : ''}`}
     >
         <span className='jfmod-testglyph' aria-hidden='true'><TestSignal /></span>
@@ -243,11 +275,52 @@ const SecretIcon: FC<{ label: string; red?: boolean; onClick: () => void; action
     <IconAction label={label} red={red} onClick={onClick} data={{ 'secret-action': action }}>{children}</IconAction>
 );
 
-/** Where to get a secret, inside its empty field (P7.FU9); the adornment takes its own width, so typed text never runs under it. */
-const keyPageLink = (keyPage: SecretFieldProps['keyPage'], configured: boolean) => (keyPage && !configured ? (
+/** Where to get a secret, at the right of its label line (P7.FU9, ds.t9). */
+const keyPageLink = (keyPage: SecretFieldProps['keyPage']) => (keyPage ? (
     <a className='jfmod-keypage' href={keyPage.href} target='_blank' rel='noopener noreferrer' title={keyPage.title}
-        data-secret-action='key-page'>Key Page</a>
-) : undefined);
+        data-secret-action='key-page'>{keyPage.text}<span aria-hidden='true'> ↗</span></a>
+) : null);
+
+/** A secret's label line: its name (with the required mark while nothing is stored) and where to get it. */
+const SecretHead: FC<{ label: string; marked: boolean; keyPage: SecretFieldProps['keyPage'] }> = ({ label, marked, keyPage }) => (
+    <div className='jfmod-secret-head'>
+        <span className={marked ? 'jfmod-secret-label jfmod-required' : 'jfmod-secret-label'}>{label}</span>
+        {keyPageLink(keyPage)}
+    </div>
+);
+
+/**
+ * How the field being typed is named: with a label line above it (a stored secret, or one with a key page) it has no floating
+ * label, and a stored secret's shows a placeholder; its accessible name still says which secret it is.
+ */
+const secretInputNaming = (label: string, configured: boolean, headed: boolean) => {
+    if (!headed) return { fieldNaming: { label }, accessibleName: undefined };
+    return {
+        fieldNaming: { className: 'jfmod-secret-input', placeholder: configured ? 'New value' : undefined, hiddenLabel: true },
+        accessibleName: { 'aria-label': configured ? `New ${label}` : label }
+    };
+};
+
+/**
+ * The icons inside the field being typed, at its right end, as the Configured box holds its own (user, 2026-10-09): Test (the
+ * typed value, ds.t9), Save and Keep the Saved One. Test and Save are refused until something is typed.
+ */
+const SecretInputButtons: FC<{
+    typed: boolean; configured: boolean; test: SecretFieldProps['test']; save: SecretFieldProps['save']; keep: () => void;
+}> = ({ typed, configured, test, save, keep }) => (
+    <span className='jfmod-secret-inputrow'>
+        {test?.typed && (
+            <TestIcon label={test.label} test={typed ? test.state : { kind: 'idle' }} busy={test.disabled}
+                refused={!typed} onClick={test.run} data={{ 'secret-action': 'test', test: test.id }} />
+        )}
+        {save && (
+            <IconAction label={save.label} refused={!typed} disabled={save.busy} onClick={save.run} data={{ 'secret-action': 'save' }}><SaveIcon /></IconAction>
+        )}
+        {configured && (
+            <IconAction label='Keep the Saved One' onClick={keep} data={{ 'secret-action': 'keep' }}><CloseIcon /></IconAction>
+        )}
+    </span>
+);
 
 /**
  * A write-only secret (PHASE7 §5.1): "Configured" with Replace and Clear, a pending clear with Undo, and an
@@ -276,6 +349,10 @@ export const SecretField: FC<SecretFieldProps> = ({ id, label, required, configu
     }, [save, typedNow]);
     // The box holds icon-only actions, Test (when the secret has one), Replace and Clear, in that order (user, 2026-10-07);
     // Undo, which takes back a pending clear, is an ordinary grey button the size of Save.
+    // The label line: the secret's name and, when it has one, where to get it. A secret with nothing stored and no key page
+    // keeps MUI's floating label instead.
+    const headed = configured || !!keyPage;
+    const head = headed && <SecretHead label={label} marked={!!required && !configured} keyPage={keyPage} />;
     const below = test && (
         <div className='jfmod-secret-below'>
             {test.help && <div className='fieldDescription'>{test.help}</div>}
@@ -285,7 +362,7 @@ export const SecretField: FC<SecretFieldProps> = ({ id, label, required, configu
     if (change.action === 'clear') {
         return (
             <div className='jfmod-secret jfmod-secret-pending'>
-                <span className='jfmod-secret-label'>{label}</span>
+                {head}
                 <div className='jfmod-secret-row'>
                     <span className='jfmod-secret-state'>Will be removed on save</span>
                     <Button variant='contained' color='inherit' onClick={undo}>Undo</Button>
@@ -298,26 +375,16 @@ export const SecretField: FC<SecretFieldProps> = ({ id, label, required, configu
         const typed = typedNow;
         // A stored secret's edit field is the Configured box in another state: a placeholder, no floating label (its height and
         // text start are the box's, see settings.scss); a secret with nothing stored keeps its labelled field.
-        const fieldNaming = configured ? { className: 'jfmod-secret-input', placeholder: 'New value', hiddenLabel: true } : { label };
-        const accessibleName = configured ? { 'aria-label': `New ${label}` } : undefined;
+        const { fieldNaming, accessibleName } = secretInputNaming(label, configured, headed);
         const requiredMarks = required && !configured ? REQUIRED_SLOTS : undefined;
-        // One field: the buttons sit inside it, at its right end, as the Configured box holds its own (user, 2026-10-09).
-        const buttons = (save || configured) && (
-            <span className='jfmod-secret-inputrow'>
-                {save && (
-                    <IconAction label={save.label} refused={!typed} disabled={save.busy} onClick={save.run} data={{ 'secret-action': 'save' }}><SaveIcon /></IconAction>
-                )}
-                {configured && (
-                    <IconAction label='Keep the Saved One' onClick={keep} data={{ 'secret-action': 'keep' }}><CloseIcon /></IconAction>
-                )}
-            </span>
+        const buttons = (save || configured || test?.typed) && (
+            <SecretInputButtons typed={typed} configured={configured} test={test} save={save} keep={keep} />
         );
-        const keyLink = keyPageLink(keyPage, configured);
         return (
             <div className='jfmod-secret'>
                 {/* The header stays while a replacement is typed, as in the Configured view (user, 2026-10-10); the input's own
                     label is then a short prompt, and its accessible name still says which secret it replaces. */}
-                {configured && <span className='jfmod-secret-label'>{label}</span>}
+                {head}
                 <TextField
                     id={id}
                     {...fieldNaming}
@@ -329,8 +396,8 @@ export const SecretField: FC<SecretFieldProps> = ({ id, label, required, configu
                     onChange={type}
                     onKeyDown={saveOnEnter}
                     slotProps={{
-                        input: { endAdornment: buttons || keyLink || undefined },
-                        inputLabel: requiredMarks?.inputLabel,
+                        input: { endAdornment: buttons || undefined },
+                        inputLabel: headed ? undefined : requiredMarks?.inputLabel,
                         htmlInput: { ...accessibleName, ...requiredMarks?.htmlInput }
                     }}
                 />
@@ -340,7 +407,7 @@ export const SecretField: FC<SecretFieldProps> = ({ id, label, required, configu
     }
     return (
         <div className='jfmod-secret'>
-            <span className='jfmod-secret-label'>{label}</span>
+            {head}
             <div className='jfmod-secret-row'>
                 <span className='jfmod-secret-state'><span className='jfmod-lock' aria-hidden='true' />Configured</span>
                 {test && <span className='jfmod-teststatus' aria-live='polite'>{test.state.kind === 'testing' ? 'Testing…' : ''}</span>}
@@ -380,6 +447,8 @@ export interface FieldSpec {
     optional?: boolean;
     /** The field must hold a value to save: its label ends with the asterisk (`.jfmod-required`) and its input `aria-required`. */
     required?: boolean;
+    /** What an empty field means, shown in it ("Off" for Prowlarr's Sync every, ds.t9); the label then stays small above it. */
+    placeholder?: string;
 }
 
 export type Draft = Record<string, unknown>;
@@ -463,13 +532,14 @@ const FieldControl: FC<{ field: FieldSpec; value: unknown; onChange: FieldChange
     if (type === 'list') return <ListField field={field} value={value} onChange={onChange} />;
     let shown = '';
     if (value !== null && value !== undefined) shown = String(value);
+    const shrunk = field.placeholder ? { inputLabel: { shrink: true } } : undefined;
     return (
         <TextField
-            fullWidth margin='dense' label={field.label} helperText={field.help}
+            fullWidth margin='dense' label={field.label} helperText={field.help} placeholder={field.placeholder}
             type={type === 'int' || type === 'number' ? 'number' : 'text'}
             value={shown}
             onChange={edit}
-            slotProps={field.required ? REQUIRED_SLOTS : undefined}
+            slotProps={field.required ? REQUIRED_SLOTS : shrunk}
         />
     );
 };

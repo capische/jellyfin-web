@@ -17,6 +17,8 @@ no top notice, nothing to dismiss.
   a hairline `border-top` in the divider colour; children `margin-right 1em`.
 - Blockers `.jfmod-blockers`: `flex 1 1 12em`, secondary text at .9em, `line-height 1.4`, the lock glyph first; the lead
   **"To continue,"** in bold, then the instruction in sentence case ending with a full stop.
+- After a save, **Saved.** with a green check sits right after Save until the next edit (user, 2026-11-07, ds.t9;
+  [buttons-and-row-actions.md](buttons-and-row-actions.md) *A status beside its action*), in `.jfmod-savemeta`'s place.
 - Buttons at the right: Save (`[data-submit]`, `margin-left: auto`) then **Continue** (`.jfmod-continue`, Save's blue
   button, the one main action; [buttons-and-row-actions.md](buttons-and-row-actions.md)). Narrow, the buttons wrap under
   the sentence, still at the right.

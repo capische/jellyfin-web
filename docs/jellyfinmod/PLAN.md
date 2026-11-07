@@ -2494,3 +2494,17 @@ First-look validation: TypeScript, changed-file ESLint/stylelint and the develop
 retains inherited patch-surface warnings and four Sass import deprecations. Playwright Chromium: 37 passed,
 0 failed, with real ratings answers and browser-only URL/default/source-list interception; computer links,
 keyboard order, malformed fallbacks, no-ratings/TMDB-only/unticked cases, TV 1920/1280 and phone sizing.
+
+## ds.t9 — key fields, Saved. beside Save, Advanced and the Prowlarr schedule (2026-11-07)
+
+**Built (not accepted), gate 1: computer first look on beta (main-items line only).** From the approved Ratings settings mockup
+(`reviews/ratings-settings/` in the workspace) and the user's additions the same day: every API key and token field tests the
+value in it, typed or saved, without storing it (MDBList key, TMDB token, Prowlarr key with its address), and holds Test, Save
+and Keep while typed; Ratings gets the in-field Save and Get a Key ↗; test results in words only; "Saved." with a green check
+beside Save in every section with a Save; Ratings' two numbers and the manual indexers (with Add Indexer) move into a closed
+Advanced; Ratings' copy cut and Fetching on one line; Prowlarr's separate Test goes, Remove becomes Remove Prowlarr, the sync
+line sits beside Sync Now, and *Sync every* carries the schedule (empty is Off, Option B), beside the address. Plugin: the
+three Test endpoints accept an optional typed value (`API.md`). Guides: [secret field](design/guides/secret-field.md) (new),
+[settings field](design/guides/settings-field.md), [buttons and row actions](design/guides/buttons-and-row-actions.md),
+[wizard step footer](design/guides/wizard-step-footer.md), [ratings](design/guides/ratings.md). Not ported to main-stubs;
+phone, TV, light theme, real Chrome and the Codex review are later gates.

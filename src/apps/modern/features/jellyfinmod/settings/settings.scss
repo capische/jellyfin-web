@@ -1558,3 +1558,77 @@
 .layout-mobile .jfmod-traktMedia + .jfmod-traktSep { display: none; }
 .layout-mobile .jfmod-traktMark { align-self: start; }
 :root[data-theme="light"] .jfmod-traktMark { color: #6438d0; }
+
+/* Key fields, small fields side by side and Saved. beside Save (ds.t9, user 2026-11-07). Base unit 1em; new spacing is on
+   the φ scale (.236/.382/.618/1/1.618); the MUI field sizes are kept as they are. */
+
+/* A secret's label line: its name, and at the right where to get it (Get a Key ↗, Key Page ↗). */
+.jfmod-secret-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 0.382em;
+}
+.jfmod-secret .jfmod-secret-head .jfmod-secret-label { margin-bottom: 0; }
+
+/* Two small fields of a FieldForm share a row: equal halves, or the address wider by φ; one column under 600 px and on a phone. */
+.jfmod-fieldrow > .jfmod-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 1em;
+    align-items: start;
+}
+.jfmod-fieldrow-wide > .jfmod-group { grid-template-columns: 1.618fr 1fr; }
+
+@media (max-width: 600px) {
+    .jfmod-fieldrow > .jfmod-group { grid-template-columns: 1fr; }
+}
+.layout-mobile .jfmod-fieldrow > .jfmod-group { grid-template-columns: 1fr; }
+.jfmod-fieldrow + .jfmod-secret { margin-top: 1em; }
+
+/* Saved. with a small green check, in the place of the footer's save note. */
+.jfmod-saved {
+    display: inline-flex;
+    align-items: center;
+
+    svg {
+        width: 1.236em;
+        height: 1.236em;
+        margin-right: 0.236em;
+        fill: #81c784;
+        flex: none;
+    }
+}
+:root[data-theme="light"] .jfmod-saved svg { fill: #2e7d32; }
+
+.jfmod-inlineactions > .jfmod-savemeta { margin-top: 0.3em; }
+
+.jfmod-inlineactions > .jfmod-inlineactions-end.MuiButtonBase-root {
+    margin-left: auto;
+    margin-right: 0;
+}
+
+/* Ratings › Fetching in one wrapped line. */
+.jfmod-fetchline {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0;
+    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+    font-size: 0.9em;
+
+    > span { margin: 0 1.618em 0.382em 0; }
+
+    b {
+        color: var(--jf-palette-text-primary, #fff);
+        font-weight: 500;
+    }
+}
+
+/* An Advanced disclosure in a settings section keeps the quality profile dialog's look and the section's spacing. */
+
+/* In a settings card Advanced follows a list whose last row already draws the divider: no second line (the user, 2026-11-07). */
+.jfmod-check-secbody .jfmod-qp-adv {
+    margin-top: 1.618em;
+    border-top: 0;
+    padding-top: 0;
+}
