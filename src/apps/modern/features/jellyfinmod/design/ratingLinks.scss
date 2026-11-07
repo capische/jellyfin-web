@@ -69,12 +69,31 @@
 @media (hover: hover) {
     .jfds.dev-computer .rgwrap.jfmod-ratingLinks,
     .jfds.dev-tablet .rgwrap.jfmod-ratingLinks {
-        &:hover .rgroup { background: none; }
+        /* One highlight (the user, 2026-11-07): the whole line lights as one pill while its popup shows, never one mark. */
+        &:hover .rgroup { background: var(--tint); }
         .jfmod-ratingMarkLink { cursor: pointer; }
-        .jfmod-ratingMarkLink:hover { background: var(--tint); }
         a.rrow:hover > :not(.jfmod-ratingsHidden) { background: var(--tint); }
     }
 }
+
+/* The popup spans the lit pill, which bleeds half the 0.6em mark gap past the line on either side. */
+.jfds.dev-computer .rgwrap.jfmod-ratingLinks .rcentre {
+    right: -0.3em;
+    left: -0.3em;
+}
+
+.jfds.layout-tv .rgwrap.jfmod-ratingsAnchor .rcentre {
+    right: -0.2em;
+    left: -0.2em;
+}
+
+.jfds.layout-tv .rgwrap.jfmod-ratingsAnchor .rcentre > .pmenu.rmenu {
+    box-sizing: border-box;
+    min-width: 100%;
+}
+
+/* A pointer click that opened a source leaves no lit pill behind once the popup has closed. */
+.ds-pointer .jfds:not(.layout-tv) .rgwrap.jfmod-ratingLinks:not(.on) .rgroup.foc { background: none; }
 
 /* Hover styling must not reopen a popup closed by following a link or Escape. */
 .jfds .rgwrap.jfmod-ratingsAnchor {

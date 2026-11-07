@@ -12,8 +12,10 @@ Every title-head rating opens its source. The group remains one `<button>`: on a
 a mouse click on a mark calls `window.open(url, '_blank', 'noopener,noreferrer')`. There is no nested link.
 Marks never take keyboard focus; middle-click is available on the popup row. Each mark takes 0.3em on either
 side of the existing 0.6em gap, with 0.382em corners; the group's reservation and Trakt-gives-way rule stay.
-The pointer lights only its mark or row with the 12% `--tint`, never the group too. Keyboard, touch and TV
-keep the group's lit state. Touch anywhere on the group opens the popup; TV OK does the same.
+One highlight (the user, 2026-11-07): while its popup shows, the whole line lights as one pill with the 12% `--tint`, exactly as
+wide as the popup (the pill bleeds 0.3em, half the mark gap, past the line on a computer, 0.2em on TV, and the popup's minimum
+width bleeds with it); a mark never lights alone, and the popup lights its row under the pointer. After a pointer click opens a
+source and the popup closes, nothing stays lit. Keyboard, touch and TV keep the group's lit state and ring. Touch anywhere on the group opens the popup; TV OK does the same.
 
 The popup is at least as wide as the ratings line above it and its words are one φ step larger (1.236em), counts right-aligned
 (option B, the user, 2026-11-07: it read small under the line).
