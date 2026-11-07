@@ -66,6 +66,9 @@ const Labelled: FC<{ parts: InlinePart[]; label?: string }> = ({ parts, label })
 };
 
 const commandClass = (command: TitleCommand) => command.play ? 'play' : 'dbtn';
+
+/** Download, then More, at the pill's end; every other command keeps its order (Array.prototype.sort is stable). */
+const rankLast = (command: TitleCommand) => ({ cloud: 1, more: 2 } as Record<string, number>)[command.icon] ?? 0;
 const factClass = (fact: { badge: boolean; star: boolean; critic: boolean }) => {
     if (fact.badge) return 'badge';
     if (fact.star) return 'star';
@@ -343,6 +346,8 @@ const Content: FC<{ view: HTMLElement; type: string; art: string; item?: BaseIte
     const download = !model.commands.some(command => command.play) && model.downloadKind === 'none';
     const commands = model.commands.filter(command => command.icon !== 'cloud' || model.downloadKind !== 'unaired');
     if (download) commands.sort((a, b) => Number(b.icon === 'cloud') - Number(a.icon === 'cloud'));
+    // With something to play, Download gets another quality: the rarer action goes last, before More (the user, 2026-11-07).
+    else commands.sort((a, b) => rankLast(a) - rankLast(b));
     const pill = commands.length > 0 && <div className={'actbar glassy focuscontainer-x' + (download || commands.some(command => command.play) ? '' : ' short')}>
         {commands.map(command => <Command key={command.key} view={view} command={command} item={item} download={download && command.icon === 'cloud'} />)}</div>;
     return <div ref={ref} className={environment.type === 'Person' ? undefined : 'jfmod-titleTop'}>
