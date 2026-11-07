@@ -667,7 +667,15 @@ h2.sect2 { margin: 1.618em 0 0.618em; font-size: 1.236em; font-weight: 600; line
 .gpk .val .marks { flex: 0 1 auto; flex-wrap: nowrap; overflow: hidden; }
 .gpk .val .chev.end { margin-left: auto; }
 .vlist { position: relative; z-index: 6; margin-top: 0.382em; border-radius: 0.618em; overflow: hidden; background: var(--paper); color: var(--text); box-shadow: 0 0.382em 1.618em rgba(0, 0, 0, 0.45); }
-.gpk:not(.stacked) .seg > .vlist { position: absolute; left: 0; right: 0; top: 100%; }
+.gpk .seg > .vlist { position: absolute; left: 0; right: 0; top: 100%; }
+/* An open field's list stays above the fields stacked under it: each glass pill is its own stacking context. */
+.gpk .seg[aria-expanded='true'] { z-index: 7; }
+.gpk.stacked > .seg.v { order: 1; }
+.gpk.stacked > [data-list='v'] { order: 2; }
+.gpk.stacked > .seg.a { order: 3; }
+.gpk.stacked > [data-list='a'] { order: 4; }
+.gpk.stacked > .seg.s { order: 5; }
+.gpk.stacked > [data-list='s'] { order: 6; }
 .vrow { display: flex; align-items: center; flex-wrap: wrap; min-height: 2.5em; padding: 0.236em 0.382em 0.236em 1em; border-left: 0.2em solid transparent; cursor: default; }
 .vrow:hover { background: var(--hover-fill); }
 .vrow .r { font-weight: 600; margin-right: 0.8em; white-space: nowrap; position: relative; }
