@@ -19,12 +19,20 @@
         padding-left: 0.236em;
     }
 
+    /* At least as wide as the ratings line above it, its words one φ step larger (option B, the user, 2026-11-07). */
+    .rcentre > .pmenu.rmenu {
+        box-sizing: border-box;
+        min-width: 100%;
+        font-size: 1.236em;
+    }
+
     .rmk {
         height: 1.618em;
         padding-left: 0.382em;
     }
 
     .rvt {
+        text-align: right;
         padding-right: 0.382em;
         color: rgba(255, 255, 255, 0.7);
         opacity: 1;
