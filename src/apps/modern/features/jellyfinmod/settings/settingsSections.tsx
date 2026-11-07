@@ -2123,7 +2123,7 @@ export const RatingsSection: FC<SectionProps> = props => {
     const rows = [...chosen, ...available.filter(source => !chosen.includes(source))];
     return (
         <SectionFrame id='ratings' eyebrow={props.eyebrow} title='Ratings' state={summarise('ratings', data)} notice={section.notice}
-            onSave={save} saving={section.busy} saveMeta={`Revision ${ratings.revision}.`} next={props.next} onGo={props.onGo}
+            onSave={save} saving={section.busy} next={props.next} onGo={props.onGo}
         >
             <FieldForm fields={[
                 { key: 'enabled', label: 'Fetch and show title ratings', type: 'bool', help: 'Display only: ratings never steer searching, grabbing or retention.' },
