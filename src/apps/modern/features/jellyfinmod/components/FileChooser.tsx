@@ -14,12 +14,6 @@ const FORM_SELECTOR = '.trackSelections';
 /** Audio's and Subtitles' fixed cells (17.8em and 13.2em, `ds.css`) on the phone, tablet and TV, which Video's width is left after. */
 const TRACK_CELLS_EMS = 31;
 /**
- * The computer's strip (ds.t12, the user 2026-11-07): Video and Audio φ⁶ of the head's base each, Subtitles the rest but at least
- * φ⁵, two φ⁻² gaps. Under this many of the strip's em (the head's base) it stacks: a 1440 px window keeps a row beside the φ²
- * poster (a 952.7 px column), 1280 stacks (836.9 px).
- */
-const GOLDEN_ROW_EMS = 2 * 17.94427191 + 11.0901699437 + 2 * 0.3819660113;
-/**
  * Under this Video cell width the strip stacks as on the phone (D199). 11.7em is a named exception to the golden ratio (φ⁵, 11.09em,
  * until D238): it is where the pending entry's quality stays on its line: a 996 px window keeps 11.74em
  * and stays a row, 995 px stacks; the TV at 1280 has 9.9em and stacks.
@@ -173,13 +167,17 @@ export interface StripHosts {
 }
 
 /**
- * Whether the strip stacks: on the phone (D4); on a computer where the three φ⁶ cells do not fit (ds.t12); elsewhere where the
- * Video cell would be narrower than `STACK_EMS` (D199). It reads the
- * strip's own width, which does not depend on the stacking, so the strip never flips back and forth at the switch.
+ * Whether the strip stacks: always on the phone (D4) and the tablet (a window under 900 px, a tablet held upright); never on a
+ * computer, whose three fields shrink alike instead (the user, 2026-11-07); on the TV where the Video cell would be narrower than
+ * `STACK_EMS` (D199). It reads the strip's own width, which does not depend on the stacking, so the strip never flips back and
+ * forth at the switch.
  */
-const stacks = (strip: HTMLElement) => document.documentElement.classList.contains('layout-mobile')
-    || strip.clientWidth < (strip.closest('.jfds.dev-computer:not(.layout-tv)') ? GOLDEN_ROW_EMS : TRACK_CELLS_EMS + STACK_EMS + 2 * 0.382)
-        * parseFloat(getComputedStyle(strip).fontSize);
+const stacks = (strip: HTMLElement) => {
+    const root = strip.closest('.jfds');
+    if (document.documentElement.classList.contains('layout-mobile') || root?.matches('.dev-phone, .dev-tablet')) return true;
+    if (root?.matches('.dev-computer:not(.layout-tv)')) return false;
+    return strip.clientWidth < (TRACK_CELLS_EMS + STACK_EMS + 2 * 0.382) * parseFloat(getComputedStyle(strip).fontSize);
+};
 
 /**
  * The track strip (D4–D9, user-approved 2026-10-28, `reviews/upgrade-status-options/all-in-one`): Video, Audio and Subtitles as

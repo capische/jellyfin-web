@@ -5,11 +5,11 @@ suggested"; field height "Codex version"; "file size should be moved to Video si
 gate 1 on beta.** Reference: workspace `reviews/dropdown-golden/` and its `NOTES.md`; where they differ on height the user's later
 60.88 px wins. Computer title head (`.jfds.dev-computer:not(.layout-tv)`, `design/titleTop.scss`), tokens `sN` = `--jfmod-s<n>`:
 - **Strip:** s-1 under the action pill, fields s-2 apart. Each field the caption's s0 line over the value's s1 line with s-2 above
-  and below: **60.88 px** (Bφ⁰ + Bφ¹ + 2·Bφ⁻²), padding s-2 / s0, **s1 corners**, open ring s-4. **Video s6, Audio s6, Subtitles
-  the rest, at least s5 and at most s6** (323 / 323 / 293 px at a 1440 window beside the φ² poster; 323 / 323 / 323 at 1920, the
-  rest of the row empty: the user's option A, 2026-11-07, over equal thirds). The computer stack test
-  (`GOLDEN_ROW_EMS` in `FileChooser.tsx`) is 2·φ⁶ + φ⁵ + 2·φ⁻² of the strip's em: a 1440 window is a row, **1280 stacks**. s5 rather
-  than the proposal's s6 minimum is forced by the bigger poster (title-pages.md): with s6 the 952.7 px column at 1440 would stack.
+  and below: **60.88 px** (Bφ⁰ + Bφ¹ + 2·Bφ⁻²), padding s-2 / s0, **s1 corners**, open ring s-4. **Video, Audio and Subtitles s6 each, in
+  one row** (323 px; at 1920 the rest of the row stays empty: the user's option A, 2026-11-07, over equal thirds). **The computer
+  never stacks** (the user, 2026-11-07: "No stacking, stacking for mobile, and probably tablet portrait"): a column too narrow for
+  three s6 fields shrinks all three alike (`flex: 0 1 s6`, 274 px each at 1280, 213 at 1024), the marks that do not fit dropped whole (Video's as D242; Audio's 5.1 first, then DD+ Atmos, leaving the Dolby glyph at 1024). The phone and
+  the tablet (a window under 900 px) always stack; the TV keeps D199's width test (`stacks` in `FileChooser.tsx`).
 - **Captions** s-1 at an s0 pitch, s-7 tracking, 61.8 %, one line (`nowrap`, an ellipsis only as a fallback; the Philosopher's
   captions fit: 287 of 323 px, 257 of 293 px). **The Video caption carries the file size** (`VIDEO · 13.2 GB`, on every layout); the
   closed value is the resolution and its marks only, its chevron at the end like Audio's.
