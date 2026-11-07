@@ -48,9 +48,8 @@ const result = await build({
         const root=createRoot(host); const widget=createRoot(document.getElementById('widgets'));
         const versions=['aaaa','bbbb'].map((id,i)=>({mediaSourceId:id,jellyfinItemId:id,bindingId:id,label:i?'1080p':'2160p',resolution:i?'1080p':'2160p',
             videoCodec:i?'h264':'hevc',videoRange:i?'SDR':'HDR',bitDepth:i?8:10,sizeBytes:i?15000000000:55000000000,isDefault:!i,phoneCopy:!!i,retention:null}));
-        const Chooser=()=>{const strip=useTrackStrip(view,true);const [history,setHistory]=React.useState(null);const closeHistory=React.useCallback(()=>setHistory(null),[]);return React.createElement(React.Fragment,null,strip&&React.createElement(FileChooser,{view,strip,versions,preferred:versions[1],busy:false,
-            pin:()=>({kept:false,title:'Keep'}),onPin:()=>window.pins=(window.pins||0)+1,canRemove:()=>true,onRemove:()=>window.removes=(window.removes||0)+1,
-            removeDate:()=>null,onHistory:(version,anchor)=>setHistory({version,anchor}),
+        const Chooser=()=>{const strip=useTrackStrip(view,true);const [history,setHistory]=React.useState(null);const closeHistory=React.useCallback(()=>setHistory(null),[]);window.openHistory=anchor=>setHistory({version:versions[0],anchor});return React.createElement(React.Fragment,null,strip&&React.createElement(FileChooser,{view,strip,versions,preferred:versions[1],
+            removeDate:()=>null,
             pending:React.createElement('div',{className:'pend'},'Pending'),note:'Whole folder delete warning'}),
             history&&React.createElement(FileHistoryPopover,{...history,history:Array.from({length:100},(_,i)=>({id:String(i),bindingId:history?.version.bindingId,createdAt:new Date(Date.now()-i*86400000).toISOString(),eventType:'imported',summary:'Imported file',detail:null})),onClose:closeHistory}));};
         let starting; const manager={};
@@ -217,10 +216,11 @@ try {
     assert.equal(await painted.locator('.vlist .vrow').count(),2);
     assert.match(await painted.locator('.vlist').innerText(),/Whole folder delete warning/);
     assert.doesNotMatch(await painted.locator('.vlist .vrow').first().innerText(),/AAC|Atmos|5\.1/);
-    await painted.locator('[data-jfmod-file-pin]').first().click();
-    assert.equal(await page.evaluate(()=>window.pins),1);
-    assert.equal(await painted.locator('.vlist').count(),1);
-    await painted.locator('[data-jfmod-file-history]').first().click();
+    // ds.t12: the rows only choose (History, Keep and Remove are the title More menu's), and the closed field's size is its caption.
+    assert.equal(await painted.locator('.vlist .vrow button').count(),0,'no row actions');
+    assert.match(await painted.locator('.gpk .seg.v .cap').innerText(),/·/);
+    assert.equal(await painted.locator('.gpk .seg.v .val .size2').count(),0);
+    await page.evaluate(()=>{const anchor=document.querySelector('.gpk .seg.v');window.openHistory(anchor);});
     await page.locator('.historyportal').waitFor();
     await page.keyboard.press('ArrowDown');
     assert.equal(await page.locator('.historyportal').evaluate(n=>n.scrollTop>0&&n.contains(document.activeElement)),true);
@@ -229,8 +229,8 @@ try {
     await page.keyboard.press('Escape');
     await page.locator('.historyportal').waitFor({state:'detached'});
     assert.equal(await painted.locator('.vlist').count(),1,'Back closes history alone');
-    assert.equal(await page.evaluate(()=>document.activeElement.hasAttribute('data-jfmod-file-history')),true);
-    await painted.locator('[data-jfmod-file-history]').first().click();
+    assert.equal(await page.evaluate(()=>document.activeElement.matches('.gpk .seg.v')),true,'focus returns to the opener');
+    await page.evaluate(()=>{const anchor=document.querySelector('.gpk .seg.v');window.openHistory(anchor);});
     await page.locator('.historyportal').waitFor();
     await page.evaluate(()=>window.dispatchEvent(new CustomEvent('command',{cancelable:true,detail:{command:'back'}})));
     await page.locator('.historyportal').waitFor({state:'detached'});
