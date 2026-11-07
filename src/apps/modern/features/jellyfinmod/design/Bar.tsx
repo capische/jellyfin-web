@@ -70,12 +70,12 @@ const ComputerNavigation: FC = () => {
     return <>
         <a href='#/home' className='logo focusable' aria-label='Home' /><a href='#/home' className='name'>jellyfinmod</a>
         <span className='nav'>
-            <a href='#/home?tab=1'><span className={favorites ? 'on' : ''}><Icon name='heart' />Favorites</span></a>
+            <a href='#/home?tab=1' data-tip='Favorites'><span className={favorites ? 'on' : ''}><Icon name='heart' /><span className='lbl'>Favorites</span></span></a>
             {primary.map(view => {
                 const viewPath = view.CollectionType === 'tvshows' ? '/tv' : '/movies';
-                return <a key={view.Id} href={appRouter.getRouteUrl(view, { context: view.CollectionType })}>
+                return <a key={view.Id} href={appRouter.getRouteUrl(view, { context: view.CollectionType })} data-tip={view.Name ?? undefined}>
                     <span className={pathname === viewPath || titleLibrary === viewPath ? 'on' : ''}>
-                        <Icon name={view.CollectionType === 'tvshows' ? 'tv' : 'movie'} />{view.Name}</span></a>;
+                        <Icon name={view.CollectionType === 'tvshows' ? 'tv' : 'movie'} /><span className='lbl'>{view.Name}</span></span></a>;
             })}
         </span>
         {(remaining.length > 0 || !!menuLinks?.length) && <span className='menuhost'>
