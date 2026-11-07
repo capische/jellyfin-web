@@ -28,7 +28,7 @@ import { usePlayedAction, type PlayedItem } from '../hooks/usePlayedAction';
 
 const slots = new WeakMap<HTMLElement, Map<string, HTMLDivElement>>();
 /** Keep controller portals and their focus/state alive when head changes structure on a layout switch. */
-const Slot: FC<{ view: HTMLElement; name: string }> = ({ view, name }) => {
+const Slot: FC<{ view: HTMLElement; name: string; className?: string }> = ({ view, name, className }) => {
     let own = slots.get(view);
     if (!own) {
         own = new Map();
@@ -41,7 +41,7 @@ const Slot: FC<{ view: HTMLElement; name: string }> = ({ view, name }) => {
         own.set(name, node);
     }
     const target = node;
-    return <div ref={host => {
+    return <div className={className} ref={host => {
         if (!host || target.parentElement === host) return;
         const old = target.closest('.meta');
         const next = host.closest('.meta');
@@ -338,7 +338,7 @@ const Content: FC<{ view: HTMLElement; type: string; art: string; item?: BaseIte
         {model.meta.filter(fact => !fact.endsAt).map(fact => <span key={fact.text} className={factClass(fact)}>
             {fact.star && <Icon name='star' />}{fact.critic && <RatingIcon className='rm rt' rating={{ source: 'tomatoes_critic', value: parseFloat(fact.text), scale: 'percent' }} />}{fact.parts.length ? <Inline parts={fact.parts} /> : fact.text}</span>)}
         {model.facts.map(fact => <span key={fact.text}>{fact.href ? <a href={fact.href} target='_blank' rel='noreferrer'>{fact.text}</a> : fact.text}</span>)}
-        <Slot view={view} name='ratings' />
+        <Slot view={view} name='ratings' className='jfmod-metaRatings' />
         {environment.type === 'Series' && !!item?.RecursiveItemCount && <span>{item.RecursiveItemCount} episodes · {item.ChildCount} seasons</span>}
         {model.meta.filter(fact => fact.endsAt).map(fact => <span key={fact.text} data-ds-endsat=''><Inline parts={fact.parts} /></span>)}
         {watched && <span className='jfmod-watchedMeta'><Icon name='check' />{watched}</span>}

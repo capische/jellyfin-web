@@ -109,3 +109,6 @@
     min-height: 1em;
     visibility: hidden;
 }
+
+/* The ratings pill's end chevron shows only where the golden title head draws the pill (titleTop.scss, ds.t10). */
+.jfds .jfmod-rchev { display: none; }

@@ -1,5 +1,27 @@
 # Title pages and art ground
 
+**Golden title head (ds.t10): approved by the user 2026-11-07, 18px base, built, not accepted.** Computer layout only (gate 1
+on beta); phone, tablet and TV keep the D288–D295 values below. Reference: workspace `reviews/title-golden/`, its 18px proposal
+and `NOTES.md`. Every length is a token of the golden scale in `design/_golden.scss`, declared on `.jfds.dev-computer:not(.layout-tv)`:
+`--jfmod-scale` (unitless, default 1, the one zoom knob; set it on `.jfds`), `--jfmod-base` = 18px × scale (1.2097 × the 14.88px
+root) and `--jfmod-s<n>` = base × φⁿ for n = −7 … 8 (written `sN` below; `s0` is the base). Plain px, so nothing compounds.
+Code: `design/titleTop.scss` (the ds.t10 block), `Ratings.tsx`, `TitlePage.tsx`.
+
+- Head: padding s1 / s2, font s0 (every em inside the head now reads 18px). Poster s6 wide (2:3; an episode's 16:9 still keeps 27.6%),
+  s-1 corners, shadow 0 s-1 s1 black 61.8%; column s1 from the poster.
+- Title s2, weight 700, line height 1. Directed by s-2 below it, s0 at pitch φ, label and names in full ink, names underlined
+  in currentColor, thickness s-6, offset s-5.
+- Metadata s0 at pitch φ in 76.4% ink: year • runtime • R • Ends at • Watched, the rating a plain word (no box), bullets 61.8%
+  ink with s-1 either side, lines s-2 apart. The watched check s0, s-3 before its words, same ink.
+- Ratings on their own line s0 below the metadata ([ratings.md](ratings.md)), then the action pill s0 below them.
+- Action pill padding s-2 on every side, so Play's round end nests in the pill's (the user, 2026-11-07: "Bad padding" on
+  the proposal's s-2 / s-1). Play s0 words, min width s4, side padding s0, glyph s0 with s-2 before its word, s-2 before the
+  first icon; Play keeps 3.333em / 3em / 85.4% white. Icon buttons s2 round (40 px minimum), glyphs s1.
+- Tracks s0 below the pill ([track-dropdown.md](track-dropdown.md)). Reading s1 below them, at most s8 wide: tagline s0/600 in full
+  ink, s-2 to the overview, s0 at pitch φ in 76.4% ink; facts s0 below, s0 at pitch φ in full ink, s-2 apart, labels 61.8% with
+  s-1 after them; tags still clamp at 3 lines.
+
+
 **Status: approved 2026-11-06, D288–D295, built, not accepted.** Computer first look only; phone/TV specifics and full acceptance follow the user's first look. These values supersede the older presentation notes below.
 
 ## External links (D276/D277)

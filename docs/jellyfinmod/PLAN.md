@@ -2603,3 +2603,16 @@ and syncs the new one at once; emptying the address and clearing the key, then S
 source and its synced indexers (hand-added indexers and grab history stay); an indexer deleted in Prowlarr keeps the 30-day
 window; the Remove Prowlarr button is gone. Plugin `PATCH`/`DELETE Settings/Prowlarr` ([API.md](API.md)); guides
 [buttons and row actions](design/guides/buttons-and-row-actions.md), [settings field](design/guides/settings-field.md).
+
+## ds.t10 — the golden title head (2026-11-07)
+
+**Built (not accepted), gate 1: computer first look on beta (main-items line only).** The user approved the 18px proposal
+(workspace `reviews/title-golden/`): "Let's try 18px one - but keep css easier to zoom out or zoom in the whole design", then
+asked for uniform pill padding ("Bad padding") and for the golden rules to reach every page later. A shared golden scale,
+`design/_golden.scss` (`--jfmod-scale`, `--jfmod-base` = 18px × scale on a computer, `--jfmod-s-7` … `--jfmod-s8`), drives the
+movie/series/season/episode head on a computer: title, Directed by, metadata with bullets and a plain R, the ratings on their own
+card-glass pill with a chevron, the action pill, the track strip, reading and facts. Phone, tablet and TV keep their values.
+Guides: [title pages](design/guides/title-pages.md), [ratings](design/guides/ratings.md),
+[track dropdown](design/guides/track-dropdown.md), [buttons and row actions](design/guides/buttons-and-row-actions.md),
+[media marks](design/guides/media-marks.md), [card glass](design/guides/card-glass.md). Other pages (Home, Search, …) adopt the
+scale only after their own approved designs. Light theme, phone/TV designs, real Chrome and the Codex review are later gates.

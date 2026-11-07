@@ -379,6 +379,9 @@ const fitsOneLine = (row: Element | null, group: HTMLElement) => {
     const box = group.getBoundingClientRect();
     if (box.width > own.width + 0.5) return false;
     if (layoutManager.mobile) return true;
+    // A group on its own line under the words (the computer's golden title head, ds.t10) needs only the row's width.
+    const line = group.closest('.jfmod-metaRatings');
+    if (line && line.getBoundingClientRect().width >= own.width - 0.5) return true;
     return [...row.children].every(child => {
         const rect = child.getBoundingClientRect();
         return !rect.width || !rect.height || (rect.top < box.bottom - 1 && rect.bottom > box.top + 1);

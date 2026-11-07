@@ -1,6 +1,7 @@
 import React, { type FC, type RefObject, type FocusEvent } from 'react';
 import type { usePopup } from '../components/RatingsGroup';
 import RatingIcon from '../components/RatingIcon';
+import { Icon } from './Icon';
 import type { Rating } from '../types/ratings';
 import { formatValue, formatVotes, provenance, SOURCE_LONG, tooltipLines } from '../constants/ratings';
 
@@ -40,6 +41,7 @@ export const DesignRatings: FC<Props> = ({ box, button, popup, standIn, stack, l
             {(standIn ? standInList : inline).map(rating => <span key={rating.source} className={'ritem' + (!tv && href(rating) ? ' jfmod-ratingMarkLink' : '')} data-ds-stale={rating.stale || undefined} data-jfmod-rating={rating.source}>
                 <span className='mk0'><RatingIcon className={'rm' + (rating.source.startsWith('tomatoes') ? ' rt' : '')} rating={rating} /></span><b className={rating.scale === 'percent' ? 'pc' : undefined}>{formatValue(rating)}</b>
             </span>)}
+            {!tv && <Icon name='down' className='jfmod-rchev' />}
         </button>
         <span className='rcentre'><div id={id} aria-hidden={!popup.open || undefined} className={'pmenu mn from-top rmenu' + (popup.open ? ' open' : '')} data-jfmod-ratings-popup='' role='group' aria-label='Ratings sources'>
             {enabled.map(rating => {

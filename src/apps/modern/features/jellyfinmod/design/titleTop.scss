@@ -157,3 +157,302 @@
 }
 
 .jfds .jfmod-titleTop .jfmod-titleTags b { font-weight: 400; }
+
+/* ds.t10, the golden title head (the user, 2026-11-07, 18px base; mockup reviews/title-golden, its 18px proposal).
+   Computer only: phone, tablet and TV keep the values above. Every length is a _golden.scss token (base × φⁿ), so the one
+   --jfmod-scale on `.jfds` zooms the head together. Named exceptions: Play 3.333em high, 3em corners, white 85.4% (of its
+   own font); the pill's 3em corners; 40 px icon targets; the 2:3 poster; the ratings popup's 1.236em words. */
+.jfds.dev-computer:not(.layout-tv) .jfmod-titleTop .jfmod-titleHead {
+    --jfmod-head-muted: rgba(255, 255, 255, 0.764);
+
+    padding: var(--jfmod-s1) var(--jfmod-s2);
+    font-size: var(--jfmod-s0);
+
+    .poster { filter: drop-shadow(0 var(--jfmod-s-1) var(--jfmod-s1) rgba(0, 0, 0, 0.618)); }
+
+    .poster:not(.wide) { width: var(--jfmod-s6); }
+
+    .poster .post,
+    .poster img { border-radius: var(--jfmod-s-1); }
+
+    .col { margin-left: var(--jfmod-s1); }
+
+    .itemName {
+        font-size: var(--jfmod-s2);
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    .by {
+        margin-top: var(--jfmod-s-2);
+        font-size: var(--jfmod-s0);
+        line-height: 1.618;
+        color: var(--text);
+    }
+
+    .jfmod-byLabel { opacity: 1; }
+
+    .by u {
+        text-decoration-color: currentColor;
+        text-decoration-thickness: var(--jfmod-s-6);
+        text-underline-offset: var(--jfmod-s-5);
+    }
+
+    /* Plain words with bullets between them; the items' margins are the gaps (no flex gap). */
+    .meta {
+        margin-top: 0;
+        font-size: var(--jfmod-s0);
+        color: var(--jfmod-head-muted);
+    }
+
+    .meta > * {
+        margin: var(--jfmod-s-2) var(--jfmod-s-1) 0 0;
+        line-height: 1.618;
+    }
+
+    .meta > * + :not(.jfmod-metaRatings)::before {
+        content: '\2022';
+        margin-right: var(--jfmod-s-1);
+        opacity: 0.809;
+    }
+
+    .meta .badge {
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        font-size: 1em;
+    }
+
+    .meta .jfmod-watchedMeta { opacity: 1; }
+
+    .meta .jfmod-watchedMeta svg {
+        width: var(--jfmod-s0);
+        height: var(--jfmod-s0);
+        margin-right: var(--jfmod-s-3);
+    }
+
+    /* The ratings take their own line under the metadata: a card-glass pill, each mark beside its value, a chevron last. */
+    .meta > .jfmod-metaRatings {
+        order: 1;
+        flex-basis: 100%;
+        margin: 0;
+    }
+
+    .jfmod-metaRatings .rgwrap {
+        display: inline-block;
+        margin-top: var(--jfmod-s0);
+        vertical-align: top;
+    }
+
+    .rgwrap .rgroup {
+        box-sizing: border-box;
+        height: var(--jfmod-s2);
+        padding: 0 var(--jfmod-s0);
+        margin: 0;
+        border-radius: var(--jfmod-s2);
+        background: var(--card-glass-bg);
+        backdrop-filter: var(--card-glass-filter);
+        color: var(--text);
+        line-height: 1;
+    }
+
+    .rgwrap .rgroup.foc { background: rgba(255, 255, 255, 0.18); }
+
+    /* One highlight: the whole pill lights while its popup shows. */
+    .rgwrap.on .rgroup { background: var(--tint); }
+
+    @media (hover: hover) {
+        .rgwrap:hover .rgroup { background: var(--tint); }
+    }
+
+    .rgwrap .ritem {
+        flex-direction: row;
+        padding: 0;
+        margin: 0;
+    }
+
+    .rgwrap .ritem + .ritem { margin-left: var(--jfmod-s0); }
+
+    .rgwrap .ritem .mk0 {
+        align-items: center;
+        height: var(--jfmod-s0);
+        margin: 0 var(--jfmod-s-2) 0 0;
+    }
+
+    .rgwrap .ritem .rm { height: var(--jfmod-s0); }
+
+    .rgwrap .ritem b {
+        font-size: var(--jfmod-s0);
+        line-height: 1;
+    }
+
+    .rgwrap .ritem b.pc { padding-left: 0; }
+
+    .rgwrap .jfmod-rchev {
+        display: block;
+        flex: none;
+        width: var(--jfmod-s0);
+        height: var(--jfmod-s0);
+        margin-left: var(--jfmod-s0);
+        opacity: 0.764;
+    }
+
+    /* The popup hangs from the pill itself, at least as wide. */
+    .rgwrap .rcentre {
+        right: 0;
+        left: 0;
+    }
+
+    .rgwrap .rcentre > .pmenu.rmenu { margin-top: var(--jfmod-s-2); }
+
+    /* Uniform padding, so Play's round end and the pill's end are concentric (the user, 2026-11-07: "Bad padding"). */
+    .actbar {
+        margin-top: var(--jfmod-s0);
+        padding: var(--jfmod-s-2);
+    }
+
+    .actbar .play {
+        min-width: var(--jfmod-s4);
+        padding: 0 var(--jfmod-s0);
+        margin-right: var(--jfmod-s-2);
+        font-size: var(--jfmod-s0);
+        line-height: 1;
+    }
+
+    .actbar .play svg {
+        width: var(--jfmod-s0);
+        height: var(--jfmod-s0);
+        margin-right: var(--jfmod-s-2);
+    }
+
+    .actbar .dbtn {
+        width: var(--jfmod-s2);
+        height: var(--jfmod-s2);
+        min-width: 40px;
+        min-height: 40px;
+    }
+
+    .actbar .dbtn svg {
+        width: var(--jfmod-s1);
+        height: var(--jfmod-s1);
+    }
+
+    .gpk {
+        margin-top: var(--jfmod-s0);
+        line-height: 1.618;
+    }
+
+    .gpk .seg {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-height: var(--jfmod-s3);
+        padding: var(--jfmod-s-1) var(--jfmod-s0);
+        border-radius: var(--jfmod-s2);
+    }
+
+    .gpk:not(.stacked) .seg { margin-left: var(--jfmod-s-2); }
+
+    .gpk:not(.stacked) .seg.v { margin-left: 0; }
+
+    .gpk:not(.stacked) .seg.a { width: var(--jfmod-s6); }
+
+    .gpk:not(.stacked) .seg.s { width: var(--jfmod-s5); }
+
+    .gpk.stacked .seg { margin-top: var(--jfmod-s-2); }
+
+    .gpk.stacked .seg.v { margin-top: 0; }
+
+    .gpk .cap {
+        font-size: var(--jfmod-s-1);
+        line-height: 1.618;
+        letter-spacing: var(--jfmod-s-7);
+        opacity: 0.618;
+    }
+
+    .gpk .val {
+        font-size: var(--jfmod-s0);
+        line-height: 1.618;
+    }
+
+    .gpk .val .r { margin-right: var(--jfmod-s-1); }
+
+    .gpk .val .marks { font-size: var(--jfmod-s-1); }
+
+    .gpk .val .marks .mk {
+        margin-right: var(--jfmod-s-3);
+        font-size: 1em;
+        letter-spacing: 0;
+    }
+
+    /* The whole-mark drop (D242) measured on the marks' own size. */
+    .gpk .seg.v .val .marks { max-height: 1.2em; }
+
+    .gpk .seg.v .val .marks::before { height: 1.2em; }
+
+    .gpk .val .size2 {
+        padding-left: var(--jfmod-s-1);
+        font-size: var(--jfmod-s-1);
+        font-weight: 600;
+        letter-spacing: 0;
+    }
+
+    .gpk .val .chev {
+        width: var(--jfmod-s0);
+        height: var(--jfmod-s0);
+        margin-left: var(--jfmod-s-1);
+    }
+
+    .gpk .val .chev.end { margin-left: auto; }
+
+    .gpk .val .atm {
+        margin-right: var(--jfmod-s-1);
+        font-size: var(--jfmod-s-1);
+        letter-spacing: var(--jfmod-s-7);
+    }
+
+    .gpk .val .atm svg { margin-right: var(--jfmod-s-3); }
+
+    .gpk .val .atm .n { margin-left: var(--jfmod-s-2); }
+
+    .jfmod-titleReading {
+        max-width: var(--jfmod-s8);
+        margin-top: var(--jfmod-s1);
+    }
+
+    .jfmod-tagline {
+        font-size: var(--jfmod-s0);
+        color: var(--text);
+    }
+
+    .jfmod-titleText .overview {
+        font-size: var(--jfmod-s0);
+        line-height: 1.618;
+        color: var(--jfmod-head-muted);
+    }
+
+    .jfmod-tagline + .overview { margin-top: var(--jfmod-s-2); }
+
+    .jfmod-titleFacts {
+        margin-top: var(--jfmod-s0);
+        color: var(--text);
+    }
+
+    .jfmod-titleFacts .tags,
+    .jfmod-titleFacts .links { font-size: var(--jfmod-s0); }
+
+    .jfmod-titleFacts .tags + .tags { margin-top: var(--jfmod-s-2); }
+
+    .jfmod-titleFacts .links { margin-top: var(--jfmod-s-1); }
+
+    .jfmod-titleFactLabel { margin-right: var(--jfmod-s-1); }
+}
+
+.jfds.dev-computer:not(.layout-tv)[data-theme='light'] .jfmod-titleTop .jfmod-titleHead {
+    --jfmod-head-muted: var(--text);
+
+    .poster { filter: drop-shadow(0 var(--jfmod-s-1) var(--jfmod-s1) rgba(0, 0, 0, 0.3)); }
+}
+
+/* A pointer click that opened a source leaves the pill's own glass, not a lit pill (ratings.md, one highlight). */
+.ds-pointer .jfds.dev-computer:not(.layout-tv) .jfmod-titleTop .jfmod-titleHead .rgwrap:not(.on) .rgroup.foc { background: var(--card-glass-bg); }

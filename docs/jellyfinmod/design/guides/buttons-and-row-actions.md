@@ -1,5 +1,10 @@
 # Buttons and row actions
 
+**Golden action pill (ds.t10): approved by the user 2026-11-07, 18px base, built, not accepted.** Title head, computer layout only:
+values in [title-pages.md](title-pages.md) (Play s0 words and min width s4, icon buttons s2 with s1 glyphs, pill padding s-2 on every side so the ends nest;
+Play's 3.333em / 3em / 85.4% and the 40 px minimum kept). Phone, tablet and TV keep the values below.
+
+
 **Status: approved 2026-11-06, D288–D295, built, not accepted.** Computer first look only; phone/TV specifics and full acceptance follow the user's first look. These values supersede the older presentation notes below.
 
 **Prowlarr disconnect (no Remove Prowlarr button):** approved by the user 2026-11-07 ("Approve", ds.t9); built, not accepted, gate 1 on beta.

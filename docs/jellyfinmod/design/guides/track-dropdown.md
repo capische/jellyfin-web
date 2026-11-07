@@ -1,5 +1,14 @@
 # Track strip and dropdown (the custom dropdown)
 
+**Golden closed strip (ds.t10): approved by the user 2026-11-07, 18px base, built, not accepted.** Title head, computer layout only;
+phone, tablet and TV keep the values below. Tokens `--jfmod-s<n>` from `design/_golden.scss` ([title-pages.md](title-pages.md)).
+Strip s0 below the action pill, fields s-2 apart; each field at least s3 high, padding s-1 / s0, s2 corners, caption over value,
+centred. Audio s6 wide, Subtitles s5 (their ratio is φ), Video the rest. Caption s-1 at pitch φ, tracking s-7, 61.8%; value s0 at
+pitch φ; s-1 between the value's parts; Video's marks s-1, s-3 apart, no tracking; size s-1/600; chevron s0. The Atmos run s-1 with
+s-7 tracking, glyph still 0.82em with s-3 after it, channels s-2 after the format. Open lists read the head's 18px base. The stack
+test is unchanged (43.46 of the strip's em).
+
+
 **A stacked strip's lists are dropdowns** (the user, 2026-11-07: "It supposed to be dropdown"; first look approved 2026-11-07): on the
 computer and the TV every open list hangs under its own field over the page, stacked or not (the open field takes `z-index: 7`, since
 each glass pill is its own stacking context). Only the phone opens it in the card (D197), now right under its own field: the list

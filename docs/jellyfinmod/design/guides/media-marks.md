@@ -1,5 +1,10 @@
 # Media marks
 
+**Golden closed Video value (ds.t10): approved by the user 2026-11-07, built, not accepted.** On a computer title head the closed
+Video marks are s-1 (base × φ⁻¹, 11.1 px at the 18px base), s-3 apart, without tracking; the Atmos run s-1. See
+[track-dropdown.md](track-dropdown.md). Everywhere else the sizes below stay.
+
+
 **dsD (2026-11-04), built, not accepted:** the title pickers, pending entry and download block now draw the source
 SVG/chip markup with `design/MediaMarks.tsx` (`mk/codec/hdr/tag/join/ch/chs`). Existing stream/release parsers supply values;
 Video and pending receive only video facts, Audio receives its own stream facts. Release-picker/admin renderers remain in place.
