@@ -2528,3 +2528,11 @@ Guides: [title pages](design/guides/title-pages.md), [ratings](design/guides/rat
 [track dropdown](design/guides/track-dropdown.md), [buttons and row actions](design/guides/buttons-and-row-actions.md),
 [media marks](design/guides/media-marks.md), [card glass](design/guides/card-glass.md). Other pages (Home, Search, …) adopt the
 scale only after their own approved designs. Light theme, phone/TV designs, real Chrome and the Codex review are later gates.
+
+## ds.t11 — the card foot pill without Download (2026-11-07)
+
+**Built (not accepted), gate 1: computer first look on beta (main-items line only).** The user, on a hovered Continue Watching
+card: "Remove Get Another Release from the toolbar, too many download icons". The card foot pill is Watched, Favourite, More on
+every card and on the title pages' season and episode cards; Download stays on the centre disc of a card with no file, and
+Download / Get Another Quality stay in the card's More menu (a title with no Jellyfin item gets Download at the top of its own
+menu). Guide: [poster card](design/guides/poster-card.md). Light theme, real Chrome and the Codex review are later gates.
