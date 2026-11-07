@@ -70,7 +70,7 @@ foot pill, 2em each ([poster-card.md](poster-card.md)).
 | --- | --- | --- |
 | main | blue, the primary `#00a4dc` | the one main action of a view: Save, Add Profile, Continue, Download |
 | other | grey | everything else: Cancel, Add Predefined Profiles, Cancel Download, View Queue as a button |
-| destroy | red, the error `#c62828` | Remove, Search Again after a failure, Replace in the picker |
+| destroy | red, the error `#c62828` | Remove, Remove Prowlarr (it removes the connection and its indexers; the key's red bin removes only the key), Search Again after a failure, Replace in the picker |
 
 Labels in **Title Case** (a short article, conjunction or preposition stays lower case unless first or last: *Add from
 TMDB*, *Turn Grabbing On*); product names keep their spelling. Help, status lines, field labels and notices are sentence case.
@@ -98,6 +98,22 @@ TMDB*, *Turn Grabbing On*); product names keep their spelling. Help, status line
   (user, 2026-10-29: the file chooser's 1.75em icons with an invisible 2.5em circle let the tilted pin fill its tint; D107).
 - On the TV each icon is a focus stop with the white double focus ring; the arrows walk a row's icons left to right.
   Indicators (the download mark, the file-state marks) are **not** buttons and take none of this.
+
+## A status beside its action
+
+**Status:** approved by the user 2026-11-07 (ds.t9, the Ratings and Prowlarr mockup `reviews/ratings-settings/` in the workspace,
+and "the sync line moves next to Sync Now"); built, not accepted. Code: `settings/settingsWidgets.tsx` (`useSavedNote`,
+`SavedNote`), `settings.scss` (`.jfmod-savemeta`, `.jfmod-saved`).
+
+- A button's outcome or state is a short muted line **right after that button**, not a notice at the top of the card: the
+  secondary text at 0.9em (`.jfmod-savemeta`), sentence case.
+- **Saved.** beside Save, in every settings section with a Save (and Prowlarr's card): a small green check (1.236em,
+  `#81c784`, light `#2e7d32`) then the save's own words ("Saved.", or "Saved." and what to do next). It goes at the next edit in
+  that card (a typed value, a switch, a ticked box, a picked option, a row's move). A section that saves as it changes and has
+  no Save (Interface) keeps its notice.
+- The sync line beside **Sync Now**: "7 synced indexer(s) · last sync …", updated after a sync; on a narrow window it wraps
+  under the buttons.
+- Errors that need action (a refused save, a conflict with its Reload) stay where they are, at the top.
 
 ## A disclosure in the group title's look
 

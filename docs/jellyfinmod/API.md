@@ -454,7 +454,9 @@ series and records a pass as before; its answer adds `source`. `POST /JellyfinMo
 (administrators) is a read-only diagnostic: it reads Breaking Bad and its first season through Jellyfin's connection
 whatever token is saved, records nothing, and answers
 `{"ok":true,"code":"ok","message":"Jellyfin's TMDb connection answered: 5 seasons, 7 episodes in season 1.","source":"jellyfin",…}`,
-or `not_available` when the server has no usable connection. Any other `source` is 400 `invalid_source`. Each call through
+or `not_available` when the server has no usable connection. Any other `source` is 400 `invalid_source`. An optional body
+`{"apiKey":"…"}` (ds.t9) tests that typed read access token instead of the saved one and records nothing ("TMDB accepted this
+token. Save it to use it for discovery." / "TMDB refused this token. Check it was copied completely."). Each call through
 Jellyfin's connection logs `TMDB request <path> through Jellyfin's TMDb connection`.
 
 ## Acquisition (Phase 4)
@@ -490,6 +492,12 @@ The client Test reads `session-get` only and never adds a torrent.
 `seedProtectionMatchesClient` and the quality vocabulary (`source-resolution` ids such as
 `webdl-1080p`). `PATCH` with `enabled: true` answers 409 `acquisition_not_ready` with the blockers
 until a verified indexer, a verified enabled client and a default profile exist.
+
+`POST /JellyfinMod/Settings/Prowlarr/{id}/Test` takes an optional body `{"apiKey":"…","baseUrl":"…"}` (ds.t9): each value
+given is used in place of the saved one (an address is validated as on save, 400 `invalid_prowlarr_url`), nothing is stored,
+and a typed key's refusal reads "Prowlarr refused this key. Copy it again from its General settings."; a pass adds "Save it to
+sync with it.". `POST /JellyfinMod/Settings/Prowlarr/Test` tests a source not yet added and needs both (400
+`prowlarr_test_incomplete`). No body tests the saved source as before.
 
 `POST` and `PATCH /JellyfinMod/Settings/Prowlarr` take `name` as optional (user, 2026-10-19; the settings form has no Name
 field, and there is one source): a new source without a name is called `Prowlarr`, an edit without one keeps the stored name,
@@ -1172,6 +1180,10 @@ migration `PhaseNineRatingsIdentity`. One value per source:
   call made — `budget_spent` and `breaker_open`; `database_busy` when the database stayed busy past the fetcher's bound
   (nothing was recorded; try again). A refused key may be tested (that is how a new one is proven); a pass
   marks the key verified only if the settings did not change during the call.
+  An optional body `{"apiKey":"…"}` (ds.t9) tests that typed key instead: the call still counts in the budget, but nothing
+  else is recorded (no verification, blocker or breaker change) and a pass starts no fetching; its words are "MDBList accepted
+  this key. Save it to start fetching ratings." / "MDBList refused this key. Check it was copied completely.". No body tests
+  the saved key as before.
 - `GET /JellyfinMod/Ratings/Status` — `{enabled, apiKeyConfigured, blocker, breaker:{open,until,reason,consecutiveFailures},
   budget:{day,used,limit}, lastRun:{startedAt,finishedAt,fetched,failed,stopReason}, entries, entriesWithoutRatings, queued,
   running}`. `running` is `null`, or the pass in progress: `{"kind":"daily"|"arrivals"|"setup"|"startup","startedAt":"…",
