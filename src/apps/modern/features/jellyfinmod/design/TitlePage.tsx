@@ -152,13 +152,13 @@ const PosterActions: FC<{ card: TitleCard; view: HTMLElement }> = ({ card, view 
     const primary = card.commands.find(command => ['play', 'cloud'].includes(command.icon));
     const playCommand = !card.node.matches('[data-jfmod-placeholder], [data-jfmod-nofile], [data-jfmod-empty]') && !!card.node.dataset.id
         && ['Movie', 'Series', 'Season', 'Episode'].includes(card.node.dataset.type ?? '');
-    // The mockup's pill keeps Download beside the disc that offers the same; Play stays only on the disc.
-    const pillOrder = ['check', 'heart', 'cloud'];
+    // Watched, Favourite, More (the user, 2026-11-07): Play and Download stay on the disc, and Download is in More's menu.
+    const pillOrder = ['check', 'heart'];
     const pillRank = (command: TitleCommand) => {
         const rank = pillOrder.indexOf(command.icon);
         return rank < 0 ? pillOrder.length : rank;
     };
-    const menuCommands = card.commands.filter(command => command !== primary || command.icon === 'cloud').sort((a, b) => pillRank(a) - pillRank(b));
+    const menuCommands = card.commands.filter(command => command !== primary && command.icon !== 'cloud').sort((a, b) => pillRank(a) - pillRank(b));
     return <>
         {(primary || playCommand) && <button type='button' className={'disc hov glassy' + (device === 'tv' ? '' : ' focusable')} tabIndex={device === 'tv' ? -1 : 0} data-ds-primary-action={primary ? primaryAction(primary) : 'play'} aria-label={primary?.label || 'Play ' + card.title} onClick={event => {
             event.stopPropagation();

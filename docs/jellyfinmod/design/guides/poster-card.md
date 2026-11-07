@@ -1,5 +1,7 @@
 # Poster card
 
+**Foot pill without Download (ds.t11), user 2026-11-07 ("too many download icons"), built, not accepted:** the foot pill is Watched, Favourite, More on every card that draws it (`Cell`, the title pages' cards). Download stays the disc of a card with no file; Download or Get Another Quality is in More: a native item's menu through `moreMenuItem`'s card items, a missing title's own menu (Download, More Info, View Queue). The pill still hugs its buttons and centres. The corner mark is unchanged. Code: `design/Cell.tsx`, `design/useCellModel.ts`, `design/TitlePage.tsx`.
+
 **D284, approved by the user, 2026-11-06; built, live acceptance pending:** Continue Watching keeps a placeholder next episode (`IsPlaceHolder: true`) as the existing file-less episode card: Not Downloaded mark, Get a Release action, no Play and no watched-progress bar; the Home hero skips placeholders.
 
 **Row motion — approved 2026-11-06, D290; computer Continue Watching built, not accepted.** After a card's Watched or
@@ -20,7 +22,7 @@ proposal status). Physical webOS performance and the remaining layouts await acc
 
 ## Watched date and Download (D288–D295)
 
-The foot pill's cloud action/tip is **Download**; **Get Another Quality** is unchanged. On a computer its played check
+The card's Download action reads **Download** (the disc, More); **Get Another Quality** is unchanged. Since ds.t11 (above) the foot pill has no cloud. On a computer its played check
 shows the [shared design tip](info-tip.md), `data-tip` and matching `aria-label`, never native `title`:
 `Watched <medium locale date>`, adding ` · N times` from 2 plays. Read the item's own `UserData.LastPlayedDate` and
 `PlayCount`; no date says Watched, unplayed says Mark Played. No inferred date from a series' episodes.
@@ -82,7 +84,7 @@ Base unit 1em (computer 14.88 px, phone 14.4 px, TV 20 px). φ steps named; exce
 | Dim | black 23.6 % (φ⁻³), on the overlay's fill, with the ring. The overlay's own opacity stays 1: a parent fading its opacity cuts a child's blur off from the poster |
 | Disc | 3.236em (2φ, 48 px at a computer), card glass, glyph 2em; hidden at rest, so a grid pays for no blur until hovered |
 | Disc under the pointer | scale 1.146 (55 px), fill white 85.4 % with a `#101010` glyph, light theme `rgba(16,16,16,.854)` with a white glyph; 0.236 s; press scale 1.09 on 0.146 s; no ring; pointer cursor |
-| Foot pill | Watched, Favourite, Download, More; card glass, hugs its buttons, centred 0.382em above the foot, radius 1.618em, padding 0.236em on every side (even, the user 2026-11-07; was 0.09em by 0.236em); buttons 2em round, glyph 1.236em, hover tint white 23.6 %, light black 14.6 % |
+| Foot pill | Watched, Favourite, More (ds.t11, user 2026-11-07; Download is on the disc and in More); card glass, hugs its buttons, centred 0.382em above the foot, radius 1.618em, padding 0.236em on every side (even, the user 2026-11-07; was 0.09em by 0.236em); buttons 2em round, glyph 1.236em, hover tint white 23.6 %, light black 14.6 % |
 | Phone | no hover, no ring, no overlay buttons: a tap opens the title |
 | TV | the ring at 0.236em, solid disc (black 66 %) from `::after`, both instant; press 0.96 at once; no pill, no dim, no blur |
 | Missing art | keeps the ratio box and upstream's fallback icon |
@@ -106,7 +108,7 @@ settings for that view: 2:3 shape, title and year always on, no card layout.
 
 **The ring needs room:** the ring is drawn outside the poster, so a card must not contain paint. `cardDesign.scss` takes `paint` out of upstream's `.card:not(.show-animation)` containment; with it, a row's cards lose the ring's left side (the user's report, 2026-11-04).
 
-**Marks are no controls (ds.t6, built, not accepted):** a download disc that opens nothing and the Not Downloaded mark keep the default arrow on a card whose click opens its page. The title pages' season cards draw the same four-button pill as the grid: Download sits in the pill and on the disc, as the mockup draws it.
+**Marks are no controls (ds.t6, built, not accepted):** a download disc that opens nothing and the Not Downloaded mark keep the default arrow on a card whose click opens its page. The title pages' season cards draw the same pill as the grid: since ds.t11 Watched, Favourite, More, with Download on the disc and in More.
 
 **Icon sizes:** the foot pill's glyphs are 1.236em (18.4 px on a computer) in 2em buttons, the disc's 2em. Each rule also sets `font-size: 1em` on the svg, because MUI's SvgIcon sets 1.5rem and an em width would count from that (the user's report, 2026-11-04).
 
