@@ -136,15 +136,19 @@ export const useCellModel = (row: BrowseRow, options: CardOptions, alwaysShowCou
             event.stopPropagation();
             // Native item menus need an item id. Entries can open their own page (including its management actions),
             // and an in-flight entry can open the queue, without pretending Played/Favourite can be saved on it.
-            void actionsheet.show({ positionTo: event.currentTarget, items: [
+            // Download is here rather than in the pill, as a native card's menu carries it (the user, 2026-11-07).
+            const opener = event.currentTarget;
+            void actionsheet.show({ positionTo: opener, items: [
+                ...(entryGet ? [{ id: 'get', name: 'Download', icon: 'cloud_download' }] : []),
                 { id: 'info', name: 'More Info', icon: 'info' },
                 ...(queue ? [{ id: 'queue', name: 'View Queue', icon: 'download' }] : [])
             ] }).then(id => {
+                if (id === 'get') entryGet?.open(opener);
                 if (id === 'info') open();
                 if (id === 'queue') window.location.hash = '#' + QUEUE_ROUTE;
             }, () => undefined);
         }
     };
     const rating = visibleRating(row.rating);
-    return { action, releaseLabel: release.label, prepareRelease: release.prepare, countdown, searching, flightMenu, empty, item, entry, get, pending, noFile, queue, shape, source, failedSource, setFailedSource, title, name, second, progress, count, data, open, download, toggle, menu, rating, isPlayed: shown.played, isFavorite: shown.favorite };
+    return { action, prepareRelease: release.prepare, countdown, searching, flightMenu, empty, item, entry, get, pending, noFile, queue, shape, source, failedSource, setFailedSource, title, name, second, progress, count, data, open, download, toggle, menu, rating, isPlayed: shown.played, isFavorite: shown.favorite };
 };

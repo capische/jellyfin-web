@@ -55,16 +55,16 @@ const CellMarks: FC<{ model: CellModel }> = ({ model }) => {
     </>;
 };
 
+/** Watched, Favourite, More: Download lives on the disc of a card with no file and in More (the user, 2026-11-07). */
 const CellMenu: FC<{ model: CellModel }> = ({ model }) => {
     const tv = useContext(DesignContext) === 'tv';
     const controlClass = 'pi' + (tv ? '' : ' focusable');
-    const { item, entry, pending, get, download, toggle, menu, releaseLabel, isPlayed, isFavorite } = model;
+    const { item, entry, pending, toggle, menu, isPlayed, isFavorite } = model;
     return <span className='hmenu glassy jfmod-cardActions'>
         {item && itemHelper.canMarkPlayed(item) && <span className={controlClass + ' itemAction'} data-action={ItemAction.None} role='button' tabIndex={tv ? -1 : 0} onKeyDown={activate}
             data-tip={watchedLabel({ ...item.UserData, Played: isPlayed })} aria-label={watchedLabel({ ...item.UserData, Played: isPlayed })} data-ds-action='played' aria-pressed={isPlayed} onClick={event => { void toggle(event, 'played'); }}><Icon name='check' /></span>}
         {item && itemHelper.canRate(item) && <span className={controlClass + ' itemAction'} data-action={ItemAction.None} role='button' tabIndex={tv ? -1 : 0} onKeyDown={activate}
             data-tip={isFavorite ? 'Favorite' : 'Add to Favorites'} aria-label={isFavorite ? 'Favorite' : 'Add to Favorites'} data-ds-action='favorite' aria-pressed={isFavorite} onClick={event => { void toggle(event, 'favorite'); }}><Icon name='heart' /></span>}
-        {get && <span className={controlClass + ' itemAction'} data-action={ItemAction.None} role='button' tabIndex={tv ? -1 : 0} onKeyDown={activate} data-tip={releaseLabel} aria-label={releaseLabel} data-ds-action='get' onClick={download}><Icon name='cloud' /></span>}
         {(item || entry && !pending) && <span className={`${controlClass}${item ? ' itemAction' : ''}`} role='button' tabIndex={tv ? -1 : 0}
             onKeyDown={activate} data-tip='More' aria-label='More' data-action={item ? ItemAction.Menu : undefined} onClick={menu}><Icon name='more' /></span>}
     </span>;
