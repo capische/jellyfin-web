@@ -320,31 +320,62 @@ async function checkNoOldControls(page, layout, label) {
         !text.includes('Automatic removal is off.') && !/\bSearch now\b/.test(text) && old === 0, `old ${old}`);
 }
 
-/** The one-file Video row: history, pin and cross at its end (admin), history only (user). */
-const ROW_GREY = 'rgba(255, 255, 255, 0.7)';
-const ROW_PRIMARY = 'rgb(0, 164, 220)';
-const ROW_RED = 'rgb(198, 40, 40)';
-/** The pin's tooltips the page can show (implementation choice 6): file, episode and title Keep, and the read-only kinds. */
-const PIN_TITLES = { false: ['Keep', 'Keep the Episode', 'Keep the Whole Series', 'Keep the Movie'],
-    true: ['Stop Keeping', 'Stop Keeping the Episode', 'This episode is kept', 'Kept with the whole series', 'Kept indefinitely'] };
-
 /**
- * A row action's expected colour, tooltip and accessible name at rest, from its icon and pressed state (user rules,
- * 2026-10-08): grey, the cross red, the pin primary while kept; every name ends with its file. Null for an unknown action.
+ * ds.t12 (the user, 2026-11-07): the Video rows only choose; File History, Keep and Remove act on the selected file from the
+ * title's More menu, a Selected Version group at its end (`data-id` jfmod-version-history|keep|remove).
  */
-function rowActionExpectation(button) {
-    const file = / (the \d+p file)$/.exec(button.label ?? '')?.[1];
-    if (!file) return null;
-    if (button.icon === 'history') return { color: ROW_GREY, title: 'History', label: `History of ${file}` };
-    if (button.icon === 'close') return { color: ROW_RED, title: 'Remove This Version', label: `Remove ${file}` };
-    if (button.icon !== 'push_pin') return null;
-    const kept = button.pressed === 'true';
-    // The tooltip must be one the page offers for this state; the name then follows from it exactly.
-    if (!PIN_TITLES[kept].includes(button.title)) return { color: kept ? ROW_PRIMARY : ROW_GREY, title: PIN_TITLES[kept].join(' | '), label: '?' };
-    const fileLevel = { Keep: `Keep ${file}`, 'Stop Keeping': `Stop keeping ${file}` };
-    const label = fileLevel[button.title] ?? `${button.title}, on ${file}`;
-    return { color: kept ? ROW_PRIMARY : ROW_GREY, title: button.title, label };
+const MORE = `${PAGE} [data-ds-command~=btnMoreCommands]:not(.hide)`;
+const VERSION_ENTRY = action => `[data-ds-actionsheet] .mi[data-id="jfmod-version-${action}"]`;
+
+/** Opens the title's More menu the layout's way (tap, or focus and Enter); false when it does not open. */
+async function openMore(page, layout) {
+    const more = page.locator(MORE).first();
+    if (!await more.count()) return false;
+    if (isMobile(layout)) await more.tap({ timeout: 5000 });
+    else { await more.focus(); await page.keyboard.press('Enter'); }
+    const opened = await page.locator('[data-ds-actionsheet]').first().waitFor({ state: 'visible', timeout: 8000 }).then(() => true, () => false);
+    if (opened) await page.waitForTimeout(300);
+    return opened;
 }
+
+/** The Selected Version group as drawn: its heading and its entries in order, with their names and refused state. */
+const versionGroup = page => page.evaluate(() => ({
+    heading: document.querySelector('[data-ds-actionsheet] .jfmod-menuSection')?.textContent ?? '',
+    entries: [...document.querySelectorAll('[data-ds-actionsheet] .mi[data-id^="jfmod-version-"]')].map(node => ({
+        id: node.getAttribute('data-id').replace('jfmod-version-', ''), name: node.textContent.trim(), disabled: node.getAttribute('aria-disabled') === 'true' }))
+}));
+
+/** Chooses a file by its row (a source id as its row carries it); choosing closes the list. */
+async function chooseFile(page, layout, sourceId) {
+    if (!await openFileList(page, layout)) return false;
+    const row = page.locator(`${PAGE} .vlist .vrow[data-jfmod-media-source-id="${sourceId}"]`).first();
+    if (isMobile(layout)) await row.tap({ timeout: 5000 });
+    else { await row.focus(); await page.keyboard.press('Enter'); }
+    await page.waitForTimeout(500);
+    return true;
+}
+
+/** Runs one Selected Version entry from More, for the file chosen first when `sourceId` is given. False when it is not offered. */
+async function versionAction(page, layout, action, sourceId) {
+    if (sourceId && !await chooseFile(page, layout, sourceId)) return false;
+    if (!await openMore(page, layout)) return false;
+    const entry = page.locator(VERSION_ENTRY(action)).first();
+    if (!await entry.count()) { await page.keyboard.press('Escape'); await page.waitForTimeout(500); return false; }
+    if (isMobile(layout)) await entry.tap({ timeout: 5000 });
+    else { await entry.focus(); await page.keyboard.press('Enter'); }
+    return true;
+}
+
+/** The binding of the file the page's stock Version select has selected, from the plugin's entry. */
+const selectedBinding = async page => {
+    const { entryId, source } = await page.evaluate(sel => ({ entryId: document.querySelector(`${sel} [data-jfmod-entry-id]`)?.getAttribute('data-jfmod-entry-id'),
+        source: document.querySelector(`${sel} .selectSource`)?.value ?? '' }), PAGE);
+    if (!entryId) return null;
+    const detail = await apiGet(page, `JellyfinMod/Entries/${entryId}`);
+    const versions = [...detail.versions ?? [], ...(detail.episodes ?? []).flatMap(episode => episode.versions ?? [])];
+    const chosen = versions.find(version => norm(version.mediaSourceId) === norm(source)) ?? versions.find(version => version.isDefault) ?? versions[0];
+    return chosen?.bindingId ?? null;
+};
 
 /** Waits until an element's box has stopped moving (upstream's dialog scales up from 0.5; the file list slides open). */
 async function settled(page, selector) {
@@ -388,63 +419,34 @@ async function checkOneFile(page, layout, admin) {
     if (!await openFileList(page, layout)) { record(layout, 'one-file episode: the dropdown opens its one file', false); return; }
     await page.mouse.move(0, 0);
     await page.waitForTimeout(300);
-    const icons = await page.evaluate(sel => {
-        const rows = document.querySelectorAll(`${sel} .vlist .vrow[data-jfmod-media-source-id]`);
-        const host = rows[0]?.querySelector('.icons');
-        if (!host) return null;
-        const root = parseFloat(getComputedStyle(host.closest('.jfds')).fontSize);
-        const buttons = [...host.querySelectorAll('button')];
-        const shape = buttons.map(button => {
-            const glyph = button.querySelector('[data-ds-icon]');
-            const hit = getComputedStyle(button, '::before');
-            return { w: Math.round(button.getBoundingClientRect().width), h: Math.round(button.getBoundingClientRect().height),
-                hitW: button.getBoundingClientRect().width, hitH: button.getBoundingClientRect().height, min: Math.floor(2.5 * root) - 1,
-                round: getComputedStyle(button).borderRadius === '50%', color: getComputedStyle(button).color, opacity: getComputedStyle(button).opacity,
-                label: button.getAttribute('aria-label'), title: button.title, pressed: button.getAttribute('aria-pressed'),
-                icon: ({pin:'push_pin',x:'close'})[glyph?.getAttribute('data-ds-icon')] ?? glyph?.getAttribute('data-ds-icon'), tilt: glyph ? getComputedStyle(glyph).transform : 'none',
-                background: getComputedStyle(button).backgroundColor };
-        });
-        return { rows: rows.length, add: !!document.querySelector(`${sel} [data-jfmod-add-version]`), names: shape.map(button => button.icon), shape };
-    }, PAGE);
+    const listed = await page.evaluate(sel => ({ rows: document.querySelectorAll(`${sel} .vlist .vrow[data-jfmod-media-source-id]`).length,
+        buttons: document.querySelectorAll(`${sel} .vlist .vrow button`).length, add: !!document.querySelector(`${sel} [data-jfmod-add-version]`) }), PAGE);
     // User, 2026-10-29: no Get Another Quality row; the header's cloud icon opens the picker for another quality.
-    record(layout, 'one-file episode: the list has one file and no Get Another Quality row',
-        !!icons && icons.rows === 1 && !icons.add, JSON.stringify({ rows: icons?.rows, add: icons?.add }));
-    const want = admin ? ['history', 'push_pin', 'close'] : ['history'];
-    record(layout, `one-file episode: the file's row ends with ${want.join(', ')}`, !!icons && JSON.stringify(icons.names) === JSON.stringify(want),
-        JSON.stringify(icons?.names));
-    if (icons) {
-        // User, 2026-10-08: drawn the track row's height, round, each answering a 2.5em circle; grey, the cross red.
-        record(layout, 'one-file episode: row actions are round, no taller than the row, each answering a 2.5em circle',
-            icons.shape.every(button => button.round && button.h <= row.audio + 1 && button.hitW >= button.min && button.hitH >= button.min),
-            JSON.stringify(icons.shape.map(b => [b.w, b.h, b.hitW, b.hitH, b.min])));
-        const expected = icons.shape.map(rowActionExpectation);
-        record(layout, 'one-file episode: grey at rest, the cross red, the pin primary only while kept',
-            expected.every((rowWant, index) => !!rowWant && icons.shape[index].color === rowWant.color),
-            icons.shape.map((b, index) => `${b.icon}=${b.color} (want ${expected[index]?.color})`).join(', '));
-        record(layout, 'one-file episode: each action names its file and has its Title Case tooltip',
-            expected.every((rowWant, index) => !!rowWant && icons.shape[index].label === rowWant.label && icons.shape[index].title === rowWant.title),
-            icons.shape.map((b, index) => `${b.label} / ${b.title} (want ${expected[index]?.label} / ${expected[index]?.title})`).join(', '));
-        record(layout, 'one-file episode: icons are not dimmed', icons.shape.every(button => button.opacity === '1'), icons.shape.map(b => b.opacity).join(','));
-        const pin = icons.shape.find(button => button.icon === 'push_pin');
-        if (pin) {
-            // The pin looks pinned: tilted while loose, upright on the primary tint while kept.
-            const pinned = pin.pressed === 'true';
-            record(layout, 'one-file episode: the native pin stays tilted and turns primary when kept',
-                pin.tilt !== 'none' && (!pinned || pin.color === ROW_PRIMARY),
-                `${pin.pressed} ${pin.tilt} ${pin.background}`);
-        }
-    }
-    await checkHistoryPopover(page, layout, '.vlist [data-jfmod-file-history]');
+    record(layout, 'one-file episode: the list has one file and no Get Another Quality row', listed.rows === 1 && !listed.add, JSON.stringify(listed));
+    record(layout, 'one-file episode: the file row only chooses, no row actions (ds.t12)', listed.buttons === 0, JSON.stringify(listed));
+    await back(page, layout, true);
+    if (await openMore(page, layout)) {
+        const group = await versionGroup(page);
+        const want = admin ? ['history', 'keep', 'remove'] : ['history'];
+        record(layout, `one-file episode: More's Selected Version group lists ${want.join(', ')}`,
+            JSON.stringify(group.entries.map(entry => entry.id)) === JSON.stringify(want), JSON.stringify(group));
+        record(layout, 'one-file episode: the group is headed Selected Version and names the file', /selected version/i.test(group.heading) && /\d+p/.test(group.heading), group.heading);
+        const keep = group.entries.find(entry => entry.id === 'keep');
+        if (admin) record(layout, 'one-file episode: Keep names what it keeps', !!keep && /keep|kept/i.test(keep.name), keep?.name);
+        const remove = page.locator(VERSION_ENTRY('remove'));
+        if (admin && await remove.count()) record(layout, 'one-file episode: Remove is in error ink, last in the group', await remove.first().evaluate(node => node.classList.contains('redrow')));
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(500);
+    } else record(layout, 'one-file episode: the title\'s More menu opens', false);
+    await checkHistoryPopover(page, layout);
     if (admin) await checkMoreMenuItem(page, layout, true);
     else await checkMoreMenuItem(page, layout, false);
 }
 
-/** The per-file history popover: only that file's events; Back closes it; focus returns to the icon. */
-async function checkHistoryPopover(page, layout, selector) {
-    const opener = `${selector}`;
-    if (!await page.locator(`${PAGE} ${opener}`).count()) { notVerified(layout, 'history popover', 'no history icon (plugin without history.files?)'); return; }
-    const bindingId = await page.locator(`${PAGE} ${opener}`).first().getAttribute('data-jfmod-file-history');
-    if (!await activate(page, layout, opener, 'history icon')) return;
+/** The selected file's history popover, from More's File History: only that file's events; Back closes it; focus returns to More. */
+async function checkHistoryPopover(page, layout) {
+    const bindingId = await selectedBinding(page);
+    if (!await versionAction(page, layout, 'history')) { notVerified(layout, 'history popover', 'no File History in More (plugin without history.files?)'); return; }
     const popover = page.locator('.historyportal');
     const opened = await popover.first().waitFor({ state: 'visible', timeout: 8000 }).then(() => true, () => false);
     record(layout, 'history popover opens', opened);
@@ -471,7 +473,7 @@ async function checkHistoryPopover(page, layout, selector) {
     await back(page, layout, true);
     const closed = await popover.first().waitFor({ state: 'detached', timeout: 5000 }).then(() => true, () => false);
     record(layout, 'Back closes the history popover', closed);
-    if (!isMobile(layout)) record(layout, 'focus returns to the history icon', await activeMatches(page, opener), await activeName(page));
+    if (!isMobile(layout)) record(layout, 'focus returns to the More button', await activeMatches(page, '[data-ds-command~=btnMoreCommands]'), await activeName(page));
 }
 
 /** "Remove after watching…" in the stock More menu: an admin's item opens the window dialog; a user's menu has no extra item. */
@@ -1266,16 +1268,13 @@ async function checkBadge(page, layout, { id, text }) {
     record(layout, 'after the toggles there is exactly one badge again', after.length === 1, after.join(','));
 }
 
-/** Pin on the one-file episode: the plugin reports the file kept; pressing it again stops keeping it. */
+/** Keep on the one-file episode, from More: the plugin reports the file kept; Stop Keeping undoes it. */
 async function checkPin(page, layout) {
     await openDetail(page, `id=${ids.one}`, `${PAGE} .gpk .seg.v`);
-    if (!await openFileList(page, layout)) { record(layout, 'pin: the Video dropdown opens', false); return; }
-    const pin = `${PAGE} [data-jfmod-file-pin]`;
     // User, 2026-10-08: keeping a file must not push the page down; the confirmation is upstream's toast.
     const layoutTop = () => page.evaluate(sel => Math.round(document.querySelector(`${sel} .itemDetailsGroup`)?.getBoundingClientRect().top ?? -1), PAGE);
-    await settled(page, `${PAGE} .vlist`);
     const topBefore = await layoutTop();
-    const bindingId = await page.locator(pin).first().getAttribute('data-jfmod-file-pin');
+    const bindingId = await selectedBinding(page);
     const entryId = await page.evaluate(sel => document.querySelector(`${sel} [data-jfmod-entry-id]`)?.getAttribute('data-jfmod-entry-id'), PAGE);
     const kept = async () => {
         const detail = await apiGet(page, `JellyfinMod/Entries/${entryId}`);
@@ -1283,27 +1282,30 @@ async function checkPin(page, layout) {
         return versions.find(version => version.bindingId === bindingId)?.kept ?? null;
     };
     const before = await kept();
-    await page.locator(pin).first().click();
+    if (!await versionAction(page, layout, 'keep')) { record(layout, 'pin: More offers Keep for the selected file', false); return; }
     await page.waitForTimeout(3000);
     const after = await kept();
-    record(layout, 'pin toggles Keep and the plugin reports the file kept', before === false && after === true, `${before} → ${after}`);
+    record(layout, 'Keep in More keeps the selected file and the plugin reports it kept', before === false && after === true, `${before} → ${after}`);
     const topAfter = await layoutTop();
     const toast = await page.locator('.toast').allTextContents().catch(() => []);
     record(layout, 'keeping does not move the page; the confirmation is a toast', topBefore === topAfter && toast.some(text => /kept/i.test(text)),
         `${topBefore} → ${topAfter}; toast ${JSON.stringify(toast)}`);
-    record(layout, 'the pin shows kept (pressed, primary)', await page.locator(pin).first().getAttribute('aria-pressed') === 'true');
-    await page.locator(pin).first().click();
+    const shown = await openMore(page, layout) ? await versionGroup(page) : null;
+    record(layout, 'More then offers Stop Keeping This Version', !!shown?.entries.some(entry => entry.id === 'keep' && /stop keeping/i.test(entry.name)), JSON.stringify(shown?.entries));
+    if (shown) { await page.keyboard.press('Escape'); await page.waitForTimeout(500); }
+    await versionAction(page, layout, 'keep');
     await page.waitForTimeout(3000);
-    record(layout, 'pressing the pin again stops keeping the file', await kept() === false);
+    record(layout, 'Stop Keeping in More stops keeping the file', await kept() === false);
 }
 
 /** The cross on a disposable two-file episode: the stock confirmation, one copy removed, the page moves on. */
 async function checkRemove(page, layout, itemId) {
     await openDetail(page, `id=${itemId}`, `${PAGE} .gpk .seg.v`);
-    await page.locator(`${PAGE} .gpk .seg.v`).click();
-    const cross = page.locator(`${PAGE} .vrow[data-jfmod-media-source-id] [data-jfmod-file-remove]`);
-    await cross.first().waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
-    const bindingId = await cross.last().getAttribute('data-jfmod-file-remove');
+    // The last (worst) file: chosen by its row, then removed from More.
+    await openFileList(page, layout);
+    const lastSource = await page.locator(`${PAGE} .vlist .vrow[data-jfmod-media-source-id]`).last().getAttribute('data-jfmod-media-source-id');
+    await chooseFile(page, layout, lastSource);
+    const bindingId = await selectedBinding(page);
     const entryId = await page.evaluate(sel => document.querySelector(`${sel} [data-jfmod-entry-id]`)?.getAttribute('data-jfmod-entry-id'), PAGE);
     const episodeId = await page.evaluate(sel => document.querySelector(`${sel} [data-jfmod-episode-id]`)?.getAttribute('data-jfmod-episode-id'), PAGE);
     const bindings = async () => {
@@ -1312,10 +1314,10 @@ async function checkRemove(page, layout, itemId) {
         return versions.map(version => version.bindingId);
     };
     const before = await bindings();
-    await cross.last().click();
+    if (!await versionAction(page, layout, 'remove')) { record(layout, 'More offers Remove for the chosen file', false); return; }
     const dialog = page.locator('.dialog', { hasText: 'Only the' });
     const shown = await dialog.first().waitFor({ state: 'visible', timeout: 8000 }).then(() => true, () => false);
-    record(layout, 'cross opens the stock confirmation saying what goes and what stays', shown);
+    record(layout, 'Remove in More opens the stock confirmation saying what goes and what stays', shown);
     if (!shown) return;
     await page.locator('.dialog button', { hasText: /Remove This Version/ }).first().click();
     await page.waitForTimeout(6000);
@@ -1530,16 +1532,9 @@ function vlOpenGeometry(layout, facts, label, expected) {
             && near(facts.list.l, facts.strip.l, 0.6) && near(facts.list.r, facts.video.r, 0.6) && near(facts.list.t, facts.strip.b + 0.382 * facts.belowEm, 1),
         JSON.stringify({ list: facts.list, strip: facts.strip, video: facts.video }));
     }
-    const em = facts.belowEm;
-    const action = isMobile(layout) ? 40 : null;
     const rows = facts.rows;
-    record(layout, `${label}: every action is whole inside its row, inside the screen`, rows.every(row => row.icons.every(icon => icon.l >= row.box.l - 0.5 && icon.r <= row.box.r + 0.5
-        && icon.r <= facts.page.inner + 0.5 && icon.t >= row.box.t - 0.5 && icon.b <= row.box.b + 0.5)), JSON.stringify(rows.map(row => row.icons.map(icon => [icon.l, icon.r, icon.t, icon.b].map(Math.round)))));
-    if (action) {
-        record(layout, `${label}: the phone's actions are 40 px`, rows.every(row => row.icons.every(icon => near(icon.w, action, 0.7) && near(icon.h, action, 0.7))), JSON.stringify(rows[0]?.icons.map(icon => [icon.w, icon.h])));
-    } else {
-        record(layout, `${label}: the actions are the 2.5em buttons`, rows.every(row => row.icons.every(icon => icon.w >= 2.5 * em * 0.92 && icon.w <= 2.5 * em * 1.2)), `${em}px em, ${JSON.stringify(rows[0]?.icons.map(icon => icon.w))}`);
-    }
+    // ds.t12: the rows only choose; History, Keep and Remove are the title More menu's.
+    record(layout, `${label}: no row has actions`, rows.every(row => row.icons.length === 0), JSON.stringify(rows.map(row => row.icons.length)));
     record(layout, `${label}: the marks are whole or dropped in every row`, rows.every(row => row.marksWhole), rows.map(row => row.text).join(' | '));
     record(layout, `${label}: the size is never cut`, rows.every(row => row.size && row.sizeUncut && row.size.r <= row.box.r + 0.5), JSON.stringify(rows.map(row => [row.sizeText, row.sizeUncut, row.size?.r, row.box.r])));
     if (facts.two) {
@@ -1660,51 +1655,45 @@ async function checkVideoListActions(page, layout, id, tag) {
     await vlOpenPage(page, id);
     if (!await vlOpen(page, layout)) return;
     await page.waitForTimeout(300);
-    const pressRow = async attribute => {
-        if (isTv(layout)) {
-            const rights = await page.evaluate(([sel, name]) => {
-                const row = document.querySelector(`${sel} .vlist .vrow[data-jfmod-media-source-id]`);
-                return [...row.querySelectorAll('.vrow[data-jfmod-media-source-id], .rb')].findIndex(stop => stop.hasAttribute(name));
-            }, [PAGE, attribute]);
-            await vlWalk(page, 0, rights);
-            record(layout, `${tag} actions: the remote's walk reaches ${attribute}`, await activeMatches(page, `[${attribute}]`), await vlActive(page));
-        }
-        await vlHit(page, layout, `${PAGE} .vlist .vrow[data-jfmod-media-source-id] [${attribute}]`);
-    };
+    record(layout, `${tag} actions: the rows only choose, no row actions (ds.t12)`, await page.locator(`${PAGE} .vlist .vrow button`).count() === 0);
+    const first = await page.locator(`${PAGE} .vlist .vrow[data-jfmod-media-source-id]`).first().getAttribute('data-jfmod-media-source-id');
+    await chooseFile(page, layout, first);
     // History.
-    await pressRow('data-jfmod-file-history');
+    await versionAction(page, layout, 'history');
     const history = page.locator('.historyportal');
     const opened = await history.first().waitFor({ state: 'visible', timeout: 8000 }).then(() => true, () => false);
-    record(layout, `${tag} actions: History opens the file's history`, opened);
+    record(layout, `${tag} actions: More's File History opens the selected file's history`, opened);
     await vlShot(page, `${layout}-${tag}-history`);
     if (opened) {
         const rect = await history.first().evaluate(node => { const r = node.getBoundingClientRect(); return { l: r.left, r: r.right, t: r.top, b: r.bottom, vw: window.innerWidth }; });
         record(layout, `${tag} actions: the history is whole on the screen`, rect.l >= -0.5 && rect.r <= rect.vw + 0.5, JSON.stringify(rect));
         await vlPress(page, 'Escape', 700);
-        record(layout, `${tag} actions: Back closes the history and the list stays open`, await history.count() === 0 && (await vlFacts(page)).open);
-        if (!isMobile(layout)) record(layout, `${tag} actions: focus returns to History`, await activeMatches(page, '[data-jfmod-file-history]'), await vlActive(page));
+        record(layout, `${tag} actions: Back closes the history`, await history.count() === 0);
+        if (!isMobile(layout)) record(layout, `${tag} actions: focus returns to More`, await activeMatches(page, '[data-ds-command~=btnMoreCommands]'), await vlActive(page));
     }
     // Keep and Stop Keeping, read back from the plugin.
     if (env('JELLYFINMOD_DD_VL_WRITES')) {
-        const pin = `${PAGE} .vlist .vrow[data-jfmod-media-source-id] [data-jfmod-file-pin]`;
-        const bindingId = await page.locator(pin).first().getAttribute('data-jfmod-file-pin');
+        const bindingId = await selectedBinding(page);
         const entryId = await page.evaluate(sel => document.querySelector(`${sel} [data-jfmod-entry-id]`)?.getAttribute('data-jfmod-entry-id'), PAGE);
         const kept = async () => {
             const detail = await apiGet(page, `JellyfinMod/Entries/${entryId}`);
             return [...detail.versions ?? [], ...(detail.episodes ?? []).flatMap(episode => episode.versions ?? [])].find(version => version.bindingId === bindingId)?.kept ?? null;
         };
         const start = await kept();
-        await pressRow('data-jfmod-file-pin');
+        await versionAction(page, layout, 'keep');
         await page.waitForTimeout(2500);
         const on = await kept();
-        record(layout, `${tag} actions: Keep keeps the file, the list stays open`, start === false && on === true && (await vlFacts(page)).open && await page.locator(pin).first().getAttribute('aria-pressed') === 'true', `${start} → ${on}`);
-        await pressRow('data-jfmod-file-pin');
+        const named = await openMore(page, layout) ? await versionGroup(page) : null;
+        if (named) await vlPress(page, 'Escape', 500);
+        record(layout, `${tag} actions: Keep keeps the selected file, More then says Stop Keeping`, start === false && on === true
+            && !!named?.entries.some(entry => entry.id === 'keep' && /stop keeping/i.test(entry.name)), `${start} → ${on}`);
+        await versionAction(page, layout, 'keep');
         await page.waitForTimeout(2500);
         record(layout, `${tag} actions: Stop Keeping undoes it`, await kept() === false);
     }
     // Remove: up to its dialog, closed with the safe choice; the file stays.
     const before = (await vlFacts(page)).rows.length;
-    await pressRow('data-jfmod-file-remove');
+    await versionAction(page, layout, 'remove');
     const dialog = page.locator('.dialog').last();
     const shown = await dialog.waitFor({ state: 'visible', timeout: 8000 }).then(() => true, () => false);
     const text = shown ? (await dialog.innerText()).replace(/\s+/g, ' ') : '';
@@ -1714,10 +1703,9 @@ async function checkVideoListActions(page, layout, id, tag) {
         if (isTv(layout)) await vlPress(page, 'Escape', 800);
         else await dialog.locator('button', { hasText: /^(Cancel|Keep)/i }).first().click({ timeout: 5000 });
         await page.waitForTimeout(800);
-        const after = await vlFacts(page);
-        record(layout, `${tag} actions: closing the dialog removes nothing`, await page.locator('.dialog').count() === 0 && (after.rows.length === before || after.rows.length === 0), `${before} → ${after.rows.length} rows`);
+        record(layout, `${tag} actions: closing the dialog removes nothing`, await page.locator('.dialog').count() === 0);
         const versions = (await page.evaluate(entrySel => document.querySelector(entrySel)?.getAttribute('data-jfmod-entry-id'), `${PAGE} [data-jfmod-entry-id]`));
-        if (versions) record(layout, `${tag} actions: the plugin still lists both files`, ((await apiGet(page, `JellyfinMod/Entries/${versions}`)).versions ?? []).length === before);
+        if (versions) record(layout, `${tag} actions: the plugin still lists every file`, ((await apiGet(page, `JellyfinMod/Entries/${versions}`)).versions ?? []).length === before);
     }
 }
 
@@ -1861,23 +1849,21 @@ async function checkVideoListRemote(page, layout, id) {
     if (!await vlOpen(page, layout)) return;
     await page.waitForTimeout(300);
     const open = await vlFacts(page);
-    const stops = open.rows.map(row => [undefined, ...row.icons.map(icon => icon.label)]);
     await page.locator(VIDEO).focus();
     await page.waitForTimeout(200);
-    for (const [index, row] of stops.entries()) {
+    for (const index of open.rows.keys()) {
         await vlPress(page, 'ArrowDown');
-        const seen = [await vlActive(page)];
-        for (let right = 1; right < row.length; right++) { await vlPress(page, 'ArrowRight'); seen.push(await vlActive(page)); }
-        record(layout, `remote: row ${index + 1}: Right walks the row's button, then each action in order`, seen.length === row.length && seen.every((stop, at) => stop.startsWith(`row${index + 1} `) && (at === 0 ? /fileChoose/.test(stop) : stop.endsWith(row[at]))),
-            seen.join(' ; '));
-        const back = [];
-        const lefts = await page.evaluate(() => { const a = document.activeElement; const r = a?.closest?.('.vrow[data-jfmod-media-source-id]'); return r ? [...r.querySelectorAll('.vrow[data-jfmod-media-source-id], .rb')].indexOf(a) : -1; });
-        for (let left = 0; left < lefts; left++) { await vlPress(page, 'ArrowLeft'); back.push(await vlActive(page)); }
-        record(layout, `remote: row ${index + 1}: Left walks back to the row's button`, lefts > 0 && /fileChoose/.test(back.at(-1) ?? '') && (back.at(-1) ?? '').startsWith(`row${index + 1} `), back.join(' ; '));
+        const at = await vlActive(page);
+        await vlPress(page, 'ArrowRight');
+        const right = await vlActive(page);
+        await vlPress(page, 'ArrowLeft');
+        const left = await vlActive(page);
+        record(layout, `remote: row ${index + 1}: Down reaches it, Right and Left keep the focus on it (ds.t12)`,
+            at.startsWith(`row${index + 1} `) && right === at && left === at, [at, right, left].join(' ; '));
     }
     await vlShot(page, `${layout}-remote-walked`);
-    // At a row's end the keys go on as the remote's own search takes them (the guide), but never up to the Video value (D199).
-    await vlWalk(page, 0, stops[0].length - 1);
+    // Right never jumps up to the Video value (D199).
+    await vlWalk(page, 0, 0);
     await vlPress(page, 'ArrowRight');
     record(layout, 'remote: Right at a row\'s end does not jump to the Video value', !await activeMatches(page, '.gpk .seg.v'), await vlActive(page));
     await page.locator(VIDEO).focus();
@@ -1917,15 +1903,15 @@ async function checkVideoListResize(page, layout, id) {
     }
     record(layout, 'resize: at every width the open list stays open, exact under its cell or in the card, rows by the width, no flip', problems.length === 0, problems.slice(0, 3).join(' || '));
     await vlShot(page, `${layout}-resize-back`);
-    // Crossing the stacking line remounts the list: Keep and Remove keep the focus, both ways.
+    // Crossing the stacking line remounts the list: the focused file row keeps the focus, both ways.
     if (!isMobile(layout)) {
         const row = (await vlFacts(page)).rows.length - 1;
         const seen = { narrowing: [], widening: [] };
-        for (const control of ['data-jfmod-file-pin', 'data-jfmod-file-remove']) {
+        {
             for (const [way, from, to] of [['narrowing', 996, 995], ['widening', 995, 996]]) {
                 await page.setViewportSize({ width: from, height: start.height });
                 await page.waitForTimeout(400);
-                const target = page.locator(`${PAGE} .vlist .vrow[data-jfmod-media-source-id]`).nth(row).locator(`[${control}]`);
+                const target = page.locator(`${PAGE} .vlist .vrow[data-jfmod-media-source-id]`).nth(row);
                 await target.focus();
                 const before = await vlActive(page);
                 await page.setViewportSize({ width: to, height: start.height });
@@ -1934,7 +1920,7 @@ async function checkVideoListResize(page, layout, id) {
             }
         }
         for (const way of ['narrowing', 'widening']) {
-            record(layout, `resize: Keep and Remove keep the focus across the stacking line, ${way}`, seen[way].every(one => one.on && one.after === one.before), JSON.stringify(seen[way]));
+            record(layout, `resize: the focused file row keeps the focus across the stacking line, ${way}`, seen[way].every(one => one.on && one.after === one.before), JSON.stringify(seen[way]));
         }
         await page.setViewportSize(start);
         await page.waitForTimeout(400);
@@ -1963,78 +1949,25 @@ async function checkVideoListResize(page, layout, id) {
 }
 
 /**
- * The focus across the stacking line follows the control, not its place (Codex re-review): Keep on file A while the focus moves to file
- * B's Keep drops A's Remove from before B's; B's Keep must come back, never B's Remove. Then a focused Remove that goes away leaves the
- * focus on its own file's row button. INTERCEPTED ANSWERS for this race only: the Keep request is answered here and the entry reads as
- * kept, so nothing changes on the server. The page, its refetch and the resize are real.
+ * The More menu's Selected Version group follows the chosen file (ds.t12; it replaced the row actions' focus identity): choosing
+ * the second file names it in the group's heading, choosing the first names that one again. Reads only.
  */
 async function checkVideoListFocusIdentity(page, layout, id) {
     await vlOpenPage(page, id);
-    const start = page.viewportSize();
-    await page.setViewportSize({ width: 996, height: start.height });
-    await page.waitForTimeout(400);
     if (!await vlOpen(page, layout)) return;
     await page.waitForTimeout(300);
-    const entryId = await page.evaluate(sel => document.querySelector(`${sel} [data-jfmod-entry-id]`)?.getAttribute('data-jfmod-entry-id'), PAGE);
-    const row = index => page.locator(`${PAGE} .vlist .vrow[data-jfmod-media-source-id]`).nth(index);
-    const kept = new Set();
-    const refused = [];
-    await page.route(`**/JellyfinMod/Entries/${entryId}**`, async route => {
-        const request = route.request();
-        const binding = /\/Versions\/([^/]+)\//.exec(request.url())?.[1];
-        if (request.method() === 'POST' && binding) {
-            kept.add(binding);
-            await route.fulfill({ json: { bindingId: binding, kept: true } });
-        } else if (request.method() === 'GET' && !binding) {
-            // The refetch comes after the viewer has moved on, as a slow server's would.
-            await new Promise(resolve => { setTimeout(resolve, 500); });
-            const response = await route.fetch();
-            const body = await response.json();
-            for (const version of body.versions ?? []) if (kept.has(version.bindingId)) { version.kept = true; version.removable = false; }
-            await route.fulfill({ response, json: body });
-        } else if (request.method() === 'GET') {
-            await route.continue();
-        } else {
-            // Only the answered Keep may be pressed: a kept file's Enter would send a real DELETE.
-            refused.push(`${request.method()} ${new URL(request.url()).pathname}`);
-            await route.abort();
-        }
-    });
-    const keepB = row(1).locator('[data-jfmod-file-pin]');
-    const labelB = await keepB.getAttribute('aria-label');
-    const labelA = await row(0).locator('[data-jfmod-file-pin]').getAttribute('aria-label');
-    if (!labelA?.startsWith('Keep ') || !labelB?.startsWith('Keep ')) {
-        record(layout, 'focus identity: both files start not kept, so nothing real is pressed', false, `${labelA} / ${labelB}`);
-        await page.unroute(`**/JellyfinMod/Entries/${entryId}**`);
-        await page.setViewportSize(start);
-        await page.waitForTimeout(300);
-        return;
+    const rows = await page.evaluate(sel => [...document.querySelectorAll(`${sel} .vlist .vrow[data-jfmod-media-source-id]`)].map(row => ({
+        id: row.getAttribute('data-jfmod-media-source-id'), resolution: row.querySelector('.r')?.textContent?.trim() ?? '' })), PAGE);
+    await vlClose(page, layout);
+    if (rows.length < 2) { notVerified(layout, 'version group follows the chosen file', 'fewer than two files'); return; }
+    const seen = [];
+    for (const row of [rows[1], rows[0]]) {
+        await chooseFile(page, layout, row.id);
+        const group = await openMore(page, layout) ? await versionGroup(page) : null;
+        if (group) await vlPress(page, 'Escape', 500);
+        seen.push({ want: row.resolution, heading: group?.heading ?? 'no menu' });
     }
-    await row(0).locator('[data-jfmod-file-pin]').focus();
-    await page.keyboard.press('Enter');
-    await keepB.focus();
-    const gone = await row(0).locator('[data-jfmod-file-remove]').waitFor({ state: 'detached', timeout: 8000 }).then(() => true, () => false);
-    record(layout, 'focus identity: Keep on file A took A\'s Remove away while the focus is on B\'s Keep', gone && await activeMatches(page, '[data-jfmod-file-pin]'), await vlActive(page));
-    const crossed = [];
-    for (const width of [995, 996]) {
-        await page.setViewportSize({ width, height: start.height });
-        await page.waitForTimeout(450);
-        crossed.push(await vlActive(page));
-    }
-    record(layout, 'focus identity: B\'s Keep comes back across the stacking line, not another action', crossed.every(one => one === `row2 ${labelB}`), crossed.join(' ; '));
-    // A focused Remove that goes away: the same file's row button, no other action.
-    await row(1).locator('[data-jfmod-file-pin]').focus();
-    await page.keyboard.press('Enter');
-    await row(1).locator('[data-jfmod-file-remove]').focus();
-    await row(1).locator('[data-jfmod-file-remove]').waitFor({ state: 'detached', timeout: 8000 }).catch(() => {});
-    await page.setViewportSize({ width: 995, height: start.height });
-    await page.waitForTimeout(450);
-    const left = await vlActive(page);
-    record(layout, 'focus identity: a Remove that went away leaves the focus on its own file\'s row button', /^row2 .*fileChoose/.test(left), left);
-    record(layout, 'focus identity: no request but the answered Keep and the reads left the page', refused.length === 0, refused.join(', '));
-    await page.unroute(`**/JellyfinMod/Entries/${entryId}**`);
-    await page.setViewportSize(start);
-    await page.waitForTimeout(300);
+    record(layout, 'version group: More names the chosen file each time', seen.every(one => one.heading.includes(one.want)), JSON.stringify(seen));
 }
 
 /** What each width is expected to be (the guide's measured table); a width not named here is left to the width rule alone. */
@@ -2116,8 +2049,7 @@ async function checkLayout(browser, layout, user, admin) {
                 await openDetail(page, `id=${ids.movie}`, `${PAGE} .gpk .seg.v`);
                 await checkHeaderIcon(page, label, 'movie', admin);
                 await checkNoOldControls(page, label, 'movie');
-                if (await openFileList(page, label)) await checkHistoryPopover(page, label, '.vlist [data-jfmod-file-history]');
-                else record(label, 'movie: the Video dropdown opens', false);
+                await checkHistoryPopover(page, label);
                 // Movies have no per-title window, so their menu is upstream's for everyone (implementation choice 8).
                 await checkMoreMenuItem(page, label, false, false, 'on a movie page');
             });

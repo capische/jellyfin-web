@@ -156,26 +156,35 @@ const closeAll = async context => {
 
 const checks = {};
 
-// 4a P2 2: the mod's raised buttons carry show-focus on the TV, so the focused one is painted.
+// 4a P2 2: the mod's raised buttons carry show-focus on the TV, so the focused one is painted. ds.t12: the Video rows only choose;
+// History, Keep and Remove are the title More menu's Selected Version entries, so those are the focus stops checked here.
 checks.focus = async browser => {
     const { context, page } = await session(browser, 'tv');
     await go(page, `#/details?id=${ITEM}`);
     await page.locator('.jfds .gpk .seg.v').first().focus();
     await page.keyboard.press('Enter');
-    await page.waitForSelector('[data-jfmod-file-remove]', { timeout: 30000 });
+    await page.waitForSelector('.vlist .vrow[data-jfmod-media-source-id]', { timeout: 30000 });
+    record('4a-2', 'the TV\'s Video list rows have no row actions', await page.locator('.vlist .vrow button').count() === 0);
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(600);
+    await page.locator('.jfds [data-ds-command~=btnMoreCommands]').first().focus();
+    await page.keyboard.press('Enter');
+    await page.waitForSelector('[data-ds-actionsheet] .mi[data-id="jfmod-version-remove"]', { timeout: 30000 });
     await page.waitForTimeout(1500);
     const shape = await page.evaluate(() => {
         const style = node => { const s = getComputedStyle(node); return [s.transform, s.backgroundColor, s.color, s.boxShadow].join('|'); };
-        const actions = Array.from(document.querySelectorAll('.vlist .vrow button.rb'));
-        const [target, other] = document.querySelectorAll('[data-jfmod-file-remove]');
+        const actions = Array.from(document.querySelectorAll('[data-ds-actionsheet] .mi[data-id^="jfmod-version-"]'));
+        const target = document.querySelector('[data-ds-actionsheet] .mi[data-id="jfmod-version-remove"]');
+        const other = document.querySelector('[data-ds-actionsheet] .mi[data-id="jfmod-version-history"]');
         other?.focus();
         const unfocused = style(target);
         target.focus();
         const focused = style(target);
-        return { count: actions.length, missing: actions.filter(button => !button.classList.contains('focusable')).length, changed: unfocused !== focused };
+        return { count: actions.length, missing: actions.filter(entry => !entry.classList.contains('focusable')).length, changed: unfocused !== focused };
     });
-    record('4a-2', 'every row action of the TV\'s Video list is a focus stop', shape.count > 1 && shape.missing === 0, `${shape.count} buttons, without: ${shape.missing}`);
+    record('4a-2', 'every Selected Version entry of the TV\'s More menu is a focus stop', shape.count > 1 && shape.missing === 0, `${shape.count} entries, without: ${shape.missing}`);
     record('4a-2', 'the focused Remove This Version is painted differently from an unfocused one', shape.changed);
+    await page.keyboard.press('Escape');
     await closeAll(context);
 };
 
