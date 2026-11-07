@@ -27,6 +27,8 @@ below facts; keep only sources without ratings (D276), none on TV.
 For a title with no file and no active download, Download is the blue `.play.mainb` with the cloud glyph, first in the pill,
 and the status slot is empty. A user without download permission sees the slim Not Downloaded line; Unaired shows its date
 line and no Download. Active states retain the compact paper card ([download block](download-block.md)).
+With a file to play, the cloud (it gets another quality) sits at the pill's end, after the heart and before More (the user,
+2026-11-07: "it goes to the end"): Play, trailer, Played, Favourite, Download, More.
 
 A played title with a valid `UserData.LastPlayedDate` ends its metadata with a blue 1.236em check, 0.236em before
 `Watched <medium locale date>` at 85.4%. The user's build brief includes ` · N times` from `PlayCount >= 2` on this line
