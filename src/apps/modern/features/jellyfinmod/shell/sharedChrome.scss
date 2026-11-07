@@ -704,4 +704,45 @@ html.jfmod-chrome.jfmod-chromePlayer {
     --jfmod-chrome-line: rgba(255, 255, 255, 0.32);
     --jfmod-chrome-hair: rgba(255, 255, 255, 0.09);
     --jfmod-chrome-error: #ff7b72;
+
+    /* Skip Intro, Skip Outro and Skip Recap (upstream `.skip-button`, the user 2026-11-07: "It should be the same" as Play): the title
+ * page's Play button exactly, in rem because the player sits outside `.jfds`: 0.9 type at 600, 3 high, 0.9 side padding, round,
+ * white 85.4% with #101010 ink, white on hover, glyph 1.26 with a 0.27 gap, press 0.96 in 0.146s. Its right edge lines up with
+ * the control pills and it sits 1.618 (φ) above upstream's 8rem, clear of the remaining time. */
+    .skip-button-container { bottom: 9.618rem; }
+
+    .skip-button {
+        box-sizing: border-box;
+        justify-content: center;
+        gap: 0.27rem;
+        min-width: 6.168rem;
+        height: 3rem;
+        margin-right: 3.3%;
+        padding: 0 0.9rem;
+        border-radius: 3rem;
+        background: rgba(255, 255, 255, 0.854);
+        color: #101010;
+        font-family: 'jfmod-inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
+        font-size: 0.9rem;
+        font-weight: 600;
+        white-space: nowrap;
+        transition: opacity 0.2s ease-out, background-color 0.236s $ease, transform 0.236s $ease;
+    }
+
+    .skip-button .material-icons { font-size: 1.26rem; }
+    .skip-button:hover { background: #fff; }
+
+    .skip-button:active {
+        transform: scale(0.96);
+        transition-duration: 0.2s, 0.146s, 0.146s;
+    }
+
+    .skip-button:focus-visible {
+        outline: 0.15em solid $primary;
+        outline-offset: 0.15em;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html.jfmod-chrome.jfmod-chromePlayer .skip-button:active { transform: none; }
 }

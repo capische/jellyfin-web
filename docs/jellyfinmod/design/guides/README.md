@@ -16,6 +16,7 @@ The design rulebook, how the components fit together: [GUIDELINES.md](../GUIDELI
 | [title-pages.md](title-pages.md) | art-ground title head, stable poster/still boxes, action pill, person facts and Add/Undo notice | movie, series, season, episode, person and TMDB browse pages |
 | [shared-chrome.md](shared-chrome.md) | scoped type, colour, dialogs, switches, existing settings/list rows, motion and focus | signed-in mod shell, excluding admin and wizard |
 | [menus.md](menus.md) | paper menus, anchored lists and scrolling phone sheets | More, user, library and player menus |
+| [skip-button.md](skip-button.md) | Skip Intro, Skip Outro and Skip Recap in the player, drawn as Play | video player |
 | [top-bar.md](top-bar.md) | glass top bar and its single URL-backed search | computer, tablet, phone and legacy TV header |
 | [spinner.md](spinner.md) | smaller upstream loading spinner and theme ink | loading in the mod shell |
 | [download-state-mark.md](download-state-mark.md) | the download state ring (disc, arc, glyph) in three sizes | cards, rows, the detail line, the Queue page, the picker's added row, the episode page block, the season and series headers |
