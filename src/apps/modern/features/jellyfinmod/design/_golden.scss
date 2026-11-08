@@ -579,3 +579,225 @@
         white-space: nowrap;
     }
 }
+
+/* ---------------------------------------------------------------------------------------------------------------------
+   ds.t15, the release picker on B (the user, 2026-11-07: "apply new golden ratio rules to it and see how it goes (do not
+   make it massive or too big)"). Computer only. The dialog's own font is B, so its em values follow; its density stays
+   close to before: rows s-2 above and below, the quality word at B, the columns, marks, flags, names and status at s-1.
+   Named exceptions: the 40 px round actions (the floor, kept compact), the width s8 + s6 (about the old 76.01em of the
+   root), the indexer hues, the media marks' own glyph proportions.
+   --------------------------------------------------------------------------------------------------------------------- */
+&.dev-computer:not(.layout-tv) .pickerDialog {
+    width: calc(var(--jfmod-s8) + var(--jfmod-s6));
+    border-radius: var(--jfmod-s1);
+    font-size: var(--jfmod-s0);
+
+    .dlghead { padding: var(--jfmod-s0) var(--jfmod-s0) 0 var(--jfmod-s1); }
+
+    .dlghead h3 {
+        font-size: var(--jfmod-s1);
+        line-height: 1;
+    }
+
+    .dlghead h3 small {
+        margin-top: var(--jfmod-s-2);
+        font-size: var(--jfmod-s0);
+        line-height: 1.236;
+    }
+
+    .rb {
+        width: 40px;
+        height: 40px;
+    }
+
+    .rb svg {
+        width: var(--jfmod-s0);
+        height: var(--jfmod-s0);
+    }
+
+    .dlghead > .rb,
+    .ract .rb + .rb { margin-left: var(--jfmod-s-3); }
+
+    .dlgbody { padding: var(--jfmod-s-1) var(--jfmod-s1) var(--jfmod-s1); }
+
+    /* Search For and Quality Profile: s2 pills, s-1 apart, their s-1 captions on the value's inset. */
+    .pmchoices { margin: 0 calc(var(--jfmod-s-1) / -2); }
+
+    .pmchoices .fld {
+        flex: 1 1 var(--jfmod-s6);
+        margin: 0 calc(var(--jfmod-s-1) / 2);
+    }
+
+    .fld .lb {
+        margin: 0 0 var(--jfmod-s-3) var(--jfmod-s0);
+        font-size: var(--jfmod-s-1);
+        line-height: 1.618;
+        letter-spacing: var(--jfmod-s-7);
+    }
+
+    .fld .box {
+        height: var(--jfmod-s2);
+        padding: 0 var(--jfmod-s-1) 0 var(--jfmod-s0);
+        border-radius: var(--jfmod-s2);
+        box-shadow: inset 0 0 0 var(--jfmod-s-5) var(--neutral-line);
+    }
+
+    .fld .box:hover,
+    .fld.hov .box { box-shadow: inset 0 0 0 var(--jfmod-s-5) var(--primary); }
+
+    .fld.foc .box,
+    .fld.open .box { box-shadow: 0 0 0 calc(var(--jfmod-s0) * 0.135) var(--primary); }
+
+    .fld .box .chev {
+        width: var(--jfmod-s0);
+        height: var(--jfmod-s0);
+        margin-left: var(--jfmod-s-2);
+    }
+
+    .pstatus {
+        min-height: 0;
+        margin: var(--jfmod-s-1) 0 var(--jfmod-s-2);
+        font-size: var(--jfmod-s-1);
+        line-height: 1.618;
+        letter-spacing: var(--jfmod-s-7);
+    }
+
+    /* The rows bleed to the dialog's edges, so their hover and hairlines do too. */
+    .releaseScroll {
+        margin: 0 calc(-1 * var(--jfmod-s1));
+        padding: 0 var(--jfmod-s1);
+    }
+
+    .rels { margin: 0 calc(-1 * var(--jfmod-s1)); }
+    .rel { padding: var(--jfmod-s-2) var(--jfmod-s1); }
+
+    .rq {
+        margin-right: var(--jfmod-s-1);
+        line-height: 1.618;
+    }
+
+    .rflag {
+        height: var(--jfmod-s0);
+        margin-right: var(--jfmod-s-1);
+        padding: 0 var(--jfmod-s-3);
+        border-width: var(--jfmod-s-6);
+        border-radius: var(--jfmod-s-4);
+        font-size: var(--jfmod-s-1);
+        letter-spacing: var(--jfmod-s-7);
+    }
+
+    .rlang {
+        margin-right: var(--jfmod-s-1);
+        font-size: var(--jfmod-s-1);
+    }
+
+    .rlang svg {
+        width: var(--jfmod-s0);
+        height: var(--jfmod-s0);
+        margin-right: var(--jfmod-s-3);
+    }
+
+    .rcols { font-size: var(--jfmod-s-1); }
+    .rcols .sz { width: var(--jfmod-s3); }
+    .rcols .sd { width: var(--jfmod-s2); }
+    .rcols .ix { width: var(--jfmod-s4); }
+
+    .ract {
+        width: calc(80px + var(--jfmod-s-3));
+        min-height: 40px;
+        margin-left: var(--jfmod-s-1);
+    }
+
+    .rl .marks { font-size: var(--jfmod-s-1); }
+
+    .rl .marks .mk {
+        margin-right: var(--jfmod-s-1);
+        font-size: 1em;
+        letter-spacing: var(--jfmod-s-7);
+    }
+
+    .rname,
+    .rreason {
+        margin-top: var(--jfmod-s-3);
+        font-size: var(--jfmod-s-1);
+        line-height: 1.618;
+    }
+
+    .rejt {
+        margin: var(--jfmod-s-1) calc(-1 * var(--jfmod-s-1)) 0;
+        padding: var(--jfmod-s-2) var(--jfmod-s-1);
+        border-radius: var(--jfmod-s-1);
+    }
+
+    .rejt svg {
+        width: var(--jfmod-s0);
+        height: var(--jfmod-s0);
+        margin-right: var(--jfmod-s-3);
+    }
+
+    .rejt b {
+        font-size: var(--jfmod-s-1);
+        letter-spacing: var(--jfmod-s-7);
+    }
+
+    .grab {
+        margin: var(--jfmod-s-2) 0 var(--jfmod-s-3);
+        padding: var(--jfmod-s-1) var(--jfmod-s0);
+        border-left-width: var(--jfmod-s-3);
+        border-radius: var(--jfmod-s-3);
+        font-size: 1em;
+    }
+
+    .sl {
+        width: var(--jfmod-s7);
+        margin: var(--jfmod-s-3) auto;
+        font-size: var(--jfmod-s-1);
+    }
+}
+
+/* The Sources checklist in the open lists' language (ds.t12's vlist): paper s0 corners, s-2 padding, rows at least s2 with s-1
+   corners, the name at B, the box s0, the state s-1; s7 wide. */
+&.dev-computer:not(.layout-tv).menuportal .srcmenu {
+    width: var(--jfmod-s7);
+    padding: var(--jfmod-s-2);
+    border-radius: var(--jfmod-s0);
+    font-size: var(--jfmod-s0);
+    box-shadow: 0 var(--jfmod-s-2) var(--jfmod-s1) rgba(0, 0, 0, 0.45);
+
+    .srow {
+        min-height: var(--jfmod-s2);
+        padding: 0 var(--jfmod-s-1) 0 var(--jfmod-s0);
+        border-radius: var(--jfmod-s-1);
+    }
+
+    .srow .box {
+        width: var(--jfmod-s0);
+        height: var(--jfmod-s0);
+        margin-right: var(--jfmod-s-1);
+        border-width: var(--jfmod-s-4);
+        border-radius: var(--jfmod-s-3);
+    }
+
+    .srow .box svg {
+        width: var(--jfmod-s-1);
+        height: var(--jfmod-s-1);
+    }
+
+    .srow .st {
+        padding-left: var(--jfmod-s0);
+        font-size: var(--jfmod-s-1);
+        letter-spacing: var(--jfmod-s-7);
+    }
+
+    .srow .inf { margin-left: var(--jfmod-s-2); }
+
+    .srow .inf svg {
+        width: var(--jfmod-s0);
+        height: var(--jfmod-s0);
+    }
+
+    .srow .slow {
+        margin-left: var(--jfmod-s-1);
+        font-size: var(--jfmod-s-1);
+    }
+}

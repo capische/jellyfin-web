@@ -1,5 +1,18 @@
 # Release picker: Sources (the icon, the train, the checklist) and the searching ring's colours
 
+**ds.t15 (the user, 2026-11-07: the Sources list opened behind the picker; "apply new golden ratio rules to it and see how it
+goes (do not make it massive or too big)"), built, not accepted, gate 1 on beta (computer, dark).** The checklist now opens
+**above the dialog** (`.menuportal.overdialog`, z-index 1000000 over dialogHelper's 999999; any anchored menu opened from a
+dialog, or from a menu over one, does the same, so the failure (i)'s popover does too) and **hangs from the Sources button's right
+edge**, s-2 below it (`menuPosition(…, end)`), kept inside the window. On a computer the picker is on B (`design/_golden.scss`,
+ds.t15): the dialog s8 + s6 wide (about the old 76.01em of the root), s1 corners, its own font B; head padding s0 / s0 / 0 / s1,
+title s1 at line 1, the title's name s0 s-2 below it; the head's and rows' round actions stay 40 px (the floor, kept compact) with s0
+glyphs, s-3 apart; Search For and Quality Profile s2 pills (s-5 outline, s0 / s-1 insets, s0 chevron), s-1 apart, captions s-1 on
+the value's inset; status s-1; rows s-2 above and below, s1 at the sides, the quality word at B / 600, flags, languages, size, seeds,
+indexer, media marks, names and reasons at s-1 (columns s3, s2, s4); Rejected's title s-1 in its s-2 / s-1 pill. The checklist
+takes the open lists' language (ds.t12): s7 wide, paper s0 corners, s-2 padding, lines at least s2 with s-1 corners and s0 / s-1
+insets, the box s0 (s-4 border, s-3 corners) s-1 before the name at B, the state s-1. Phone, tablet and TV keep the values below.
+
 **Status: approved 2026-11-06, D288–D295, built, not accepted.** Release-start buttons and tips now say Download (D294); the picker's own Get a Release title and Get Another Quality remain unchanged. Sources behavior and geometry are unchanged.
 
 **Review fixes (2026-11-04), built, not accepted:** the native picker's full-width release row keeps its markup. On TV, Right explicitly moves row → Add → Replace (or row → Cancel while pending); Left reverses that path. Refused actions remain reachable for reading/confirmation. Up/Down still use upstream `focusManager` and arrive on the row. Arrow keys and directional `command` events share this path; acquisition, cancellation and replacement semantics stay unchanged.
