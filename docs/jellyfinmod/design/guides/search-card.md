@@ -1,5 +1,13 @@
 # Search card
 
+**Library titles take Home's disc and foot pill (ds.t16), the user 2026-11-07 ("Search - if in library. Play if file exists.
+Download should be … if in Library but not on the disk"), built, not accepted.** A library title's card (`CatalogSearchResults`
+→ `SearchCell` with its browse row) draws the poster card's centre disc from `design/Cell.tsx` (`CellDisc`, `useCellModel`):
+**Play** when the title has a file, **Download** when it is in the library without one, the **progress ring** while something of
+it is on its way ([download-state-mark.md](download-state-mark.md)); and the poster card's foot pill (Watched, Favourite, More;
+`CellMenu`). Their commands run through upstream's `ItemsContainer`, now around the results, as on Home. A TMDB result keeps its
+**+** (Add to Library); the caption and the corner marks are unchanged.
+
 **Search on B (ds.t13), approved by the user 2026-11-07 (workspace `reviews/golden-pages/search.html`), built, not accepted.** The
 results' cells take their own font at B (`_golden.scss`), so the poster's corners, the + disc, the ring and the three-line
 caption follow the scale and `--jfmod-scale`. The grid sits on the page gutter, its first row Bφ¹ under the bar; cells are Bφ¹

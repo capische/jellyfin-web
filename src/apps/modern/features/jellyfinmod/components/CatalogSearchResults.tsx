@@ -23,6 +23,9 @@ import { getEntryPath, getTmdbImage, getTmdbPath } from '../utils/entryLinks';
 import { SearchCell, type SearchCardItem } from '../design/SearchCell';
 import { SearchRows } from '../design/Search';
 import { CellSkeleton } from '../design/Cell';
+import ItemsContainer from 'elements/emby-itemscontainer/ItemsContainer';
+import { ItemAction } from 'constants/itemAction';
+import type { CardOptions } from 'types/cardOptions';
 import { useUserSettings } from 'hooks/useUserSettings';
 
 interface Props {
@@ -126,14 +129,14 @@ const libraryCard = (row: BrowseRow, context: { serverId?: string; nativeLeads: 
             cast: nativeLeads.get(item.Id ?? undefined) ?? leads(entry?.metadata?.cast),
             poster: imageOf(item) ?? getTmdbImage(entry?.posterPath, 'w342'),
             href: '#/details?id=' + encodeURIComponent(item.Id ?? '') + (serverId ? '&serverId=' + encodeURIComponent(serverId) : ''),
-            entry, retention: row.retention
+            entry, retention: row.retention, row
         };
     }
     if (!entry) return null;
     return {
         key: identityOf(entry.mediaType, entry.tmdbId), mediaType: entry.mediaType, tmdbId: entry.tmdbId, title: entry.title,
         year: entry.year, date: entry.metadata?.premiereDate, votes: entry.metadata?.voteCount, cast: leads(entry.metadata?.cast), poster: getTmdbImage(entry.posterPath, 'w342'),
-        href: '#' + getEntryPath(entry.id, serverId), entry, retention: row.retention
+        href: '#' + getEntryPath(entry.id, serverId), entry, retention: row.retention, row
     };
 };
 
@@ -189,6 +192,8 @@ const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
     const stock = useSearchItems(parentId, collectionType, query.trim());
     const views = useUserViews({ userId: user?.Id });
     const queryInput = query.trim();
+    const cardOptions = useMemo<CardOptions>(() => ({ serverId, action: ItemAction.Link,
+        queryKey: ['JellyfinMod', api?.basePath, user?.Id, 'SearchBrowse'] }), [serverId, api?.basePath, user?.Id]);
     const [selectedLibraries, setSelectedLibraries] = useState<Partial<Record<MediaType, string>>>(() => loadLibraryChoice(user?.Id));
     useEffect(() => {
         try {
@@ -421,10 +426,11 @@ const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
             <button ref={undoButton} type='button' className='btn focusable' onClick={undo}>Undo</button>
         </div>}
         {!browseFailed && !fetching && <DiscoveryNotice failedTypes={failedTypes} />}
-        <div className='libgrid searchresults'><div className='grid searchgrid itemsContainer' aria-busy={loading}>
-            {cards.map(item => <SearchCell key={item.key} item={item} />)}
+        {/* Upstream's command container, so a library card's Play, Watched, Favourite and More run as on Home (ds.t16). */}
+        <ItemsContainer isPlain className='libgrid searchresults' queryKey={cardOptions.queryKey}><div className='grid searchgrid itemsContainer' aria-busy={loading}>
+            {cards.map(item => <SearchCell key={item.key} item={item} options={cardOptions} />)}
             {loading && !browseFailed && Array.from({ length: 10 }, (_, index) => <CellSkeleton key={index} library />)}
-        </div></div>
+        </div></ItemsContainer>
         <div ref={endRef} />
         {ended && <div className='empty searchend'>No more results for “{queryInput}”</div>}
         <SearchRows sections={remainingSections} query={query} />
