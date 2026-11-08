@@ -1,5 +1,9 @@
-import React, { type FC, useContext, useState } from 'react';
+import React, { type FC, type ReactNode, useContext, useState } from 'react';
 import { useUserSettings } from 'hooks/useUserSettings';
+import type { CardOptions } from 'types/cardOptions';
+import type { BrowseRow } from '../types/browse';
+import { CellDisc, CellMenu } from './Cell';
+import { useCellModel } from './useCellModel';
 import { FileState, type Entry, type RetentionSummary } from '../types/entry';
 import { daysUntilReclaim, retentionDeadline } from '../constants/fileState';
 import { Cloud, Icon } from './Icon';
@@ -27,20 +31,29 @@ export interface SearchCardItem {
     retention?: RetentionSummary | null;
     /** A TMDB result: the + add disc in the poster's centre. */
     add?: { adding: boolean; onAdd: (item: SearchCardItem, button: HTMLElement) => void };
+    /** A library title's row: its card draws Home's disc (Play, Download, or the progress ring) and foot pill (ds.t16). */
+    row?: BrowseRow;
+}
+
+interface ViewProps {
+    item: SearchCardItem;
+    /** The library title's disc and foot pill, over the poster. */
+    over?: ReactNode;
+    /** The library title's item attributes, which the disc's and the pill's commands read (as a Home card's). */
+    data?: Record<string, unknown>;
+    onPrepare?: () => void;
 }
 
 /** ds.js cell for the mixed Search grid; the existing search session owns Add and navigation. */
 
-export const SearchCell: FC<{ item: SearchCardItem }> = ({ item }) => {
-    const device = useContext(DesignContext);
-    const { libraryPageSize } = useUserSettings();
-    const [failed, setFailed] = useState<string>();
-    const [focused, setFocused] = useState(false);
-    const add = device === 'computer' ? item.add : undefined;
+const noFile = (entry?: Entry) => !!entry && [FileState.None, FileState.Reclaimed].includes(entry.state);
+
+/** The corner: Not Downloaded, Searching, or the days before the file is removed. */
+const cornerMark = (item: SearchCardItem) => {
     const days = daysUntilReclaim(retentionDeadline(item.retention));
-    let mark = null;
+    let mark: ReactNode = null;
     let tip = 'Not Downloaded';
-    if (item.entry && [FileState.None, FileState.Reclaimed].includes(item.entry.state)) mark = <Cloud />;
+    if (noFile(item.entry)) mark = <Cloud />;
     if (item.entry?.state === FileState.Searching) {
         mark = <Icon name='search' />;
         tip = 'Searching';
@@ -49,6 +62,16 @@ export const SearchCell: FC<{ item: SearchCardItem }> = ({ item }) => {
         mark = <span className='num'>{days}d</span>;
         tip = `File will be removed in ${days} days`;
     }
+    return { mark, tip };
+};
+
+const SearchCellView: FC<ViewProps> = ({ item, over, data, onPrepare }) => {
+    const device = useContext(DesignContext);
+    const { libraryPageSize } = useUserSettings();
+    const [failed, setFailed] = useState<string>();
+    const [focused, setFocused] = useState(false);
+    const add = device === 'computer' ? item.add : undefined;
+    const { mark, tip } = cornerMark(item);
     const body = <div className='tile'><span className='post'>
         {item.poster && failed !== item.poster ? <img src={item.poster} alt='' loading='lazy' onError={() => setFailed(item.poster)} /> :
             <Icon name={item.mediaType === 'movie' ? 'movie' : 'tv'} className='fallback' />}
@@ -71,16 +94,32 @@ export const SearchCell: FC<{ item: SearchCardItem }> = ({ item }) => {
             <Icon name='plus' />
             {add.adding && <span className='dm importing' aria-hidden='true'><svg className='arc' viewBox='0 0 36 36'><circle className='turn' cx='18' cy='18' r='15.9' fill='none' stroke='currentColor' strokeWidth='2.2' strokeDasharray='28 72' /></svg></span>}
         </span>}
+        {over}
     </span><div className='capt'>
         <div className='ln t'>{item.title}</div>
         <div className='ln'>{item.year && <span>{item.year}</span>}{item.mediaType === 'series' && <span className='k'>TV Series</span>}</div>
         <div className='ln d'>{libraryPageSize ? item.cast.slice(0, 2).join(', ') : ''}</div>
     </div></div>;
-    return <a href={item.href} aria-label={item.title} tabIndex={0} className={'cell p focusable' + (add ? ' act' : '') + (focused && device !== 'phone' ? ' focus' : '')}
-        data-jfmod-key={item.key} data-jfmod-entry-id={item.entry?.id} data-jfmod-tmdb-id={item.tmdbId} onFocus={() => setFocused(true)}
+    return <a href={item.href} aria-label={item.title} tabIndex={0} className={'cell p focusable' + (add || over ? ' act' : '') + (focused && device !== 'phone' ? ' focus' : '')}
+        {...data} data-jfmod-key={item.key} data-jfmod-entry-id={item.entry?.id} data-jfmod-tmdb-id={item.tmdbId}
+        data-jfmod-nofile={noFile(item.entry) ? '' : undefined}
+        onMouseEnter={onPrepare} onFocus={() => {
+            onPrepare?.();
+            setFocused(true);
+        }}
         onBlur={event => {
             if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocused(false);
         }}>
         {body}
     </a>;
 };
+
+/** A library title: Home's card disc and foot pill on the search card (the user, 2026-11-07: "Play if file exists. Download … if in Library but not on the disk"). */
+const LibrarySearchCell: FC<{ item: SearchCardItem; row: BrowseRow; options: CardOptions }> = ({ item, row, options }) => {
+    const model = useCellModel(row, options);
+    return <SearchCellView item={item} data={model.item ? model.data : undefined} onPrepare={model.prepareRelease}
+        over={<><CellDisc model={model} /><CellMenu model={model} /></>} />;
+};
+
+export const SearchCell: FC<{ item: SearchCardItem; options?: CardOptions }> = ({ item, options }) =>
+    (item.row && options ? <LibrarySearchCell item={item} row={item.row} options={options} /> : <SearchCellView item={item} />);

@@ -34,7 +34,7 @@ export const CellSkeleton: FC<{ library?: boolean; wide?: boolean }> = ({ librar
     <span className='post sk' /><div className='sk1' /><div className='sk1' />{library && <div className='sk1' />}
 </div></div>;
 
-type CellModel = ReturnType<typeof useCellModel>;
+export type CellModel = ReturnType<typeof useCellModel>;
 
 const FileMark: FC<{ model: CellModel }> = ({ model }) => {
     if (model.countdown !== null) return <span className='mark glassy' title={`File will be removed in ${model.countdown} day${model.countdown === 1 ? '' : 's'}`}><span className='num' data-ds-countdown>{model.countdown}d</span></span>;
@@ -56,7 +56,7 @@ const CellMarks: FC<{ model: CellModel }> = ({ model }) => {
 };
 
 /** Watched, Favourite, More: Download lives on the disc of a card with no file and in More (the user, 2026-11-07). */
-const CellMenu: FC<{ model: CellModel }> = ({ model }) => {
+export const CellMenu: FC<{ model: CellModel }> = ({ model }) => {
     const tv = useContext(DesignContext) === 'tv';
     const controlClass = 'pi' + (tv ? '' : ' focusable');
     const { item, entry, pending, toggle, menu, isPlayed, isFavorite } = model;
@@ -68,6 +68,16 @@ const CellMenu: FC<{ model: CellModel }> = ({ model }) => {
         {(item || entry && !pending) && <span className={`${controlClass}${item ? ' itemAction' : ''}`} role='button' tabIndex={tv ? -1 : 0}
             onKeyDown={activate} data-tip='More' aria-label='More' data-action={item ? ItemAction.Menu : undefined} onClick={menu}><Icon name='more' /></span>}
     </span>;
+};
+
+/** The centre disc: Download for a title with no file, Play for one that plays (Search's library cards draw it too, ds.t16). */
+export const CellDisc: FC<{ model: CellModel }> = ({ model }) => {
+    const { item, noFile, get, shape, download } = model;
+    const available = noFile ? !!get : !!item && playbackManager.canPlay(item);
+    if (shape === 'c' || !available) return null;
+    return <span className='disc hov glassy itemAction' role='button' tabIndex={-1}
+        data-action={noFile ? ItemAction.None : ItemAction.Play} aria-label={noFile ? 'Download' : 'Play'} data-ds-action={noFile ? 'get' : undefined}
+        onKeyDown={activate} onClick={noFile ? download : undefined}>{noFile ? <Cloud /> : <Icon name='play' />}</span>;
 };
 
 const CellCaption: FC<{ model: CellModel }> = ({ model }) => {
@@ -87,9 +97,8 @@ const fallbackIcon = (type: string | null | undefined, shape: string) => {
 /** ds.js cell: native actions stay delegated to ItemsContainer's existing command logic. */
 export const Cell: FC<{ row: BrowseRow; options: CardOptions; alwaysShowCountdown?: boolean }> = ({ row, options, alwaysShowCountdown }) => {
     const model = useCellModel(row, options, alwaysShowCountdown);
-    const { action, item, entry, get, empty, pending, noFile, shape, source, failedSource, setFailedSource, title, data, open, download, menu } = model;
+    const { action, item, entry, empty, pending, noFile, shape, source, failedSource, setFailedSource, title, data, open, menu } = model;
     const fallback = fallbackIcon(item?.Type, shape);
-    const discAvailable = noFile ? !!get : !!item && playbackManager.canPlay(item);
     const { flightMenu } = model;
     return <div className={`cell jfmod-posterCell ${shape}${shape === 'c' ? '' : ' act'} focusable${item ? ' itemAction' : ''}`}
         {...data} data-action={item ? action : undefined} tabIndex={0} role='link' aria-label={title} aria-busy={pending || undefined}
@@ -100,10 +109,7 @@ export const Cell: FC<{ row: BrowseRow; options: CardOptions; alwaysShowCountdow
             {source && source !== failedSource ? <img src={source} loading='lazy' alt='' onError={() => setFailedSource(source)} /> :
                 <Icon name={fallback} className='fallback' />}
             <CellMarks model={model} />
-            {shape !== 'c' && discAvailable && <span
-                className='disc hov glassy itemAction' role='button' tabIndex={-1}
-                data-action={noFile ? ItemAction.None : ItemAction.Play} aria-label={noFile ? 'Download' : 'Play'} data-ds-action={noFile ? 'get' : undefined}
-                onKeyDown={activate} onClick={noFile ? download : undefined}>{noFile ? <Cloud /> : <Icon name='play' />}</span>}
+            <CellDisc model={model} />
             {shape !== 'c' && <CellMenu model={model} />}
         </span><CellCaption model={model} /></div>
     </div>;
