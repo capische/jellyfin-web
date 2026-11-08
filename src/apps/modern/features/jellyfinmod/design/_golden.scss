@@ -628,6 +628,12 @@
         margin: 0 calc(var(--jfmod-s-1) / 2);
     }
 
+    /* A movie's picker has Quality Profile alone (no Search For): it keeps the half it has beside Search For on a series. */
+    .pmchoices .fld:only-child {
+        flex-grow: 0;
+        flex-basis: calc(50% - var(--jfmod-s-1));
+    }
+
     .fld .lb {
         margin: 0 0 var(--jfmod-s-3) var(--jfmod-s0);
         font-size: var(--jfmod-s-1);

@@ -1520,8 +1520,8 @@ const useSourcesView = (input: SourcesViewInput) => {
  * a new scope or profile. Nothing refetches underneath a focused row.
  */
 const SearchScopeField: FC<{ series: boolean; title?: string; label: string; value: string; options: EmbySelectOption[]; choose: (value: string) => void }> = props =>
-    props.series ? <Select key={props.label} id='jfmod-releaseEpisode' label='Search For' value={props.value} options={props.options} onChange={props.choose} /> :
-        <Select label='Search For' value='title' options={[{ value: 'title', label: props.title ?? '' }]} onChange={() => undefined} />;
+    // A movie has nothing to choose and its name is in the head, so it draws no Search For (the user, 2026-11-07).
+    props.series ? <Select key={props.label} id='jfmod-releaseEpisode' label='Search For' value={props.value} options={props.options} onChange={props.choose} /> : null;
 
 const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, episodes: givenEpisodes, initialEpisodeId, episodePage,
     seasonPage, intent, loadEpisodes, onChanged, sourcesSlot, showNames, title }) => {
