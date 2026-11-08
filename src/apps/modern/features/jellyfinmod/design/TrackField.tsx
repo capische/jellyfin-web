@@ -125,7 +125,7 @@ export const TrackField: FC<{ kind: 'v' | 'a' | 's'; name: string; value: ReactN
                 toggle();
             }
         }}>
-        <span className='cap'>{name}{extra && ' · ' + extra}</span><span className='val'>{value}{enabled && <Icon name={open ? 'up' : 'down'} className='chev end' />}</span>
+        <span className='cap'>{name}{extra && <span className='x'>{' · ' + extra}</span>}</span><span className='val'>{value}{enabled && <Icon name={open ? 'up' : 'down'} className='chev end' />}</span>
         {!inCard && sheet}
     </div>{inCard && sheet}</>;
 };

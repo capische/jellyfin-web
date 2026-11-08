@@ -14,6 +14,12 @@ const FORM_SELECTOR = '.trackSelections';
 /** Audio's and Subtitles' fixed cells (17.8em and 13.2em, `ds.css`) on the phone, tablet and TV, which Video's width is left after. */
 const TRACK_CELLS_EMS = 31;
 /**
+ * Under this strip width (in the head's base) a computer's fields are narrower than the user's last size, 245 px at 18 px, and
+ * their marks move up to the caption line, which keeps only its first word (`.gpk.tight`, the user 2026-11-07). 13.61 is a named
+ * exception to the golden ratio: the user picked the size on the page.
+ */
+const TIGHT_EMS = 3 * 13.61 + 2 * 0.3819660113;
+/**
  * Under this Video cell width the strip stacks as on the phone (D199). 11.7em is a named exception to the golden ratio (φ⁵, 11.09em,
  * until D238): it is where the pending entry's quality stays on its line: a 996 px window keeps 11.74em
  * and stays a row, 995 px stacks; the TV at 1280 has 9.9em and stacks.
@@ -208,6 +214,7 @@ export const useTrackStrip = (view: HTMLElement, enabled: boolean): StripHosts |
             below.classList.toggle('hide', form.classList.contains('hide'));
             const now = stacks(strip);
             strip.classList.toggle('stacked', now);
+            strip.classList.toggle('tight', !now && strip.clientWidth < TIGHT_EMS * parseFloat(getComputedStyle(strip).fontSize));
             setStacked(now);
         };
         restack();
