@@ -10,8 +10,8 @@ instead of staying as the page loaded them); older plugins omit it and the page 
 (TMDb, through the `inlineWithin` fallback) and a **spinner** one mark's box (s0) s0 before the chevron: a white 30 % track and a
 φ⁻² (38.2 %) arc, one turn a second, linear (`.jfmod-rspin`). When the fetched values come, TMDb and the spinner **step out**
 (opacity, down s-2, φ⁻³ s; TV φ⁻⁴ s), then IMDb, RT critics, RT audience and Trakt **fade in** from s-2 to their left, φ⁻² s each,
-φ⁻⁴ s apart, in today's order; TMDb stays popup-only (D274). On a computer the glass glides to its new width and the chevron with
-its right end (φ⁻² + (n−1)·φ⁻⁴ s; φ⁻³ s when it closes up); the TV steps at once. A failed or empty fetch only takes the spinner
+φ⁻⁴ s apart, in today's order; TMDb stays popup-only (D274). On a computer the glass glides to its new width, and the marks that stay and the
+chevron slide to their new places (FLIP) (φ⁻² + (n−1)·φ⁻⁴ s; φ⁻³ s when it closes up); the TV steps at once. A failed or empty fetch only takes the spinner
 away (φ⁻³ s, scale 0.618). A title already fetched draws everything at once, with no motion, as does every change under reduced
 motion (the spinner then stands still at 55 %). Popup: the ticked rows plus a **Fetching…** row with the same spinner while
 fetching. Easing `cubic-bezier(0.236, 0, 0, 1)`. Code: `design/Ratings.tsx` (`useHandOver`, `useGlide`), `design/progressRatings.scss`.

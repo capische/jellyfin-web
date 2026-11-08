@@ -108,43 +108,46 @@ const useHandOver = (inline: Rating[], standIn: boolean, fetching: boolean, tv: 
 };
 
 /**
- * On a computer the glass glides to its new width and the chevron with its right end (FLIP, transform only for the chevron), over
+ * On a computer the glass glides to its new width, and the marks that stay and the chevron slide to their new places (FLIP), over
  * the arrivals' time, or φ⁻³ s when it closes up. The TV steps at once (width is no transform).
  */
 const useGlide = (button: RefObject<HTMLButtonElement>, shape: string, arriving: number, off: boolean) => {
-    const was = useRef<{ width: number; chev: number } | null>(null);
+    const was = useRef<{ width: number; at: Map<string, number> } | null>(null);
     useLayoutEffect(() => {
         const node = button.current;
-        const chev = node?.querySelector<HTMLElement>('.jfmod-rchev');
         if (!node) return;
+        // What stays on screen (the marks that do not arrive now, and the chevron), by key.
+        const movers = Array.from(node.querySelectorAll<HTMLElement>('.ritem:not(.in0), .jfmod-rchev'));
+        const keyOf = (element: HTMLElement) => element.getAttribute('data-jfmod-rating') ?? 'chevron';
         node.style.width = '';
         node.style.overflow = '';
-        if (chev) chev.style.transform = '';
+        for (const mover of movers) mover.style.transform = '';
         const box = node.getBoundingClientRect();
-        const now = { width: box.width, chev: chev ? chev.getBoundingClientRect().left - box.left : 0 };
+        const now = { width: box.width, at: new Map(movers.map(mover => [keyOf(mover), mover.getBoundingClientRect().left - box.left])) };
         const before = was.current;
         was.current = now;
         if (off || !before || reducedMotion() || Math.abs(before.width - now.width) < 0.5) return;
         const ms = now.width > before.width ? ARRIVE_MS + Math.max(0, arriving - 1) * STAGGER_MS : LEAVE_MS;
+        const moved = movers.filter(mover => before.at.has(keyOf(mover)));
         node.style.transition = 'none';
         node.style.width = before.width + 'px';
         node.style.overflow = 'hidden';
-        if (chev) {
-            chev.style.transition = 'none';
-            chev.style.transform = `translateX(${before.chev - now.chev}px)`;
+        for (const mover of moved) {
+            mover.style.transition = 'none';
+            mover.style.transform = `translateX(${(before.at.get(keyOf(mover)) ?? 0) - (now.at.get(keyOf(mover)) ?? 0)}px)`;
         }
         node.getBoundingClientRect();
         node.style.transition = `width ${ms}ms var(--ease), background-color var(--d1) var(--ease)`;
         node.style.width = now.width + 'px';
-        if (chev) {
-            chev.style.transition = `transform ${ms}ms var(--ease)`;
-            chev.style.transform = '';
+        for (const mover of moved) {
+            mover.style.transition = `transform ${ms}ms var(--ease)`;
+            mover.style.transform = '';
         }
         const end = window.setTimeout(() => {
             node.style.transition = '';
             node.style.width = '';
             node.style.overflow = '';
-            if (chev) chev.style.transition = '';
+            for (const mover of moved) mover.style.transition = '';
         }, ms);
         return () => window.clearTimeout(end);
     // `arriving` and `off` are read at the change of shape.
