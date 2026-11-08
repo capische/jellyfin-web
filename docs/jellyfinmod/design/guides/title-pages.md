@@ -1,5 +1,11 @@
 # Title pages and art ground
 
+**Person page on the golden head (ds.t15), the user's brief 2026-11-07, built, not accepted, gate 1 on beta (computer, dark).**
+On a computer a person's page takes the title head and rows below as they are (`jfmod-titleTop`, `TitlePage.tsx`): the photo at
+poster : column = 1 : φ², the name s2 / 700, Born and Birth place as metadata words with a bullet between them, the ♥ ⋯ pill (a
+`.short` pill, s-2 padding), the biography at B in the reading measure (at most s8), the IMDb / TMDB links at B, and the
+filmography rows as the title rows (s1 titles, s5 posters, s1 apart). Phone, tablet and TV keep the person's old head.
+
 **Series page, rows and Download's glyph (ds.t14): approved by the user 2026-11-07 (workspace `reviews/title-golden/series.html`),
 built, not accepted, gate 1 on beta (computer, dark).** A series page has **no season row and no season page from it**: under the
 head, a **season pill** (card glass, the season's name at B / 600, an s0 chevron s-2 after it, padding s-1 with s0 on the left, at
