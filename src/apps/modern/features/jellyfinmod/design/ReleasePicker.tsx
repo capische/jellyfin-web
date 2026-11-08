@@ -36,7 +36,7 @@ const Picker: FC<ReleasePickerProps & { close: () => void }> = props => {
     };
     const label = names ? 'Hide Names' : 'Show Names';
     return <div data-ds-dialog='' className='dialog wide pickerDialog' role='dialog' aria-modal='true' aria-label={props.intent === 'addVersion' ? 'Get Another Quality' : 'Get a Release'}>
-        <div className='dlghead'><h3>{props.intent === 'addVersion' ? 'Get Another Quality' : 'Get a Release'}<small>{props.title}</small></h3>
+        <div className='dlghead'><h3>{props.intent === 'addVersion' ? 'Get Another Quality' : 'Get a Release'}{props.title && <span className='ttl'>{' · ' + props.title}</span>}</h3>
             <span ref={setSlot} className='sourcesSlot' />
             <button type='button' className={'rb focusable' + (names ? ' on' : '')} data-tip={label} aria-label={label} aria-pressed={names} onClick={toggle}><ReleaseGlyph name='names' /></button>
             {client && device !== 'tv' && <a className='rb focusable' href={client.openUrl} target='_blank' rel='noopener noreferrer' data-tip={'Open ' + client.name} aria-label={'Open ' + client.name}><ReleaseGlyph name='client' /></a>}

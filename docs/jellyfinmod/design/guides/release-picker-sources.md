@@ -128,3 +128,10 @@ Code: `components/ReleaseSources.tsx` (`ReleaseSources`, `useTrain`), `component
 - Colour the funnel glyph, add a count badge, or move the state into text in the title row.
 - Bring back a failure banner or the reason at the right of a line; it lives behind the (i).
 - Cancel an indexer's search when it is unticked, or forget its rows.
+
+## Head and Search For (the user, 2026-11-07)
+
+- The head is one line: **Get a Release · <title>** (or Get Another Quality · <title>), the title after a middle dot at 70 % ink
+  (`.ttl`), the whole line ending in an ellipsis when it does not fit. No second line under it.
+- A **movie** draws no Search For (it had one fixed option, the movie's own name, which the head now says). Quality Profile then stands
+  alone at the half it has beside Search For on a series (`.pmchoices .fld:only-child`). A series keeps Search For.

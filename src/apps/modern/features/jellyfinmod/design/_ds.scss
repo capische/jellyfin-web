@@ -511,6 +511,8 @@ h2.sect2 { margin: 1.618em 0 0.618em; font-size: 1.236em; font-weight: 600; line
 &.dev-phone .dlghead { padding: 0.618em 0.382em 0 1em; }
 .dlghead h3 { flex: 1 1 auto; min-width: 0; margin: 0; font-size: 1.618em; font-weight: 400; line-height: 1.2; }
 .dlghead h3 small { display: block; font-size: 0.618em; color: var(--text-70); margin-top: 0.236em; }
+.pickerDialog .dlghead h3 { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.pickerDialog .dlghead h3 .ttl { color: var(--text-70); }
 .dlgbody { padding: 0.618em 1.618em 1.618em; }
 &.dev-phone .dlgbody { padding: 0.618em 1em 1em; }
 .rb { position: relative; display: flex; flex: none; align-items: center; justify-content: center; width: 2.5em; height: 2.5em; border-radius: 50%; color: var(--text-70); }
@@ -526,6 +528,7 @@ h2.sect2 { margin: 1.618em 0 0.618em; font-size: 1.236em; font-weight: 600; line
 .rb .sat { position: absolute; left: 50%; top: 50%; width: 0.382em; height: 0.382em; margin: -0.191em; border-radius: 50%; }
 .pmchoices { display: flex; flex-wrap: wrap; margin: 0 -0.5em; }
 .pmchoices .fld { flex: 1 1 17.94em; margin: 0.618em 0.5em 0; }
+.pmchoices .fld:only-child { flex-grow: 0; flex-basis: calc(50% - 1em); }
 .pstatus { min-height: 1.618em; margin: 0.618em 0 0.236em; font-size: 0.92em; color: var(--text-70); }
 .pstatus .asking { color: #74c9ec; }
 &:not(html)[data-theme='light'] .pstatus .asking { color: #0277bd; }
