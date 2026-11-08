@@ -140,7 +140,8 @@
         transform: rotate(-90deg);
     }
 
-    .jfmod-pdisc circle {
+    .jfmod-pdisc .ring circle,
+    .jfmod-pdisc .spin circle {
         fill: none;
         stroke-width: 7.3;
     }
@@ -158,9 +159,11 @@
     .jfmod-pdisc .spinq svg { animation: jfds-pdturn 2.618s linear infinite; }
     .jfmod-pdisc .spini svg { animation: jfds-pdturn 1.2s linear infinite; }
 
+    /* Line glyphs: the design's svg fill (currentColor) would fill the check and the clock. */
     .jfmod-pdisc .gl svg {
         width: 2em;
         height: 2em;
+        fill: none;
     }
 
     /* The clock and the arrow sit inside a turning segment: one φ step smaller (1.618em). */
