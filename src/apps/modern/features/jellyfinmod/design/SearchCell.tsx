@@ -1,4 +1,5 @@
-import React, { type FC, type ReactNode, useContext, useState } from 'react';
+import React, { type FC, type KeyboardEvent, type MouseEvent, type ReactNode, useContext, useState } from 'react';
+import actionsheet from 'components/actionSheet/actionSheet';
 import { useUserSettings } from 'hooks/useUserSettings';
 import type { CardOptions } from 'types/cardOptions';
 import type { BrowseRow } from '../types/browse';
@@ -29,8 +30,11 @@ export interface SearchCardItem {
     /** A library title's entry: its Not Downloaded cloud top right while it has no file; nothing once it has one. */
     entry?: Entry;
     retention?: RetentionSummary | null;
-    /** A TMDB result: the + add disc in the poster's centre. */
-    add?: { adding: boolean; onAdd: (item: SearchCardItem, button: HTMLElement) => void };
+    /**
+     * A TMDB result: the Download disc in the poster's centre adds it and opens the release picker (ds.t17); Add to Library,
+     * the add alone, is in the card's More.
+     */
+    add?: { adding: boolean; onAdd: (button: HTMLElement) => void; onDownload: (button: HTMLElement) => void };
     /** A library title's row: its card draws Home's disc (Play, Download, or the progress ring) and foot pill (ds.t16). */
     row?: BrowseRow;
 }
@@ -45,6 +49,38 @@ interface ViewProps {
 }
 
 /** ds.js cell for the mixed Search grid; the existing search session owns Add and navigation. */
+
+const activate = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        event.stopPropagation();
+        event.currentTarget.click();
+    }
+};
+
+/** A control inside the card's link: it acts, and the link does not open. */
+const own = (event: MouseEvent<HTMLElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    return event.currentTarget;
+};
+
+/** A TMDB result's foot pill: More alone (it has no item to mark watched or favourite), with Download and Add to Library. */
+const AddMenu: FC<{ add: NonNullable<SearchCardItem['add']> }> = ({ add }) =>
+    <span className='hmenu glassy jfmod-cardActions'>
+        <span className='pi focusable' role='button' tabIndex={0} data-tip='More' aria-label='More' aria-disabled={add.adding || undefined}
+            onKeyDown={activate} onClick={event => {
+                const opener = own(event);
+                if (add.adding) return;
+                void actionsheet.show({ positionTo: opener, items: [
+                    { id: 'get', name: 'Download', icon: 'cloud_download' },
+                    { id: 'add', name: 'Add to Library', icon: 'add' }
+                ] }).then(id => {
+                    if (id === 'get') add.onDownload(opener);
+                    if (id === 'add') add.onAdd(opener);
+                }, () => undefined);
+            }}><Icon name='more' /></span>
+    </span>;
 
 const noFile = (entry?: Entry) => !!entry && [FileState.None, FileState.Reclaimed].includes(entry.state);
 
@@ -77,23 +113,16 @@ const SearchCellView: FC<ViewProps> = ({ item, over, data, onPrepare }) => {
             <Icon name={item.mediaType === 'movie' ? 'movie' : 'tv'} className='fallback' />}
         {mark && <span className='mark glassy' title={tip}>{mark}</span>}
         {add && <span className={'disc hov glassy' + (add.adding ? ' on' : '')} role='button' tabIndex={0}
-            aria-label={`Add ${item.title} to library`} data-tip='Add to Library' aria-busy={add.adding || undefined}
-            aria-disabled={add.adding || undefined} data-jfmod-add={item.key}
-            onKeyDown={event => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    event.currentTarget.click();
-                }
-            }}
+            aria-label={`Download ${item.title}`} data-tip='Download' aria-busy={add.adding || undefined}
+            aria-disabled={add.adding || undefined} data-jfmod-add={item.key} onKeyDown={activate}
             onClick={event => {
-                event.preventDefault();
-                event.stopPropagation();
-                if (!add.adding) add.onAdd(item, event.currentTarget);
+                const button = own(event);
+                if (!add.adding) add.onDownload(button);
             }}>
-            <Icon name='plus' />
+            <Cloud />
             {add.adding && <span className='dm importing' aria-hidden='true'><svg className='arc' viewBox='0 0 36 36'><circle className='turn' cx='18' cy='18' r='15.9' fill='none' stroke='currentColor' strokeWidth='2.2' strokeDasharray='28 72' /></svg></span>}
         </span>}
+        {add && <AddMenu add={add} />}
         {over}
     </span><div className='capt'>
         <div className='ln t'>{item.title}</div>

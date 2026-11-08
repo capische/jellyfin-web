@@ -11,6 +11,10 @@ this guide's row values (2.618em, 1.4em icons); the proposal's golden rows (s2, 
 pass. The same group shows in the phone's bottom sheet and the TV's anchored menu. Code: `integration/moreMenuItem.ts` (`divider`,
 `section`, `disabled`, `title`, `danger`, `run(opener)`), `design/ActionSheet.tsx`, `useVersionMenu` in `components/NativeEntryDetails.tsx`.
 
+**Search's TMDB result More (ds.t17), the user 2026-11-07, built, not accepted:** a result not in the library has a foot pill
+with More alone; its action sheet is **Download** (add, then the release picker) and **Add to Library** (the add only), with the
+existing row values. Code: `design/SearchCell.tsx`. See [search card](search-card.md).
+
 **Entry card More (2026-11-05, user brief), built, not accepted:** a non-pending design `Cell` with an entry and no
 Jellyfin item uses the existing action sheet for **More Info** (its title page, where entry management remains) and,
 when available, **View Queue**. Native-item More and the existing in-flight context menu retain their handlers.
