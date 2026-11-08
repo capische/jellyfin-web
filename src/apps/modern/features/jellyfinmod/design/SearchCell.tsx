@@ -119,7 +119,7 @@ const SearchCellView: FC<ViewProps> = ({ item, over, data, onPrepare }) => {
                 const button = own(event);
                 if (!add.adding) add.onDownload(button);
             }}>
-            <Cloud />
+            <Cloud add />
             {add.adding && <span className='dm importing' aria-hidden='true'><svg className='arc' viewBox='0 0 36 36'><circle className='turn' cx='18' cy='18' r='15.9' fill='none' stroke='currentColor' strokeWidth='2.2' strokeDasharray='28 72' /></svg></span>}
         </span>}
         {add && <AddMenu add={add} />}
