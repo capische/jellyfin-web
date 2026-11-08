@@ -63,7 +63,8 @@
     }
 
     .rmenu .jfmod-rfetch .jfmod-rspin {
-        margin: 0;
+        display: block;
+        margin: 0 auto;
     }
 
     .rmenu .jfmod-rfetch .rval {
@@ -73,6 +74,10 @@
 
     /* ---- The card's centre disc while its title is on its way (split A): the card glass disc, 3.236em, becomes the ring. ---- */
     .cell.jfmod-pdOn .post > .disc:not(.jfmod-pdisc) { display: none; }
+
+    /* The download mark replaces Not Downloaded in the corner, whichever draws it (never both). */
+    .ds-downloading .post .jfmod-mark--none,
+    .ds-downloading .post [data-ds-state-kind='not-downloaded'] { display: none; }
 
     /* One ring at a time: the corner's download mark steps aside while the disc shows (φ⁻³ s out, φ⁻² s back); the count stays. */
     .cell.jfmod-pdOn .post [data-ds-download] { transition: opacity var(--d2) var(--ease); }
