@@ -457,21 +457,13 @@ const useEpisodeWindow = ({ api, view, entryId, episode, itemIds, busy, change }
 };
 
 /**
- * The native series page's section: the retention status and the episodes on their way. Get a Release is the header icon and
- * Keep Series a More-menu item (user, 2026-10-12). No Episode Retention or History list for now (the user, 2026-11-07, ds.t14).
+ * The native series page's section: the retention status. Get a Release is the header icon and Keep Series a More-menu item
+ * (user, 2026-10-12). No Episode Retention or History list, and no per-episode download lines: the season total under the pill
+ * says it (the user, 2026-11-07, ds.t14: "0 of 1 episode is enough").
  */
-const SeriesSection: FC<{ detail: EntryDetail }> = ({ detail }) => {
-    // Episodes of this series that are grabbed or downloading; the series entry itself is never projected (P5.I3).
-    const inFlightEpisodes = detail.episodes.filter(candidate =>
-        candidate.state === FileState.Grabbed || candidate.state === FileState.Downloading);
-    return <section aria-label='JellyfinMod' data-jfmod-entry-id={detail.entry.id}>
-        <RetentionStatus retention={detail.retention} />
-        {inFlightEpisodes.map(candidate => <div className='er' key={'queue:' + candidate.id}>
-            <span>S{candidate.seasonNumber} E{candidate.episodeNumber} · {candidate.title}</span>
-            <QueueStatusLine entryId={candidate.entryId} episodeId={candidate.id} state={candidate.state} progress={candidate.progress} />
-        </div>)}
-    </section>;
-};
+const SeriesSection: FC<{ detail: EntryDetail }> = ({ detail }) => <section aria-label='JellyfinMod' data-jfmod-entry-id={detail.entry.id}>
+    <RetentionStatus retention={detail.retention} />
+</section>;
 
 /**
  * Keep Series in the series page's stock More menu, for administrators (user, 2026-10-12: the page's button moved there). Once

@@ -13,7 +13,11 @@ Cards are the poster card's 16:9 cell ([poster-card.md](poster-card.md)): s6 sti
 title; hover keeps the 0.135em ring) and opens second from the left; a click selects. The pill's **main button follows the
 selection**: **Play** (never Resume, no episode code; it resumes an episode in progress), **Download** (blue, first) for an
 episode with no file, or a disabled **Airs 14 Nov** (clock, hairline, muted ink) for one not aired. The round cloud (Get Another
-Quality) is in the pill only beside Play, before More. Episode Retention and History are gone from the series page for now.
+Quality) is in the pill only beside Play, before More. Episode Retention, History and the per-episode download lines are gone
+from the series page; the season total under the pill (`0 of 1 episode · 0% · 1 h 58 min left`) is the one download line
+(the user, 2026-11-07). On a computer, hovering a card of an aired episode with no file and nothing on its way shows the poster
+card's glass disc with the cloud: it opens the same Get a Release dialog as Download with that episode preselected in its scope
+switch (`episodePage`); a click elsewhere on the card still only selects it.
 Rows on every title page (computer): titles s1 at line 1, s2 above and s0 below, on the gutter; posters s5, people s4, stills
 s6, s1 apart. Order: **Cast** (actors only), **Guest Stars** (a series page's: the selected episode's, titled with its
 `S1:E1 · Title`), the rest, **More Like This** last. **Download's cloud is s1** (the round actions' glyph size; Play's triangle
