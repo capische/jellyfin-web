@@ -26,7 +26,7 @@ export const QueueRowView: FC<{ image?: string; title: ReactNode; release: strin
         <span className='q-s' style={{ color: 'var(--text-70)' }}>{props.mark}</span>{props.more}
     </div>;
 
-export const QueueHead: FC = () => <div className='qhead' aria-hidden='true'><b style={{ width: '3.618em' }} />
+export const QueueHead: FC = () => <div className='qhead' aria-hidden='true'><b style={{ width: 'var(--jfmod-q-lead, 3.618em)' }} />
     <b className='q-t'><span>Title</span></b><b className='q-p'><span>Progress</span></b>
     <b className='q-n'><span>Speed</span></b><b className='q-n'><span>Left</span></b><b className='q-s'><span>State</span></b>
-    <b style={{ width: '2.7816em' }} /></div>;
+    <b style={{ width: 'var(--jfmod-q-end, 2.7816em)' }} /></div>;

@@ -2,6 +2,11 @@
 
 **Status: approved 2026-11-06, D288–D295, built, not accepted.** Computer first look only; phone/TV specifics and full acceptance follow the user's first look. These values supersede the older presentation notes below.
 
+**ds.t15, the Queue page on B (the user, 2026-11-07: "do not make it too big"), built, not accepted, gate 1 on beta (computer,
+dark).** On a computer the Queue's State disc is s2 with an s1 glyph, beside an s2 More with an s1 glyph (`design/_golden.scss`);
+rows s-2 above and below on B, the title B / 600, release, version and figures s-1, the thumb s2 wide (2:3, s-2 corners), progress
+s5 with an s-3 bar, Speed and Left s3, the page title s1, banners and notes at B. Other layouts keep the 2.5em row disc.
+
 ## Title top (D288–D295)
 
 The active title-page status card uses a 4.236em page ring (φ³), a 2.118em glyph and a 1em body gap, within a 46.98em
