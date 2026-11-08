@@ -801,3 +801,121 @@
         font-size: var(--jfmod-s-1);
     }
 }
+
+/* ---------------------------------------------------------------------------------------------------------------------
+   ds.t15, the Queue page on B (the user, 2026-11-07: "do not make it too big, a bit probably to match design"). Computer
+   only. The page on the gutter, its title s1; rows s-2 above and below on B with the title at B / 600, the release, version
+   and figures s-1; the thumb s2 wide (2:3), the state disc and More s2 round with s1 glyphs, so a row grows only by the
+   thumb (about 84 px from 77). Named exceptions: the thumb's 2:3, the bar's own hairline radius.
+   --------------------------------------------------------------------------------------------------------------------- */
+&.dev-computer:not(.layout-tv) .qwrap {
+    /* The head's spacers (Queue.tsx): the thumb and its gap, and More. */
+    --jfmod-q-lead: calc(var(--jfmod-s2) + var(--jfmod-s0));
+    --jfmod-q-end: var(--jfmod-s2);
+
+    padding: 0 var(--jfmod-gut) var(--jfmod-s2);
+
+    .ptitle {
+        padding: var(--jfmod-s1) 0 0;
+        font-size: var(--jfmod-s1);
+        line-height: 1;
+    }
+
+    .banner {
+        margin: var(--jfmod-s0) 0 0;
+        padding: var(--jfmod-s-1) var(--jfmod-s0);
+        border-left-width: var(--jfmod-s-3);
+        border-radius: var(--jfmod-s-3);
+        font-size: var(--jfmod-s0);
+        line-height: 1.618;
+    }
+
+    .queue > .tags {
+        margin: var(--jfmod-s-1) 0 0;
+        font-size: var(--jfmod-s0);
+        line-height: 1.618;
+        color: var(--text-70);
+    }
+
+    .qhead {
+        margin: var(--jfmod-s1) calc(-1 * var(--jfmod-s0)) 0;
+        padding: 0 var(--jfmod-s0) var(--jfmod-s-2);
+    }
+
+    .qhead span {
+        font-size: var(--jfmod-s-1);
+        letter-spacing: var(--jfmod-s-7);
+    }
+
+    .qrow {
+        margin: 0 calc(-1 * var(--jfmod-s0));
+        padding: var(--jfmod-s-2) var(--jfmod-s0);
+        border-radius: var(--jfmod-s-1);
+        font-size: var(--jfmod-s0);
+    }
+
+    .qrow .th {
+        width: var(--jfmod-s2);
+        height: calc(var(--jfmod-s2) * 1.5);
+        margin-right: var(--jfmod-s0);
+        border-radius: var(--jfmod-s-2);
+    }
+
+    .q-t .a { line-height: 1.618; }
+
+    .qsub,
+    .q-t .b {
+        margin-top: 0;
+        font-size: var(--jfmod-s-1);
+        line-height: 1.618;
+    }
+
+    .q-p {
+        width: var(--jfmod-s5);
+        margin: 0 var(--jfmod-s0);
+    }
+
+    .bar2 {
+        height: var(--jfmod-s-3);
+        border-radius: var(--jfmod-s-3);
+    }
+
+    .q-p .n {
+        margin-top: var(--jfmod-s-2);
+        font-size: var(--jfmod-s-1);
+        line-height: 1.618;
+    }
+
+    .q-n {
+        width: var(--jfmod-s3);
+        margin-right: var(--jfmod-s0);
+        font-size: var(--jfmod-s-1);
+        line-height: 1.618;
+    }
+
+    .q-s {
+        width: var(--jfmod-s2);
+        margin: 0 var(--jfmod-s-2) 0 var(--jfmod-s-1);
+    }
+
+    .q-s .dm.row {
+        width: var(--jfmod-s2);
+        height: var(--jfmod-s2);
+    }
+
+    .q-s .dm.row > svg.glyph {
+        width: var(--jfmod-s1);
+        height: var(--jfmod-s1);
+        margin: calc(var(--jfmod-s1) / -2);
+    }
+
+    .qrow > .ib {
+        width: var(--jfmod-s2);
+        height: var(--jfmod-s2);
+    }
+
+    .qrow > .ib svg {
+        width: var(--jfmod-s1);
+        height: var(--jfmod-s1);
+    }
+}

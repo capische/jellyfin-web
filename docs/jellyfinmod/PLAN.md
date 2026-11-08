@@ -2580,3 +2580,14 @@ This last on every title page. Also the user's bug report: Download's cloud read
 every title head. Code: `design/SeriesEpisodes.tsx`, `TitlePage.tsx`, `_golden.scss`, `titleTop.scss`,
 `components/NativeEntryDetails.tsx`. Guides: [title pages](design/guides/title-pages.md), [poster card](design/guides/poster-card.md).
 Verified only on the computer (1440, 1920), dark; phone, tablet, TV, light theme, real Chrome and the suites are not run.
+
+## ds.t15 — the release picker, the person page and the Queue on the golden scale (2026-11-07)
+
+**Built (not accepted), gate 1: computer first look on beta.** The user's reports of 2026-11-07: the picker's Sources list
+("Sources · 6 of 7") opened behind the dialog, under its right edge; now it opens above it, hanging from its button's right edge
+(`design/Menu.tsx`, `menuPosition.ts`, `_runtime.scss`). The release picker and its Sources list on B, kept compact ("do not make
+it massive or too big"); a person's page with the golden title head and title rows; the Queue page on B ("do not make it too big").
+Computer only, in `design/_golden.scss` (ds.t15 blocks), `TitlePage.tsx`, `Queue.tsx`. Guides:
+[release picker sources](design/guides/release-picker-sources.md), [title pages](design/guides/title-pages.md),
+[download state mark](design/guides/download-state-mark.md). Verified only on the computer (1440, 1920), dark, in Playwright
+Chromium; phone, tablet, TV, the light theme, real Chrome, the runners and the Codex review are later gates.
