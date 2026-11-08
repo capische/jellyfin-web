@@ -2591,3 +2591,24 @@ Computer only, in `design/_golden.scss` (ds.t15 blocks), `TitlePage.tsx`, `Queue
 [release picker sources](design/guides/release-picker-sources.md), [title pages](design/guides/title-pages.md),
 [download state mark](design/guides/download-state-mark.md). Verified only on the computer (1440, 1920), dark, in Playwright
 Chromium; phone, tablet, TV, the light theme, real Chrome, the runners and the Codex review are later gates.
+
+## ds.t16 — the ratings pill while the plugin fetches, and the card's progress disc (2026-11-07)
+
+**Built (not accepted), gate 1: computer first look on beta.** The user approved two designs (workspace
+`reviews/progress-ratings/`, `DECISIONS.md`) and said "start the ratings and progress build". **Ratings, option B "Hand-over":**
+the plugin's ratings answer gains `fetching` (entry detail: `ratingsFetching`), true while an MDBList fetch of the title waits or
+runs; the web re-reads every 3 s while it is set (native page and file-less page) and stops when it clears; TMDb stands in with a
+spinner, then steps out for IMDb, RT critics, RT audience and Trakt. Additive: an older web ignores the field, a newer web against an
+older plugin behaves as before. **Progress, split A:** while anything of a title is on its way the card's centre disc is a
+progress ring with the percent inside (a series: one segment per episode, a wider gap between seasons, `3 of 12`, one ring above 24;
+the percent from `batchProgress()`), queued, downloading, stalled, importing, done and failed states; the corner download mark steps
+aside; a click opens the title; the same ring on the series page's in-flight episode card. Fixed with it: the corner's Not
+Downloaded cloud beside the download mark. Added from the user's first look at Search: a library title's search card takes Home's
+disc (Play, Download, the ring) and foot pill. Plugin: `RatingsAutoFetch`, `RatingsStore.FetchingAsync`, `RatingsRefreshQueue`,
+`ItemRatingsDto`, `EntryDetail` (Phase 9 suite extended). Web: `design/Ratings.tsx`, `design/ProgressDisc.tsx`,
+`design/downloadMark.ts`, `integration/downloadMarks.tsx`, `design/SeriesEpisodes.tsx`, `design/SearchCell.tsx`,
+`components/CatalogSearchResults.tsx`, `design/progressRatings.scss`. Guides: [ratings](design/guides/ratings.md),
+[download state mark](design/guides/download-state-mark.md), [poster card](design/guides/poster-card.md),
+[card glass](design/guides/card-glass.md), [title pages](design/guides/title-pages.md), [search card](design/guides/search-card.md).
+Verified only on the computer, dark, 1440, in Playwright Chromium; phone, tablet, TV, light theme, real Chrome, the browser runners
+and the Codex review are later gates.

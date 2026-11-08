@@ -1,0 +1,256 @@
+/* ds.t16 (the user, 2026-11-07; workspace reviews/progress-ratings). Base: the title head's B (s0, --jfmod-s0) for the ratings pill
+   and the card's B (1em) for the disc. φ steps: s-2 0.382, s-3 0.236, s-4 0.146; durations φ⁻² 0.382 s (--d2), φ⁻³ 0.236 s (--d1),
+   φ⁻⁴ 0.146 s (--d0), φ⁻¹ 0.618 s (--d3). Transform and opacity only, except the computer's glass width (glides in Ratings.tsx). */
+.jfds {
+    /* ---- The ratings pill while the plugin fetches (option B, the hand-over). ---- */
+    .rgwrap .ritem {
+        transition: opacity var(--d2) var(--ease), transform var(--d2) var(--ease);
+    }
+
+    /* A mark arriving starts faded, s-2 to its left; one leaving fades and drops s-2 (φ⁻³ s). */
+    .rgwrap .ritem.in0 {
+        opacity: 0;
+        transform: translateX(calc(-1 * var(--jfmod-s-2, 0.382em)));
+        transition: none;
+    }
+
+    .rgwrap .ritem.out {
+        opacity: 0;
+        transform: translateY(var(--jfmod-s-2, 0.382em));
+        transition-duration: var(--d1);
+    }
+
+    /* One mark's box: a white 30 % track and a φ⁻² (38.2 %) arc, one turn a second, s0 before the chevron. */
+    .jfmod-rspin {
+        position: relative;
+        display: inline-block;
+        flex: none;
+        width: var(--jfmod-s0, 1em);
+        height: var(--jfmod-s0, 1em);
+        margin-left: var(--jfmod-s0, 1em);
+        vertical-align: middle;
+        transition: opacity var(--d1) var(--ease), transform var(--d1) var(--ease);
+    }
+
+    .jfmod-rspin svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+        animation: jfds-rspin 1s linear infinite;
+    }
+
+    .jfmod-rspin circle {
+        fill: none;
+        stroke-width: 3.5;
+    }
+
+    .jfmod-rspin .tr { stroke: var(--card-track); }
+
+    .jfmod-rspin .ar {
+        stroke: currentcolor;
+        stroke-linecap: round;
+        stroke-dasharray: 38.2 100;
+    }
+
+    .jfmod-rspin.out {
+        opacity: 0;
+        transform: scale(0.618);
+    }
+
+    &.layout-tv .rgwrap .ritem,
+    &.layout-tv .jfmod-rspin {
+        transition-duration: var(--d0);
+    }
+
+    .rmenu .jfmod-rfetch .jfmod-rspin {
+        margin: 0;
+    }
+
+    .rmenu .jfmod-rfetch .rval {
+        font-weight: 400;
+        opacity: 0.7;
+    }
+
+    /* ---- The card's centre disc while its title is on its way (split A): the card glass disc, 3.236em, becomes the ring. ---- */
+    .cell.jfmod-pdOn .post > .disc:not(.jfmod-pdisc) { display: none; }
+
+    /* One ring at a time: the corner's download mark steps aside while the disc shows (φ⁻³ s out, φ⁻² s back); the count stays. */
+    .cell.jfmod-pdOn .post [data-ds-download] { transition: opacity var(--d2) var(--ease); }
+
+    .cell.jfmod-pdOn.lit .post [data-ds-download],
+    .cell.jfmod-pdOn.focus .post [data-ds-download] {
+        opacity: 0;
+        transition-duration: var(--d1);
+    }
+
+    &.dev-computer .cell.jfmod-pdOn:hover .post [data-ds-download],
+    &.dev-tablet .cell.jfmod-pdOn:hover .post [data-ds-download] {
+        opacity: 0;
+        transition-duration: var(--d1);
+    }
+
+    /* An indicator, not a button: no fill or growth under the pointer; a click is the card's. */
+    .cell .disc.jfmod-pdisc:active {
+        transform: none;
+    }
+
+    &.dev-computer .cell .disc.jfmod-pdisc:hover,
+    &.dev-tablet .cell .disc.jfmod-pdisc:hover {
+        transform: none;
+        background: var(--card-glass-bg);
+        color: var(--card-ink);
+    }
+
+    &.layout-tv .cell .disc.jfmod-pdisc:hover {
+        background: rgba(0, 0, 0, 0.66);
+        color: #fff;
+    }
+
+    .jfmod-pdisc > .ly {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transform: scale(0.854);
+        transition: opacity var(--d1) var(--ease), transform var(--d1) var(--ease);
+    }
+
+    .jfmod-pdisc > .ly.on {
+        opacity: 1;
+        transform: none;
+        transition-duration: var(--d2);
+    }
+
+    .jfmod-pdisc svg { overflow: visible; }
+
+    .jfmod-pdisc .ring svg,
+    .jfmod-pdisc .spin svg {
+        width: 100%;
+        height: 100%;
+        transform: rotate(-90deg);
+    }
+
+    .jfmod-pdisc circle {
+        fill: none;
+        stroke-width: 7.3;
+    }
+
+    .jfmod-pdisc .tr { stroke: var(--card-track); }
+
+    .jfmod-pdisc .va,
+    .jfmod-pdisc .sg { stroke: currentcolor; }
+
+    .jfmod-pdisc .va { transition: stroke-dasharray var(--d3) var(--ease), opacity var(--d2) var(--ease); }
+    .jfmod-pdisc .cont .va { stroke-linecap: round; }
+    .jfmod-pdisc .sg { stroke-linecap: round; }
+
+    /* Queued: a φ⁻³ (23.6 %) segment, one turn per φ² s; importing: the corner mark's 28 % segment, one turn per 1.2 s (exc: its approved turn). */
+    .jfmod-pdisc .spinq svg { animation: jfds-pdturn 2.618s linear infinite; }
+    .jfmod-pdisc .spini svg { animation: jfds-pdturn 1.2s linear infinite; }
+
+    .jfmod-pdisc .gl svg {
+        width: 2em;
+        height: 2em;
+    }
+
+    /* The clock and the arrow sit inside a turning segment: one φ step smaller (1.618em). */
+    .jfmod-pdisc [data-g='clock'] svg,
+    .jfmod-pdisc [data-g='arrow'] svg {
+        width: 1.618em;
+        height: 1.618em;
+    }
+
+    .jfmod-pdisc .ck {
+        stroke-dasharray: 1;
+        stroke-dashoffset: 1;
+    }
+
+    .jfmod-pdisc [data-g='check'].on .ck {
+        stroke-dashoffset: 0;
+        transition: stroke-dashoffset var(--d2) var(--ease) var(--d3);
+    }
+
+    .jfmod-pdisc .num {
+        flex-direction: column;
+        line-height: 1;
+        text-align: center;
+    }
+
+    .jfmod-pdisc .pc {
+        font-size: 1em;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: -0.01em;
+    }
+
+    .jfmod-pdisc .pc small {
+        margin-left: 0.04em;
+        font-size: 0.618em;
+        font-weight: 600;
+        opacity: 0.854;
+    }
+
+    .jfmod-pdisc .sub {
+        position: relative;
+        width: 100%;
+        height: 0.742em;
+        margin-top: 0.146em;
+        overflow: hidden;
+    }
+
+    .jfmod-pdisc .sub.none { display: none; }
+
+    .jfmod-pdisc .sub span {
+        display: block;
+        font-size: 0.618em;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+        opacity: 0.854;
+    }
+
+    .jfmod-pdisc .sub span.roll { animation: jfds-pdroll var(--d2) var(--ease); }
+
+    .jfmod-pdisc.stalled .va,
+    .jfmod-pdisc.stalled .num { opacity: 0.55; }
+
+    .jfmod-pdisc [data-g='bang'] svg { transform: scale(1.1); }
+
+    &.layout-tv .jfmod-pdisc > .ly,
+    &.layout-tv .jfmod-pdisc .va { transition-duration: var(--d0); }
+
+    @media (prefers-reduced-motion: reduce) {
+        .jfmod-rspin { opacity: 0.55; }
+        .jfmod-rspin svg { animation: none; }
+
+        .rgwrap .ritem,
+        .jfmod-rspin,
+        .jfmod-pdisc > .ly,
+        .jfmod-pdisc .va,
+        .jfmod-pdisc .ck { transition: none; }
+        .jfmod-pdisc .spin svg { animation: none; }
+        .jfmod-pdisc .sub span.roll { animation: none; }
+    }
+}
+
+@keyframes jfds-rspin {
+    from { transform: rotate(-90deg); }
+    to { transform: rotate(270deg); }
+}
+
+@keyframes jfds-pdturn {
+    from { transform: rotate(-90deg); }
+    to { transform: rotate(270deg); }
+}
+
+@keyframes jfds-pdroll {
+    from {
+        opacity: 0;
+        transform: translateY(100%);
+    }
+}

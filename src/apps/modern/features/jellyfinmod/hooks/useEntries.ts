@@ -7,6 +7,7 @@ import { useApi } from 'hooks/useApi';
 import { queryClient } from 'utils/query/queryClient';
 
 import { type EntryDetail, type EntryQuery, getEntries, getEntry, getPluginHealth } from '../api/modApi';
+import { QUEUE_POLL_MS } from '../constants/queue';
 
 /**
  * Entries for the current scope.
@@ -72,7 +73,9 @@ export const entryDetailQuery = (api: Api, userId: string, entryId: string) => q
 export const useLiveEntryDetail = (api: Api, initial: EntryDetail) => {
     const { user } = useApi();
     const live = useQuery({ ...entryDetailQuery(api, user?.Id ?? '', initial.entry.id), enabled: !!user?.Id, staleTime: Infinity,
-        initialData: initial });
+        initialData: initial,
+        // While the plugin fetches the title's ratings, read again every 3 s, as the queue, so they arrive on the open page (ds.t16).
+        refetchInterval: query => (query.state.data?.ratingsFetching ? QUEUE_POLL_MS : false) });
     return live.data ?? initial;
 };
 

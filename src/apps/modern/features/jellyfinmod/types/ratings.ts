@@ -28,4 +28,6 @@ export interface RatingsDefaults {
 export interface ItemRatings {
     entryId?: string | null;
     ratings: Rating[];
+    /** A fetch of the title's ratings waits or runs (ds.t16): the page reads again every 3 s. Absent from an older plugin. */
+    fetching?: boolean;
 }

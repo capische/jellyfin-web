@@ -1,5 +1,9 @@
 # Card glass
 
+**Progress disc (ds.t16), approved by the user 2026-11-07, built, not accepted.** The card's centre disc keeps this glass while
+it shows a download's ring, percent and `3 of 12` ([download-state-mark.md](download-state-mark.md)); no second tint. Its words
+are two digits and a short count, within this guide's "a glyph or two digits" spirit, at 1em and 0.618em 600 in the glass ink.
+
 **Ratings pill (ds.t10): approved by the user 2026-11-07, built, not accepted.** The title head's ratings line on a computer is a
 card-glass pill with the same `--card-glass-bg` / `--card-glass-filter` as the action pill ([ratings.md](ratings.md)).
 

@@ -3,7 +3,7 @@ import { type Query, useQuery } from '@tanstack/react-query';
 import { useApi } from 'hooks/useApi';
 
 import { getQueue } from '../api/modApi';
-import { packProblem, QUEUE_CAPABILITY, QUEUE_POLL_MS, reasonMessage } from '../constants/queue';
+import { type BatchEpisode, packProblem, QUEUE_CAPABILITY, QUEUE_POLL_MS, reasonMessage } from '../constants/queue';
 import type { QueueList, QueueRow, QueueState } from '../types/queue';
 import { usePluginHealth } from './useEntries';
 
@@ -202,4 +202,24 @@ export const useQueueVisible = (wanted = true) => {
     if (!wanted || !capability.available) return false;
     if (isAdmin) return true;
     return probe.isSuccess || (probe.isError && !probe.adminOnly);
+};
+
+/**
+ * Every episode of the season (or, `season` null, of the series) a queue row names (a pack's once each), as its season, its own
+ * view and the row it comes from.
+ */
+export const batchEpisodes = (items: QueueRow[], entryId: string, season: number | null): BatchEpisode[] => {
+    const places = new Map<string, { season: number; number: number }>();
+    for (const row of items) {
+        if (row.entry?.id !== entryId) continue;
+        const named = [...(row.episode ? [{ id: row.episode.id, season: row.episode.seasonNumber, number: row.episode.episodeNumber }] : []),
+            ...(row.pack?.episodes ?? []).map(episode => ({ id: episode.episodeId, season: episode.seasonNumber, number: episode.episodeNumber }))];
+        for (const episode of named) {
+            if (season === null || episode.season === season) places.set(episode.id, { season: episode.season, number: episode.number });
+        }
+    }
+    return Array.from(places).flatMap(([id, place]) => {
+        const row = currentRowFor(items, entryId, id);
+        return row ? [{ ...place, row, view: row.pack ? packEpisodeView(row, id) : row }] : [];
+    });
 };

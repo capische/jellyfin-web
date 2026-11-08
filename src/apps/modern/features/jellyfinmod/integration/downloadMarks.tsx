@@ -9,8 +9,8 @@ import { useApi } from 'hooks/useApi';
 
 import { type EntryDetail, getEntries, GRAB_EVENT } from '../api/modApi';
 import { entryDetailQuery } from '../hooks/useEntries';
-import { aggregateProgress, asNewVersion, describeDownload, downloadProgress, type DownloadProgress, isUnderWay } from '../constants/queue';
-import { currentRowFor, finishedRow, packEpisodeView, packHolds, useQueue, useQueueCapability } from '../hooks/useQueue';
+import { aggregateProgress, asNewVersion, batchProgress, describeDownload, downloadProgress, type DownloadProgress, isUnderWay } from '../constants/queue';
+import { batchEpisodes, currentRowFor, finishedRow, packEpisodeView, packHolds, useQueue, useQueueCapability } from '../hooks/useQueue';
 import type { QueueRow } from '../types/queue';
 
 import { type DownloadMarkLink, paintDownloadMark, ringLink } from '../components/DownloadStateMark';
@@ -571,6 +571,32 @@ const linkOf = (index: QueueIndex, scope: Scope | null | undefined, rows: QueueR
     return ringLink(rows.length > 0 ? rows : index.all.filter(row => row.entry?.id === scope.entryId), progress);
 };
 
+/**
+ * A series' or season's card reads its episodes as one batch, bytes over bytes with "3 of 12" and a segment each, as the season
+ * header does: the mean of what is still on its way dropped back as each episode finished (ds.t16). Null for a movie or an episode.
+ */
+const cardBatch = (index: QueueIndex, scope: Scope) => {
+    if (scope.episodeId || scope.number !== null || currentRowFor(index.items, scope.entryId, null)) return null;
+    return batchProgress(batchEpisodes(index.all, scope.entryId, scope.season), scope.season === null);
+};
+
+/**
+ * A card with no file whose download failed: its disc is the grey bang in place of Download, and the click opens the title, whose
+ * download block says why (ds.t16). The corner and the bar stay as they are: a failure is not drawn there.
+ */
+const failedDisc = (element: HTMLElement, rows: QueueRow[]) => {
+    const failed = rows.find(row => row.state === 'failed' || row.state === 'blocked');
+    if (!failed || rows.some(isUnderWay) || !element.classList.contains('cell') || !showsNoFile(element)) return null;
+    return downloadProgress(failed);
+};
+
+/** What is on its way for a card or row now: a series' or season's card as one batch. */
+const liveProgress = (index: QueueIndex, live: Scope | null | undefined, rows: QueueRow[], single: boolean) => {
+    if (!live) return null;
+    const progress = progressOf(rows, single, viewsIn(index, live, rows));
+    return progress && !single ? cardBatch(index, live) ?? progress : progress;
+};
+
 /** One card's or row's download, drawn for this pass; true when it shows one on its way. */
 const markElement = (element: HTMLElement, context: PassContext): boolean => {
     const { index, placements, carried, idle, unplaced } = context;
@@ -582,7 +608,8 @@ const markElement = (element: HTMLElement, context: PassContext): boolean => {
     const rows = live ? rowsIn(index, live) : [];
     // A card that stands for one episode of the mod's (the missing episode page's still) shows its download as a row does, a
     // failure included.
-    let progress = live ? progressOf(rows, isRow || element.hasAttribute('data-jfmod-episode-id'), viewsIn(index, live, rows)) : null;
+    const single = isRow || element.hasAttribute('data-jfmod-episode-id');
+    let progress = liveProgress(index, live, rows, single);
     const onItsWay = !!live && !!progress && progress.kind !== 'failed';
     if (onItsWay) {
         const key = keyOf(live);
@@ -590,7 +617,7 @@ const markElement = (element: HTMLElement, context: PassContext): boolean => {
         for (const row of rows) grabs.add(row.grabId);
         carried.set(key, { grabs, ended: 0, clean: 0 });
     } else if (!progress && scope) {
-        progress = afterwards(element, scope, context);
+        progress = afterwards(element, scope, context) ?? (single ? null : failedDisc(element, rows));
     }
     const link = linkOf(index, scope, rows, progress);
     if (isRow) drawRow(element, progress, link);

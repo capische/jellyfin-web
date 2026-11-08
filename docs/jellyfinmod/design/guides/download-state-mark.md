@@ -1,5 +1,26 @@
 # Download state mark
 
+**The card's centre disc while its title is on its way (ds.t16): approved by the user 2026-11-07, split A (workspace
+`reviews/progress-ratings/download.html`, `DECISIONS.md`), built, not accepted.** While anything of the title is queued,
+downloading, stalled or importing, the card's hover (TV: focus) disc is no longer Download or Play: it becomes a **progress ring
+with the percent inside** (`design/ProgressDisc.tsx`, one painter for the cards `paintCellDownload` paints and the series page's
+episode card). This is the one place a card ring holds the percent: the "no percent inside a card ring" rule below is the
+**corner** mark's, and stays for it. The disc is the card glass disc (3.236em), the ring's stroke s-3 of it (7.3 of 100), inset
+s-4; the percent 1em, 700, tabular, its `%` 0.618em at 85.4 %. A **series** (or season) card's ring is cut into **one segment per
+episode on its way**, each filled by its own file (`QueuePackEpisode.progress`; one in the library or importing is whole), 2.2
+apart and φ² of that between seasons, with **`3 of 12`** (0.618em, 600) under the percent; above 24 episodes one ring. The series
+percent and "3 of 12" come from `batchProgress()` (bytes over bytes, as the season header), no longer the mean of the rows on
+their way. States: **queued** the clock (1.618em) in a φ⁻³ segment turning once per φ² s; **downloading** the arc and the
+percent, the arc moving φ⁻¹ s to each 3 s read and the figure counting with it; **stalled** arc and figure at 55 % with `Stalled`
+under it; **importing** the arrow in the corner mark's turning 28 % segment (1.2 s); **failed** (a card with no file whose download
+failed) the grey glass with the bold white `!`; **done** the ring closes (φ⁻¹ s), a check draws in (φ⁻² s), holds φ s, then the
+card's own disc returns (Play, or Download while episodes are missing). Layers swap with opacity and scale 0.854 (φ⁻³ out, φ⁻²
+in; TV φ⁻⁴; reduced motion at once). It is an indicator: no fill or growth under the pointer, and **a click on it opens the
+title**, as the card does. While the disc shows, the **corner download mark steps aside** (φ⁻³ s out, φ⁻² s back); the unwatched
+count stays. The corner's Not Downloaded cloud never shows beside the download mark: the download mark replaces it (as "The disc
+wins over the Not Downloaded and Unaired marks in the corner" says), on Home's cards and on the series page's episode cards.
+Styles: `design/progressRatings.scss`.
+
 **Status: approved 2026-11-06, D288–D295, built, not accepted.** Computer first look only; phone/TV specifics and full acceptance follow the user's first look. These values supersede the older presentation notes below.
 
 **ds.t15, the Queue page on B (the user, 2026-11-07: "do not make it too big"), built, not accepted, gate 1 on beta (computer,

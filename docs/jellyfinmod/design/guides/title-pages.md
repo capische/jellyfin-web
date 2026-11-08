@@ -6,6 +6,12 @@ poster : column = 1 : φ², the name s2 / 700, Born and Birth place as metadata 
 `.short` pill, s-2 padding), the biography at B in the reading measure (at most s8), the IMDb / TMDB links at B, and the
 filmography rows as the title rows (s1 titles, s5 posters, s1 apart). Phone, tablet and TV keep the person's old head.
 
+**Ratings and progress on title pages (ds.t16), approved by the user 2026-11-07, built, not accepted.** The ratings pill on a
+first open hands TMDb over to the fetched sources ([ratings.md](ratings.md)); a file-less page's ratings now follow the entry's
+later reads (every 3 s while the plugin fetches). On the series page an episode card whose file is on its way shows the corner
+download mark and, under the pointer, the card's progress ring ([download-state-mark.md](download-state-mark.md)); a click still
+only selects it.
+
 **Series page, rows and Download's glyph (ds.t14): approved by the user 2026-11-07 (workspace `reviews/title-golden/series.html`),
 built, not accepted, gate 1 on beta (computer, dark).** A series page has **no season row and no season page from it**: under the
 head, a **season pill** (card glass, the season's name at B / 600, an s0 chevron s-2 after it, padding s-1 with s0 on the left, at

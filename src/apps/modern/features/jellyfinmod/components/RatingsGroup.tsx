@@ -25,6 +25,8 @@ interface RatingsGroupProps {
     ownStar?: boolean;
     /** With `ownStar`: told whether the page's own star should give way, from the same decision that hides upstream's. */
     onHidesStar?: (hides: boolean) => void;
+    /** The plugin is fetching the title's ratings (ds.t16): a spinner in the pill and a "Fetching…" row in the popup. */
+    fetching?: boolean;
 }
 
 /** The sources the row shows, in the row's order (IMDb where the stock star was, Rotten Tomatoes where the tomato was, Trakt). */
@@ -505,7 +507,7 @@ const popupWidthOf = (node: HTMLElement | null, reserved: Reserve | null, standI
  * - Back is taken only while the popup is open, and the popup closes when there is nothing to show.
  */
 // eslint-disable-next-line sonarjs/cognitive-complexity -- existing rating/focus guards shared by two presentations.
-const RatingsGroup: FC<RatingsGroupProps> = ({ ratings, sources, ready, wanted, ownStar, onHidesStar, title }) => {
+const RatingsGroup: FC<RatingsGroupProps> = ({ ratings, sources, ready, wanted, ownStar, onHidesStar, title, fetching }) => {
     const design = useContext(DesignContext);
     const box = useRef<HTMLSpanElement>(null);
     const button = useRef<HTMLButtonElement>(null);
@@ -550,7 +552,7 @@ const RatingsGroup: FC<RatingsGroupProps> = ({ ratings, sources, ready, wanted, 
     const popupWidth = popupWidthOf(box.current, reserved, standInKey);
     if (design) {
         return <DesignRatings href={href} onClick={onClick} resolvedSources={resolvedSources} tv={tv} fullWidth={popupWidth ?? undefined} box={box} button={button} popup={popup} standIn={standIn} stack={standInKey === FALLBACK_KEY} label={label} id={popupId}
-            standInList={standInList} inline={inline} enabled={enabled} onBlur={onBlur} />;
+            standInList={standInList} inline={inline} enabled={enabled} onBlur={onBlur} fetching={!!fetching && !standIn} />;
     }
     return <span ref={box} className={popup.groupClass} onPointerEnter={enter} onPointerLeave={leave}
         data-jfmod-full-width={popupWidth ?? undefined} data-jfmod-rating-sources={resolvedSources}>
