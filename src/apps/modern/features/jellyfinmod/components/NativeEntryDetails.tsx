@@ -29,7 +29,6 @@ import DownloadBlock, { type DownloadTarget } from './DownloadBlock';
 import EpisodeWindowDialog, { windowDays } from './EpisodeWindowDialog';
 import FileChooser, { currentVersion, type PinState, useStockSourceIds, useTrackStrip } from './FileChooser';
 import FileHistoryPopover from './FileHistoryPopover';
-import HistoryToggle from './HistoryToggle';
 import LibraryUndo from './LibraryUndo';
 import { MissingEpisodeRows, MissingSeasonCards } from './MissingChildren';
 import PendingVersion from './PendingVersion';
@@ -458,8 +457,8 @@ const useEpisodeWindow = ({ api, view, entryId, episode, itemIds, busy, change }
 };
 
 /**
- * The native series page's section: the retention status, the episodes on their way and the episode retention list. Get a
- * Release is the header icon and Keep Series a More-menu item (user, 2026-10-12); History stays as it was.
+ * The native series page's section: the retention status and the episodes on their way. Get a Release is the header icon and
+ * Keep Series a More-menu item (user, 2026-10-12). No Episode Retention or History list for now (the user, 2026-11-07, ds.t14).
  */
 const SeriesSection: FC<{ detail: EntryDetail }> = ({ detail }) => {
     // Episodes of this series that are grabbed or downloading; the series entry itself is never projected (P5.I3).
@@ -471,17 +470,6 @@ const SeriesSection: FC<{ detail: EntryDetail }> = ({ detail }) => {
             <span>S{candidate.seasonNumber} E{candidate.episodeNumber} · {candidate.title}</span>
             <QueueStatusLine entryId={candidate.entryId} episodeId={candidate.id} state={candidate.state} progress={candidate.progress} />
         </div>)}
-        {detail.episodes.some(candidate => candidate.retention) && <HistoryToggle label='Episode Retention'>
-            {detail.episodes.map(candidate => <div className='er' key={candidate.id}>
-                <span>S{candidate.seasonNumber} E{candidate.episodeNumber} · {candidate.title}</span>
-                <RetentionStatus retention={candidate.retention} compact />
-            </div>)}
-        </HistoryToggle>}
-        <HistoryToggle label='History' summary={detail.history[0]?.summary}>
-            <div role='list'>{detail.history.map(event => <div className='er' role='listitem' key={event.id}><span>
-                <time dateTime={event.createdAt}>{new Date(event.createdAt).toLocaleDateString()}</time>{' · '}{event.summary}
-            </span></div>)}</div>
-        </HistoryToggle>
     </section>;
 };
 

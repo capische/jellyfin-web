@@ -25,6 +25,7 @@ import { streamMarks } from '../constants/versions';
 import { formatBytes } from '../constants/queue';
 import { rememberCommandOpener } from '../integration/commandOpener';
 import { usePlayedAction, type PlayedItem } from '../hooks/usePlayedAction';
+import { useSeriesEpisodes, SeriesMainButton, EpisodeStrip, GuestStars, type SeriesModel } from './SeriesEpisodes';
 
 const slots = new WeakMap<HTMLElement, Map<string, HTMLDivElement>>();
 /** Keep controller portals and their focus/state alive when head changes structure on a layout switch. */
@@ -69,6 +70,25 @@ const commandClass = (command: TitleCommand) => command.play ? 'play' : 'dbtn';
 
 /** Download, then More, at the pill's end; every other command keeps its order (Array.prototype.sort is stable). */
 const rankLast = (command: TitleCommand) => ({ cloud: 1, more: 2 } as Record<string, number>)[command.icon] ?? 0;
+/** Cast, then Guest Stars, then the rest, More Like This last (the user, 2026-11-07, ds.t14). */
+const sectionRank = (key: string) => {
+    if (/guestCast/i.test(key)) return 1;
+    if (/cast/i.test(key)) return 0;
+    if (/similar/i.test(key)) return 3;
+    return 2;
+};
+const isSeasonCard = (card: TitleCard) => card.attributes['data-type'] === 'Season' || 'data-jfmod-season' in card.attributes;
+/** The cast row lists actors only (the user, 2026-11-07); a row with no typed actors keeps every card. */
+const castCards = (cards: TitleCard[]) => {
+    const actors = cards.filter(card => card.attributes['data-type'] === 'Actor');
+    return actors.length ? actors : cards;
+};
+type Sections = ReturnType<typeof readTitle>['sections'];
+const footSections = (sections: Sections, seriesMain: boolean, type: string) => sections.filter(section => !(seriesMain && section.cards.some(isSeasonCard)))
+    .map(section => (sectionRank(section.key) === 0 && type !== 'Person' ? { ...section, cards: castCards(section.cards) } : section))
+    .sort((a, b) => sectionRank(a.key) - sectionRank(b.key));
+const pillCommands = (commands: TitleCommand[], seriesMain: boolean, seriesPlay: boolean, downloadKind?: string) => commands.filter(command => (seriesMain ?
+    !command.play && (command.icon !== 'cloud' || seriesPlay) : command.icon !== 'cloud' || downloadKind !== 'unaired'));
 const factClass = (fact: { badge: boolean; star: boolean; critic: boolean }) => {
     if (fact.badge) return 'badge';
     if (fact.star) return 'star';
@@ -285,6 +305,17 @@ const TitleLinks: FC<{ view: HTMLElement; type: string; links: { label: string; 
         {index > 0 && ', '}<a className='focusable' href={link.href} target='_blank' rel='noreferrer'><b>{link.label}</b></a></React.Fragment>)}</div>;
 };
 
+/** The rows under the head: the series' episodes first, then Cast, Guest Stars (a series' selected episode's), the rest, More Like This. */
+const FootRows: FC<{ view: HTMLElement; sections: Sections; series: SeriesModel; serverId?: string | null }> = ({ view, sections, series, serverId }) => {
+    const guestsAfter = sections.filter(section => sectionRank(section.key) < 2).pop();
+    const guests = series.active && <GuestStars series={series} serverId={serverId} />;
+    return <>{series.active && <EpisodeStrip series={series} />}{!guestsAfter && guests}
+        {sections.map(section => <React.Fragment key={section.key}>{section.cards.some(card => card.row) ?
+            <div className='eps plain' data-ds-section={section.key}>{section.cards.map(card => <Card key={card.key} card={card} view={view} />)}</div> :
+            <Section title={sectionRank(section.key) === 0 ? 'Cast' : section.title} name={section.key}>{section.cards.map(card => <Card key={card.key} card={card} view={view} />)}</Section>}
+        {section === guestsAfter && guests}</React.Fragment>)}</>;
+};
+
 /** ds.js head/actbar/sect/season and ds2.js title pages. No controller-owned element is painted here. */
 const Content: FC<{ view: HTMLElement; type: string; art: string; item?: BaseItemDto }> = ({ view, type: initialType, art: initialArt, item: initialItem }) => {
     const [environment, setEnvironment] = useState<{ type: string; art: string; item?: BaseItemDto }>({ type: initialType, art: initialArt, item: initialItem });
@@ -322,6 +353,8 @@ const Content: FC<{ view: HTMLElement; type: string; art: string; item?: BaseIte
         focused.current = true;
     }, [device, model.commands, view]);
     const item = environment.item;
+    const series = useSeriesEpisodes(environment.type === 'Series' ? item : undefined);
+    const seriesMain = series.active;
     let here = '';
     if (environment.type === 'Season') here = model.title;
     else if (environment.type === 'Episode' && item?.IndexNumber != null) here = 'Episode ' + item.IndexNumber;
@@ -343,13 +376,16 @@ const Content: FC<{ view: HTMLElement; type: string; art: string; item?: BaseIte
         {model.meta.filter(fact => fact.endsAt).map(fact => <span key={fact.text} data-ds-endsat=''><Inline parts={fact.parts} /></span>)}
         {watched && <span className='jfmod-watchedMeta'><Icon name='check' />{watched}</span>}
     </div></>;
-    const download = !model.commands.some(command => command.play) && model.downloadKind === 'none';
-    const commands = model.commands.filter(command => command.icon !== 'cloud' || model.downloadKind !== 'unaired');
+    const download = !seriesMain && !model.commands.some(command => command.play) && model.downloadKind === 'none';
+    // A series page's main button follows the selected episode; Get Another Quality only beside Play (the user, 2026-11-07).
+    const commands = pillCommands(model.commands, seriesMain, series.showsPlay, model.downloadKind);
     if (download) commands.sort((a, b) => Number(b.icon === 'cloud') - Number(a.icon === 'cloud'));
     // With something to play, Download gets another quality: the rarer action goes last, before More (the user, 2026-11-07).
     else commands.sort((a, b) => rankLast(a) - rankLast(b));
-    const pill = commands.length > 0 && <div className={'actbar glassy focuscontainer-x' + (download || commands.some(command => command.play) ? '' : ' short')}>
-        {commands.map(command => <Command key={command.key} view={view} command={command} item={item} download={download && command.icon === 'cloud'} />)}</div>;
+    const pill = commands.length > 0 && <div className={'actbar glassy focuscontainer-x' + (download || seriesMain || commands.some(command => command.play) ? '' : ' short')}>
+        {seriesMain && <SeriesMainButton series={series} />}{commands.map(command => <Command key={command.key} view={view} command={command} item={item} download={download && command.icon === 'cloud'} />)}</div>;
+    // A series' seasons are the slider's now: no season row (ds.t14).
+    const sections = footSections(model.sections, seriesMain, environment.type);
     return <div ref={ref} className={environment.type === 'Person' ? undefined : 'jfmod-titleTop'}>
         <Head titleTop={environment.type !== 'Person'} title={model.title} poster={model.image} art={environment.art || (environment.type === 'Person' ? model.image : undefined)} lines={lines} pill={pill} wide={environment.type === 'Episode'} icon={environment.type === 'Person' ? 'person' : undefined}>
             <Slot view={view} name='notice' /><Slot view={view} name='tracks' />
@@ -375,9 +411,7 @@ const Content: FC<{ view: HTMLElement; type: string; art: string; item?: BaseIte
                 </div></div>
             <Slot view={view} name='augment' />
         </Head>
-        <div className='plain titlefoot'><Slot view={view} name='sections' />{model.sections.map(section => section.cards.some(card => card.row) ?
-            <div key={section.key} className='eps plain' data-ds-section={section.key}>{section.cards.map(card => <Card key={card.key} card={card} view={view} />)}</div> :
-            <Section key={section.key} title={section.title} name={section.key}>{section.cards.map(card => <Card key={card.key} card={card} view={view} />)}</Section>)}</div>
+        <div className='plain titlefoot'><Slot view={view} name='sections' /><FootRows view={view} sections={sections} series={series} serverId={item?.ServerId} /></div>
     </div>;
 };
 export const TitlePage: FC<{ view: HTMLElement; type: string; art: string; item?: BaseItemDto }> = props => <Root><Content {...props} /></Root>;

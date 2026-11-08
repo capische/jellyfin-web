@@ -433,3 +433,149 @@
     margin: var(--jfmod-s-2) 0 0;
     font-size: var(--jfmod-s0);
 }
+
+/* ---------------------------------------------------------------------------------------------------------------------
+   ds.t14, the title pages' rows and the series page's episodes (approved by the user 2026-11-07; mockup
+   reviews/title-golden/series.html). Computer only, as the head. Rows: titles s1 at line 1, s2 above and s0 below, on the
+   page gutter; cells s1 apart (each padded half), posters s5, stills s6, people s4. The series page has no season row: one
+   continuous slider of every episode under a season pill that follows the scroll; a season's first card has s2 more before it
+   (s3 in all). Named exceptions: 2:3 posters and people, 16:9 stills, 40 px targets, the card's own em values (ring, corners,
+   corner marks, progress), the glass recipe.
+   --------------------------------------------------------------------------------------------------------------------- */
+&.dev-computer:not(.layout-tv) .jfmod-titleTop .titlefoot {
+    padding-bottom: var(--jfmod-s2);
+
+    .sect { padding: 0 var(--jfmod-gut); }
+
+    h2.rowt {
+        padding: var(--jfmod-s2) 0 calc(var(--jfmod-s0) - var(--jfmod-s1) / 2);
+        font-size: var(--jfmod-s1);
+        line-height: 1;
+    }
+
+    .rowt .rowsub {
+        margin-left: var(--jfmod-s-1);
+        font-size: var(--jfmod-s0);
+        opacity: 0.764;
+    }
+
+    .cell { font-size: var(--jfmod-s0); }
+    .ds-rowframe { margin: 0 calc(var(--jfmod-s1) / -2) calc(var(--jfmod-s1) / -2); }
+    .tile { padding: calc(var(--jfmod-s1) / 2); }
+    .cell.p { width: calc(var(--jfmod-s5) + var(--jfmod-s1)); }
+    .cell.w { width: calc(var(--jfmod-s6) + var(--jfmod-s1)); }
+    .cell.c { width: calc(var(--jfmod-s4) + var(--jfmod-s1)); }
+
+    /* The row arrows on the title's line, at the gutter (the library toolbar's pill, title-pages.md D252). */
+    .emby-scrollbuttons {
+        top: calc(var(--jfmod-s2) + var(--jfmod-s1) / 2 - var(--jfmod-s2) / 2 - var(--jfmod-s-3));
+        right: var(--jfmod-gut);
+        font-size: var(--jfmod-s0);
+    }
+
+    /* The season pill (small: body type, at the 40 px floor) and the slider's arrows on one line. */
+    .estrip .etop {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--jfmod-s2) 0 calc(var(--jfmod-s0) - var(--jfmod-s1) / 2);
+    }
+
+    .spill {
+        display: inline-flex;
+        align-items: center;
+        box-sizing: border-box;
+        min-height: 40px;
+        padding: var(--jfmod-s-1) var(--jfmod-s-1) var(--jfmod-s-1) var(--jfmod-s0);
+        border: 0;
+        border-radius: var(--jfmod-s2);
+        font: inherit;
+        font-size: var(--jfmod-s0);
+        font-weight: 600;
+        line-height: 1;
+        cursor: pointer;
+    }
+
+    .spill:hover { background-color: var(--hover-fill); }
+
+    .spill svg {
+        width: var(--jfmod-s0);
+        height: var(--jfmod-s0);
+        margin-left: var(--jfmod-s-2);
+        opacity: 0.764;
+        transition: transform var(--d1) var(--ease);
+    }
+
+    .spill[aria-expanded='true'] svg { transform: rotate(180deg); }
+
+    .estrip .arrows {
+        margin: 0;
+        padding: var(--jfmod-s-3);
+        font-size: var(--jfmod-s0);
+    }
+
+    .estrip .arrows .dbtn {
+        width: var(--jfmod-s2);
+        height: var(--jfmod-s2);
+    }
+
+    .estrip .arrows .dbtn svg {
+        width: var(--jfmod-s0);
+        height: var(--jfmod-s0);
+    }
+
+    /* The strip runs to the window's edges; its first still starts on the gutter. */
+    .erail {
+        position: relative;
+        display: flex;
+        overflow-x: auto;
+        margin: 0 calc(-1 * var(--jfmod-gut)) calc(var(--jfmod-s1) / -2);
+        padding: 0 calc(var(--jfmod-gut) - var(--jfmod-s1) / 2);
+        scrollbar-width: none;
+        overscroll-behavior-x: contain;
+    }
+
+    .erail::-webkit-scrollbar { display: none; }
+
+    .erail .cell {
+        flex: none;
+        cursor: pointer;
+    }
+    .erail .cell.sfirst { margin-left: var(--jfmod-s2); }
+
+    /* Selected: the keyboard ring's width and a primary title; hover keeps the card's thinner ring. */
+    .erail .cell.sel .post { box-shadow: 0 0 0 0.236em var(--primary); }
+    .erail .cell.sel .capt .t { color: var(--primary); }
+
+    .erail .capt .d {
+        display: flex;
+        align-items: center;
+    }
+
+    .erail .capt .bullet {
+        margin: 0 var(--jfmod-s-1);
+        opacity: 0.618;
+    }
+
+    .erail .capt .star {
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .erail .capt .star svg {
+        width: var(--jfmod-s0);
+        height: var(--jfmod-s0);
+        margin-right: var(--jfmod-s-3);
+        color: #f2b01e;
+    }
+
+    /* An unaired episode's date in the corner: card glass, the caption's caps (no cloud, ds.t14). */
+    .corner > .cmark.air {
+        padding: 0 var(--jfmod-s-1);
+        font-size: var(--jfmod-s-1);
+        font-weight: 600;
+        letter-spacing: var(--jfmod-s-7);
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+}

@@ -2568,3 +2568,15 @@ offsets read the bar's height (`--jfmod-bar`, `--jfmod-barh`); `.jfds` and the s
 at 1440 and 1920 in Playwright Chromium; tablet, phone, TV, the light theme, real Chrome, the runners and the Codex review are
 later gates. Other pages (libraries, Favorites, Preferences, …) keep their values until their own designs.
 
+## ds.t14 — the series page's episodes, the title rows and Download's glyph (2026-11-07)
+
+**Built (not accepted), gate 1: computer first look on beta.** The user approved the series page design (workspace
+`reviews/title-golden/series.html`): no Season X page and no season row; a small season pill (body type) over one continuous
+episode slider across every season, the pill following the scroll ("approved"); the first unwatched episode selected; no episode
+descriptions; no Episode Retention or History for now; the main button Play (never Resume, no code), Download (blue, left, the
+bigger glyph) for an episode with no file, a disabled air date for one not aired, and Get Another Quality only beside Play; blue
+hover rings; `AIRS 14 NOV` top right with no cloud and the Not Downloaded cloud top right; rows Cast, Guest Stars, More Like
+This last on every title page. Also the user's bug report: Download's cloud read smaller than the round actions, now s1 on
+every title head. Code: `design/SeriesEpisodes.tsx`, `TitlePage.tsx`, `_golden.scss`, `titleTop.scss`,
+`components/NativeEntryDetails.tsx`. Guides: [title pages](design/guides/title-pages.md), [poster card](design/guides/poster-card.md).
+Verified only on the computer (1440, 1920), dark; phone, tablet, TV, light theme, real Chrome and the suites are not run.

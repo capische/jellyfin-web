@@ -343,6 +343,22 @@
         height: var(--jfmod-s1);
     }
 
+    /* Download's cloud at the round actions' glyph size, s1: at s0 it read smaller than the strip, tick and heart beside it
+       (the user, 2026-11-07, ds.t14; mockup reviews/title-golden/series.html). Play's triangle stays s0. */
+    .actbar .play.mainb svg {
+        width: var(--jfmod-s1);
+        height: var(--jfmod-s1);
+    }
+
+    /* An unaired episode's main button: the date, disabled, in the labelled button's disabled look (ds.t14). */
+    .actbar .play.off,
+    .actbar .play.off:hover {
+        background: none;
+        box-shadow: inset 0 0 0 1px currentColor;
+        color: var(--jfmod-head-muted);
+        cursor: default;
+    }
+
     /* ds.t12 (the user 2026-11-07): s-1 under the pill; each field the caption's s0 line over the value's s1 line with s-2 above
        and below (60.88 px), s1 corners. Three s6 fields in one row; a window too narrow for them shrinks all three alike, and
        the computer never stacks (the user, 2026-11-07: "No stacking, stacking for mobile, and probably tablet portrait"). */
