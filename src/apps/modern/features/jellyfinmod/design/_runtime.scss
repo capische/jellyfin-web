@@ -1127,23 +1127,28 @@ html.layout-tv { --jfmod-barh: calc(24.2px * 3.3819660113 * var(--jfmod-scale, 1
         position: relative;
     }
 
-    .pickerDialog .fld .pm {
+    /* The picker's field lists keep these over the dialog too (ds.t17). */
+    .pickerDialog .fld .pm,
+    .pickermenu .pm {
         position: static;
         display: inline-flex;
         margin-left: 0.3em;
     }
 
-    .pickerDialog .fld .pm svg {
+    .pickerDialog .fld .pm svg,
+    .pickermenu .pm svg {
         width: 0.62em;
         height: 0.62em;
     }
 
-    .pickerDialog .mi {
+    .pickerDialog .mi,
+    .pickermenu .mi {
         height: auto;
         min-height: 2.7816em;
     }
 
-    .pickerDialog .mi small {
+    .pickerDialog .mi small,
+    .pickermenu .mi small {
         display: block;
         white-space: normal;
     }

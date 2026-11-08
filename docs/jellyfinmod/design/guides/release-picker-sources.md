@@ -1,5 +1,14 @@
 # Release picker: Sources (the icon, the train, the checklist) and the searching ring's colours
 
+**Search For and Quality Profile lists over the dialog (ds.t17, the user 2026-11-07: "Dropdown does not fit"), built, not
+accepted.** The picker scrolls (`overflow: hidden auto`), and the two fields' lists were drawn inside it, so while the dialog was
+short (no releases yet) it cut the Quality Profile list's last rows off. A field's list (`Select`, `design/Controls.tsx`) opened
+inside any dialog now hangs from its pill **over the dialog**, as the Sources checklist does (`.menuportal.overdialog`,
+`menuPosition`): s-2 below the pill, or above it when the window has no room below, kept inside the window; it keeps the field's
+width and the field's own font, so its rows, paper, corners and captions keep the open-list values they had in the dialog. Outside
+a dialog a field's list stays in the field. The picker's own row rules (rows at least 2.7816em, the detail wrapping, the phone mark) follow the list (`pickermenu`). Code:
+`design/Controls.tsx`, `design/Menu.tsx` (`fldmenu`), `design/_runtime.scss`.
+
 **ds.t15 (the user, 2026-11-07: the Sources list opened behind the picker; "apply new golden ratio rules to it and see how it
 goes (do not make it massive or too big)"), built, not accepted, gate 1 on beta (computer, dark).** The checklist now opens
 **above the dialog** (`.menuportal.overdialog`, z-index 1000000 over dialogHelper's 999999; any anchored menu opened from a

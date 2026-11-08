@@ -59,6 +59,9 @@ export const Menu: FC<PropsWithChildren<{ close: () => void; label: string; id?:
         });
         const place = () => {
             if (!anchor || phone || !ref.current) return;
+            // A field's list keeps its field's width and type, as it had drawn inside the field (ds.t17).
+            const field = className.split(' ').includes('fldmenu') ? anchor.closest<HTMLElement>('.fld') : null;
+            if (field) Object.assign(ref.current.style, { width: field.offsetWidth + 'px', fontSize: getComputedStyle(field).fontSize });
             // The Sources list hangs from its button's right edge (release-picker-sources.md).
             const at = menuPosition(anchor, ref.current, undefined, className === 'srcmenu');
             const phoneSurface = device === 'phone' && (surface === 'ipop' || className === 'srcmenu');
