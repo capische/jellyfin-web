@@ -2625,3 +2625,8 @@ Code: `design/SearchCell.tsx`, `components/CatalogSearchResults.tsx`. Guides: [s
 [menus](design/guides/menus.md). Runners that click `[data-jfmod-add]` (`tmdb-browse`, `detail-design`, `browser-review`,
 `s11-fresh`, `undo-race`) now also get the picker and need a close step; not run. Verified only on the computer, dark, 1440, in
 Playwright Chromium; phone, tablet, TV, light theme, real Chrome and the Codex review are later gates.
+
+Fixed with it (the user's report, "Dropdown does not fit"): the picker's Search For and Quality Profile lists were drawn inside the
+scrolling dialog and cut off while it was short; a field's list in a dialog now opens over the dialog (`.overdialog`,
+`menuPosition`, above the pill when there is no room below), at its field's width and type. Guide:
+[release picker sources](design/guides/release-picker-sources.md).

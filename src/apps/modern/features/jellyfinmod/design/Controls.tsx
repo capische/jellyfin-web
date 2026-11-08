@@ -50,20 +50,30 @@ export const Select: FC<{ label: string;
     busy?: boolean;
     id?: string }> = ({ label, value, options, onChange, busy, id }) => {
     const [open, setOpen] = useState(false);
+    // In a dialog the list hangs from the box over the dialog, which scrolls and so would clip it (ds.t17).
+    const [anchor, setAnchor] = useState<HTMLElement>();
+    const [inPicker, setInPicker] = useState(false);
+    const toggle = (box: HTMLElement) => {
+        setAnchor(box.closest('.dialogContainer') ? box : undefined);
+        setInPicker(!!box.closest('.pickerDialog'));
+        setOpen(!open);
+    };
     const close = React.useCallback(() => setOpen(false), []);
+    let listClass = '';
+    if (anchor) listClass = inPicker ? 'fldmenu pickermenu' : 'fldmenu';
     return <div className={'fld' + (open ? ' open' : '')} onFocus={event => event.currentTarget.classList.add('foc')}
         onBlur={event => {
             if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.classList.remove('foc');
         }}>
         <span className='lb' id={id && `${id}-label`}>{label}</span>
         <div className='box focusable' data-value={value} id={id} role='combobox' aria-label={label} aria-expanded={open} aria-busy={busy}
-            aria-controls={id && `${id}-list`} tabIndex={0} onClick={() => setOpen(!open)} onKeyDown={event => {
+            aria-controls={id && `${id}-list`} tabIndex={0} onClick={event => toggle(event.currentTarget)} onKeyDown={event => {
                 if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
-                    setOpen(!open);
+                    toggle(event.currentTarget);
                 }
             }}><span className='v'>{options.find(option => option.value === value)?.label}{options.find(option => option.value === value)?.phone && <span className='pm' title='Plays on phones'><Icon name='phone' /></span>}</span><Icon name={open ? 'up' : 'down'} className='chev' /></div>
-        {open && <Menu close={close} label={label} id={id && `${id}-list`} anchored>{options.map(option =>
+        {open && <Menu close={close} label={label} id={id && `${id}-list`} anchored anchor={anchor} className={listClass}>{options.map(option =>
             <div key={option.value} data-value={option.value} className={'mi focusable' + (option.value === value ? ' sel' : '')} role='option' aria-selected={option.value === value} aria-disabled={option.disabled}
                 tabIndex={0} ref={node => {
                     if (option.value === value) node?.setAttribute('autofocus', '');
