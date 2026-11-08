@@ -59,7 +59,8 @@ export const Menu: FC<PropsWithChildren<{ close: () => void; label: string; id?:
         });
         const place = () => {
             if (!anchor || phone || !ref.current) return;
-            const at = menuPosition(anchor, ref.current);
+            // The Sources list hangs from its button's right edge (release-picker-sources.md).
+            const at = menuPosition(anchor, ref.current, undefined, className === 'srcmenu');
             const phoneSurface = device === 'phone' && (surface === 'ipop' || className === 'srcmenu');
             Object.assign(ref.current.style, { position: 'fixed', top: at.top + 'px', left: phoneSurface ? '' : at.left + 'px' });
         };
@@ -80,5 +81,7 @@ export const Menu: FC<PropsWithChildren<{ close: () => void; label: string; id?:
     const menu = <div ref={ref} className={surface + ' ' + className + ' focuscontainer-y' + (phone ? ' sheet bottom msheet' : ' mn from-top')} id={id} role='menu' aria-label={label}>
         {phone && <span className='sgrab' />}{children}</div>;
     if (phone) return createPortal(<Root className='menuportal phonesheet'><div className='sdim' />{menu}</Root>, document.body);
-    return anchor ? createPortal(<Root className='menuportal'>{menu}</Root>, document.body) : menu;
+    // A menu opened from a dialog (or from a menu over one) draws above upstream's dialog layer, not under it.
+    const overDialog = !!anchor?.closest('.dialogContainer, .menuportal.overdialog');
+    return anchor ? createPortal(<Root className={'menuportal' + (overDialog ? ' overdialog' : '')}>{menu}</Root>, document.body) : menu;
 };
