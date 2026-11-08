@@ -1,5 +1,10 @@
 # Poster card
 
+**Series slider card (ds.t14), approved 2026-11-07, built, not accepted.** The series page's episode cell is this card's 16:9
+cell at B: the watched tick outermost in the top-right corner, the Not Downloaded mark to its left; an episode not aired yet
+shows only its date there, `AIRS 14 NOV` (card glass, s-1 caps, 600, s-7 tracking; no weekday, the year only when not this
+one; no cloud). Selected: the 0.236em ring and a primary title. See [title-pages.md](title-pages.md).
+
 **Home's rows on B (ds.t13), approved by the user 2026-11-07 (workspace `reviews/golden-pages/home.html`), built, not accepted.**
 On Home a card's own font is B (`_golden.scss`), so its corners (Bφ⁻¹), marks, disc, foot pill, ring and caption follow the
 scale and `--jfmod-scale`. Row titles Bφ¹ at 400, line 1, Bφ² above and B over the posters; posters Bφ⁵ and stills Bφ⁶ on a

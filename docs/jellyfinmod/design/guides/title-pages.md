@@ -1,5 +1,25 @@
 # Title pages and art ground
 
+**Series page, rows and Download's glyph (ds.t14): approved by the user 2026-11-07 (workspace `reviews/title-golden/series.html`),
+built, not accepted, gate 1 on beta (computer, dark).** A series page has **no season row and no season page from it**: under the
+head, a **season pill** (card glass, the season's name at B / 600, an s0 chevron s-2 after it, padding s-1 with s0 on the left, at
+least 40 px high, full round) and the slider's arrow pill (s-3 padding, s2 buttons, s0 glyphs) share the row title's line, then
+**one continuous slider of every episode** in order (Jellyfin's episodes joined to the plugin's list: its file state, air dates
+and the episodes Jellyfin lacks; TMDB-only specials stay out). The pill names the season of the first card wholly in view at the
+left edge, so it switches once a season's last card has passed and back when scrolling left; its list (menus.md) scrolls the
+slider smoothly to that season's first card and leaves the selection. A season's first card has s2 more before it (s3 in all).
+Cards are the poster card's 16:9 cell ([poster-card.md](poster-card.md)): s6 stills s1 apart, `N. Title` in 700 and
+`24m • ★ 7.9` below, no description. The **first unwatched** aired episode is selected (a 0.236em primary ring and a primary
+title; hover keeps the 0.135em ring) and opens second from the left; a click selects. The pill's **main button follows the
+selection**: **Play** (never Resume, no episode code; it resumes an episode in progress), **Download** (blue, first) for an
+episode with no file, or a disabled **Airs 14 Nov** (clock, hairline, muted ink) for one not aired. The round cloud (Get Another
+Quality) is in the pill only beside Play, before More. Episode Retention and History are gone from the series page for now.
+Rows on every title page (computer): titles s1 at line 1, s2 above and s0 below, on the gutter; posters s5, people s4, stills
+s6, s1 apart. Order: **Cast** (actors only), **Guest Stars** (a series page's: the selected episode's, titled with its
+`S1:E1 · Title`), the rest, **More Like This** last. **Download's cloud is s1** (the round actions' glyph size; Play's triangle
+stays s0) on every title head, movie and episode too (the user, 2026-11-07: it read smaller than the strip, tick and heart).
+Code: `design/SeriesEpisodes.tsx`, `TitlePage.tsx`, `_golden.scss` (ds.t14), `titleTop.scss`.
+
 **Home's hero on B (ds.t13), approved by the user 2026-11-07 (workspace `reviews/golden-pages/home.html`), built, not accepted.**
 The hero takes the golden head's type and steps (`_golden.scss`) on every layout, on the page gutter, Bφ¹ above its foot:
 title Bφ² at 700, line 1 (phone Bφ¹); the metadata at B with bullets and a plain-text rating; the ratings on their own card-glass
