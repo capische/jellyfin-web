@@ -386,8 +386,10 @@ const Content: FC<{ view: HTMLElement; type: string; art: string; item?: BaseIte
         {seriesMain && <SeriesMainButton series={series} />}{commands.map(command => <Command key={command.key} view={view} command={command} item={item} download={download && command.icon === 'cloud'} />)}</div>;
     // A series' seasons are the slider's now: no season row (ds.t14).
     const sections = footSections(model.sections, seriesMain, environment.type);
-    return <div ref={ref} className={environment.type === 'Person' ? undefined : 'jfmod-titleTop'}>
-        <Head titleTop={environment.type !== 'Person'} title={model.title} poster={model.image} art={environment.art || (environment.type === 'Person' ? model.image : undefined)} lines={lines} pill={pill} wide={environment.type === 'Episode'} icon={environment.type === 'Person' ? 'person' : undefined}>
+    // A person's page takes the golden title head and rows on a computer (ds.t15); phone, tablet and TV keep its old head.
+    const titleTop = environment.type !== 'Person' || device === 'computer';
+    return <div ref={ref} className={titleTop ? 'jfmod-titleTop' : undefined}>
+        <Head titleTop={titleTop} title={model.title} poster={model.image} art={environment.art || (environment.type === 'Person' ? model.image : undefined)} lines={lines} pill={pill} wide={environment.type === 'Episode'} icon={environment.type === 'Person' ? 'person' : undefined}>
             <Slot view={view} name='notice' /><Slot view={view} name='tracks' />
             {model.tracks.length > 0 && <div ref={stackRef} className={'gpk' + (stacked ? ' stacked' : '')}>
                 {model.tracks.map(track => <TrackField key={track.name} kind={track.kind} name={track.name}
