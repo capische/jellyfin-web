@@ -1,5 +1,6 @@
 import type { DownloadProgress } from '../constants/queue';
 import { paintLink, type DownloadMarkLink } from '../components/DownloadStateMark';
+import { discState, finishProgressDisc, paintProgressDisc } from './ProgressDisc';
 
 // ds2.js dm, card size. Progress, state, client URL and permission all come from the existing integration.
 const painted = new WeakMap<HTMLElement, string>();
@@ -13,12 +14,49 @@ const glyphs: Record<string, string> = {
     seeding: '<path d="M12 20V7M6.5 12.5L12 7L17.5 12.5"/>'
 };
 
+const arcHtml = (kind: string, percent: number | null) => {
+    const turning = kind === 'importing';
+    if (!turning && !['downloading', 'stalled', 'seeding'].includes(kind)) return '';
+    const segment = turning ? '28 72' : `${percent ?? 0} 100`;
+    return '<svg class="arc" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--card-track)" stroke-width="2.6"/>'
+        + `<circle class="${turning ? 'turn' : 'val'}" cx="18" cy="18" r="15.9" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" pathLength="100" stroke-dasharray="${segment}"/></svg>`;
+};
+
+/**
+ * The centre disc while the title is on its way (ds.t16): the progress ring in place of the card's Download or Play disc, which
+ * `jfmod-pdOn` hides; once the download ends with its file it closes, checks and then gives the card its own disc back.
+ */
+const paintCellDisc = (cell: HTMLElement, post: HTMLElement, progress: DownloadProgress | null) => {
+    let disc = Array.from(post.children).find(child => child.classList.contains('jfmod-pdisc')) as HTMLElement | undefined;
+    if (progress) {
+        if (!disc) {
+            disc = document.createElement('span');
+            disc.className = 'disc hov glassy jfmod-pdisc';
+            disc.setAttribute('aria-hidden', 'true');
+            post.append(disc);
+        }
+        paintProgressDisc(disc, discState(progress));
+        cell.classList.add('jfmod-pdOn');
+        return;
+    }
+    if (!disc) return;
+    const host = disc;
+    finishProgressDisc(host, () => {
+        host.remove();
+        cell.classList.remove('jfmod-pdOn');
+    });
+};
+
 export const paintCellDownload = (cell: HTMLElement, progress: DownloadProgress | null, link: DownloadMarkLink | null) => {
     const post = cell.querySelector<HTMLElement>('.post');
     // A title page's cells draw their mark and bar with React from the hidden card; removing those nodes here blanks the page.
     if (!post || cell.closest('.jfmod-dsTitleHost')) return;
+    // The disc is drawn only where the card has one (posters and stills, not people).
+    if (!cell.classList.contains('c')) paintCellDisc(cell, post, progress);
     let mark = post.querySelector<HTMLElement>('[data-ds-download]');
     let bar = post.querySelector<HTMLElement>('[data-ds-progress]');
+    // A failure shows only on the disc: the corner and the bar are for what is on its way.
+    if (progress?.kind === 'failed') progress = null;
     cell.classList.toggle('ds-downloading', !!progress);
     if (!progress) {
         mark?.remove();
@@ -32,14 +70,7 @@ export const paintCellDownload = (cell: HTMLElement, progress: DownloadProgress 
         (post.querySelector('.corner') ?? post).append(mark);
     }
     const kind = progress.kind;
-    const turning = kind === 'importing';
-    const hasArc = turning || ['downloading', 'stalled', 'seeding'].includes(kind);
-    let arc = '';
-    if (hasArc) {
-        const segment = turning ? '28 72' : `${progress.percent ?? 0} 100`;
-        arc = '<svg class="arc" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--card-track)" stroke-width="2.6"/>'
-            + `<circle class="${turning ? 'turn' : 'val'}" cx="18" cy="18" r="15.9" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" pathLength="100" stroke-dasharray="${segment}"/></svg>`;
-    }
+    const arc = arcHtml(kind, progress.percent);
     const glyph = progress.plus ? glyphs.plus : glyphs[kind] || glyphs.downloading;
     const state = progress.plus && kind === 'downloading' ? 'new-version' : kind;
     const html = `<span class="dm card ${state}">${arc}<svg class="glyph${kind === 'downloading' && !progress.plus ? ' bob' : ''}" viewBox="0 0 24 24" style="fill:none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${glyph}</svg></span>`;

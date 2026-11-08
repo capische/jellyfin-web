@@ -425,6 +425,8 @@ export interface BatchProgress extends DownloadProgress {
     done: number;
     total: number;
     versions: number;
+    /** Each episode counted, by season and number, with how far it is (0..1; one in the library or importing is whole): the card ring's segments (ds.t16). */
+    segments: { season: number; fill: number }[];
 }
 
 /**
@@ -489,6 +491,8 @@ export const batchProgress = (episodes: BatchEpisode[], bySeason = false): Batch
     // The tooltip names each new version: `S01E02: another version`, `S01E02: replaces 1080p`.
     const named = versions.map(({ season, number, view }) => '\n' + episodeCode(season, number) + ': ' + versionFlag(view)).join('');
     const plus = base.kind === 'downloading' && firsts.length === 0;
+    const segments = [...counted].sort((a, b) => a.season - b.season || a.number - b.number)
+        .map(({ season, view }) => ({ season, fill: view.state === 'seeding' || IMPORTING_STATES.has(view.state) ? 1 : view.progress ?? 0 }));
     return { ...base, plus, tooltip: (plus ? base.tooltip.replace(/^Downloading/, 'New version') : base.tooltip) + ' · ' + breakdown + named,
-        done, total: firsts.length, versions: versions.length };
+        done, total: firsts.length, versions: versions.length, segments };
 };

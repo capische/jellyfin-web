@@ -3,6 +3,7 @@ import './design.scss';
 import './cardRatings.scss';
 import './titleTop.scss';
 import './ratingLinks.scss';
+import './progressRatings.scss';
 
 export type Device = 'computer' | 'tablet' | 'phone' | 'tv';
 

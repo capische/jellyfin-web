@@ -21,6 +21,9 @@ import { Icon, Cloud } from './Icon';
 import { Menu } from './Menu';
 import { Poster } from './Poster';
 import { DownloadMark } from './StateMark';
+import { ProgressDisc, discState } from './ProgressDisc';
+import { downloadProgress, type DownloadProgress, isUnderWay } from '../constants/queue';
+import { currentRowFor, packEpisodeView, useQueue, useQueueCapability } from '../hooks/useQueue';
 import { TitleRow } from './TitleRow';
 
 /** One card of the series page's slider (ds.t14): Jellyfin's episode, the plugin's episode, or both. */
@@ -147,21 +150,47 @@ export const SeriesMainButton: FC<{ series: SeriesModel }> = ({ series }) => {
 
 const seasonName = (season: number) => (season > 0 ? 'Season ' + season : 'Specials');
 
-/** A file is on its way: the card's progress ring will say so later (the user, 2026-11-07); no Download meanwhile. */
+/** A file is on its way: the card's progress ring says so (the user, 2026-11-07, ds.t16); no Download meanwhile. */
 const inFlight = (episode: SeriesEpisode) => [FileState.Searching, FileState.Grabbed, FileState.Downloading].includes(episode.entryEpisode?.state ?? FileState.None);
 
-const EpisodeCard: FC<{ episode: SeriesEpisode; selected: boolean; boundary: boolean; onSelect: () => void; onDownload?: (opener: HTMLElement) => void }> = ({ episode, selected, boundary, onSelect, onDownload }) => {
+/**
+ * Each episode's download as the queue says (read every 3 s while one is on its way, the cards' own reads): its own file of a
+ * pack, or its own row. A failed one too; one in the library (seeding) or not in the queue has none.
+ */
+const useEpisodeDownloads = (episodes: SeriesEpisode[]) => {
+    const capability = useQueueCapability();
+    const watching = episodes.some(inFlight);
+    const queue = useQueue({ enabled: capability.available && watching, poll: 'cards' });
+    const items = queue.data?.items;
+    return useMemo(() => {
+        const found = new Map<string, DownloadProgress>();
+        if (!items || !watching) return found;
+        for (const episode of episodes) {
+            const own = episode.entryEpisode;
+            if (!own || episode.hasFile || !inFlight(episode)) continue;
+            const row = currentRowFor(items, own.entryId, own.id);
+            const view = row && (row.pack ? packEpisodeView(row, own.id) : row);
+            if (view && (isUnderWay(view) || view.state === 'failed' || view.state === 'blocked')) found.set(episode.key, downloadProgress(view));
+        }
+        return found;
+    }, [items, episodes, watching]);
+};
+
+const EpisodeCard: FC<{ episode: SeriesEpisode; selected: boolean; boundary: boolean; onSelect: () => void; onDownload?: (opener: HTMLElement) => void; download?: DownloadProgress }> = ({ episode, selected, boundary, onSelect, onDownload, download }) => {
     const runtime = episode.ticks ? datetime.getDisplayDuration(episode.ticks) : '';
+    const moving = !!download && download.kind !== 'failed';
     return <div role='button' tabIndex={0} aria-pressed={selected} data-season={episode.season}
         aria-label={`S${episode.season}:E${episode.number ?? ''} ${episode.title}`}
-        className={'cell w focusable ecard' + (onDownload ? ' act' : '') + (selected ? ' sel' : '') + (boundary ? ' sfirst' : '')}
+        className={'cell w focusable ecard' + (onDownload ? ' act' : '') + (selected ? ' sel' : '') + (boundary ? ' sfirst' : '') + (download ? ' jfmod-pdOn' : '')}
         onClick={onSelect} onKeyDown={event => { if (event.key === 'Enter') onSelect(); }}>
         <div className='tile'><Poster src={episode.image} icon='tv'>
             <span className='corner'>
                 {episode.played && <span className='pill2 tick'><Icon name='check' /></span>}
                 {episode.airs && <span className='cmark glassy air'>Airs {episode.airs}</span>}
-                {!episode.airs && !episode.hasFile && <span className='cmark glassy' data-ds-state-kind='not-downloaded' title='Not Downloaded'><DownloadMark kind='not-downloaded' size='card' /></span>}
+                {moving && <span className='cmark glassy' data-ds-download=''><DownloadMark progress={download} size='card' /></span>}
+                {!episode.airs && !episode.hasFile && !moving && <span className='cmark glassy' data-ds-state-kind='not-downloaded' title='Not Downloaded'><DownloadMark kind='not-downloaded' size='card' /></span>}
             </span>
+            <ProgressDisc state={download ? discState(download) : null} />
             {!!episode.progress && <span className='prog'><i style={{ width: episode.progress + '%' }} /></span>}
             {onDownload && <button type='button' className='disc hov glassy focusable' data-ds-primary-action='get' aria-label={'Download ' + episode.title}
                 onClick={event => {
@@ -195,6 +224,7 @@ export const EpisodeStrip: FC<{ series: SeriesModel }> = ({ series }) => {
     const [open, setOpen] = useState(false);
     const [ends, setEnds] = useState({ start: true, end: true });
     const { episodes, selectedIndex } = series;
+    const downloads = useEpisodeDownloads(episodes);
     const seasons = useMemo(() => [...new Set(episodes.map(episode => episode.season))]
         .map(number => ({ number, count: episodes.filter(episode => episode.season === number).length })), [episodes]);
     const sync = useCallback(() => {
@@ -255,7 +285,7 @@ export const EpisodeStrip: FC<{ series: SeriesModel }> = ({ series }) => {
             {episodes.map((episode, index) => <EpisodeCard key={episode.key} episode={episode} selected={index === selectedIndex}
                 boundary={index > 0 && episodes[index - 1].season !== episode.season} onSelect={() => series.select(episode.key)}
                 onDownload={series.canAcquire && !episode.hasFile && !episode.airs && episode.entryEpisode && !inFlight(episode) ?
-                    opener => series.download(episode, opener) : undefined} />)}
+                    opener => series.download(episode, opener) : undefined} download={downloads.get(episode.key)} />)}
         </div>
     </div>;
 };

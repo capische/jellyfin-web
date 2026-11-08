@@ -91,6 +91,10 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
     // Ratings come with the entry; the user's choice is loaded before the page mounts (entryDetails.js), so the line is in the
     // page's first paint (Phase 9). An older plugin sends none.
     const [ratings, setRatings] = useState(detail.ratings);
+    // A later read of the entry (every 3 s while the plugin fetches them, ds.t16) brings the fetched ratings to the open page.
+    useEffect(() => {
+        if (live.ratings) setRatings(live.ratings);
+    }, [live.ratings]);
     // Whether the ratings group hides the page's own star (it tells, from its own layout decision).
     const [groupHidesStar, setGroupHidesStar] = useState(false);
     const ratingsPreferences = useRatingsPreferences(api);
@@ -246,7 +250,7 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
     return <>
         {view.querySelector('[data-ds-slot="ratings"]') && createPortal(<DesignEnvironment><RatingsGroup ratings={ratingsPreferences.enabled ? ratings : []} sources={ratingsPreferences.sources} ready={ratingsPreferences.loaded}
             title={{ title: entry.title, movie: isMovie, imdbId: entry.imdbId, tmdbId: entry.tmdbId }}
-            wanted={ratingsPreferences.loaded ? ratingsPreferences.enabled : undefined} ownStar onHidesStar={setGroupHidesStar} /></DesignEnvironment>, view.querySelector('[data-ds-slot="ratings"]')!)}
+            wanted={ratingsPreferences.loaded ? ratingsPreferences.enabled : undefined} ownStar onHidesStar={setGroupHidesStar} fetching={!!live.ratingsFetching} /></DesignEnvironment>, view.querySelector('[data-ds-slot="ratings"]')!)}
         {isMovie && <DownloadBlock anchor={view.querySelector('.trackSelections')} entryId={entry.id}
             episode={{ id: null, state: entry.state, progress: entry.progress, availability: 'missing', airDate: null }} isAdmin={isAdmin}
             canAcquire={canAcquire} onGetRelease={openPicker} onChanged={reload} />}

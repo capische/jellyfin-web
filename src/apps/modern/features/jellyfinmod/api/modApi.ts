@@ -81,6 +81,8 @@ export interface EntryDetail {
     entry: Entry;
     /** One rating per source in its own scale (Phase 9); absent from an older plugin, empty while ratings are off. */
     ratings?: Rating[];
+    /** A fetch of the title's ratings waits or runs (ds.t16): the page reads again every 3 s. Absent from an older plugin. */
+    ratingsFetching?: boolean;
     history: HistoryRecord[];
     episodes: EntryEpisode[];
     retention: RetentionSummary;

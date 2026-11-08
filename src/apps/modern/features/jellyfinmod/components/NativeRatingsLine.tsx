@@ -6,6 +6,7 @@ import { queryClient } from 'utils/query/queryClient';
 
 import { getItemRatings } from '../api/ratingsApi';
 import { RATINGS_CAPABILITY, RATINGS_STALE_MS } from '../constants/ratings';
+import { QUEUE_POLL_MS } from '../constants/queue';
 import { usePluginHealthSummary } from '../hooks/useAcquisition';
 import { loadPluginCapabilities, loadRatingsPreferences, useRatingsPreferences } from '../hooks/useRatingsPreferences';
 import RatingsGroup from './RatingsGroup';
@@ -71,8 +72,9 @@ const NativeRatingsLine: FC<NativeRatingsLineProps> = ({ api, userId, itemId, it
         enabled: supported && preferences.enabled,
         retry: false,
         staleTime: RATINGS_STALE_MS,
-        // New values (a refresh, the daily task) reach an open page within a minute.
-        refetchInterval: RATINGS_STALE_MS
+        // New values (a refresh, the daily task) reach an open page within a minute; while the plugin is fetching the title's,
+        // every 3 s, as the queue (ds.t16).
+        refetchInterval: query => (query.state.data?.fetching ? QUEUE_POLL_MS : RATINGS_STALE_MS)
     });
     const typeKnown = type !== undefined;
     let wanted: boolean | undefined;
@@ -82,7 +84,7 @@ const NativeRatingsLine: FC<NativeRatingsLineProps> = ({ api, userId, itemId, it
     // A failed minute's read keeps the last answer (react-query keeps its data): only a first answer that failed is "none".
     const ready = wanted === true && (ratings.data !== undefined || ratings.isError);
     return <DesignEnvironment><RatingsGroup ratings={ratings.data?.ratings ?? (ratings.isError ? [] : undefined)} sources={preferences.sources} ready={ready}
-        title={ratingTitle} wanted={wanted} /></DesignEnvironment>;
+        title={ratingTitle} wanted={wanted} fetching={!!ratings.data?.fetching} /></DesignEnvironment>;
 };
 
 export default NativeRatingsLine;

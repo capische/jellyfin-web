@@ -1,5 +1,21 @@
 # Ratings: the group, its popup and the card rating
 
+**While the plugin fetches (ds.t16): approved by the user 2026-11-07, option B "Hand-over" (workspace
+`reviews/progress-ratings/ratings.html`, `DECISIONS.md`), built, not accepted.** The plugin's ratings answer (`GET
+/JellyfinMod/Ratings/Items/{id}`) carries `fetching`, and the entry detail `ratingsFetching`: true while an arrival waits for its
+pass, while the pass that took it has not recorded its call, or while a manual refresh is queued; false whenever fetching may not
+start (ratings off, no key, a blocker, an open breaker, a spent budget). While it is set the page reads again every 3 s
+(`QUEUE_POLL_MS`; a native page's `NativeRatingsLine`, a file-less page's live entry detail, whose ratings now follow each read
+instead of staying as the page loaded them); older plugins omit it and the page behaves as before. The pill shows what it has
+(TMDb, through the `inlineWithin` fallback) and a **spinner** one mark's box (s0) s0 before the chevron: a white 30 % track and a
+φ⁻² (38.2 %) arc, one turn a second, linear (`.jfmod-rspin`). When the fetched values come, TMDb and the spinner **step out**
+(opacity, down s-2, φ⁻³ s; TV φ⁻⁴ s), then IMDb, RT critics, RT audience and Trakt **fade in** from s-2 to their left, φ⁻² s each,
+φ⁻⁴ s apart, in today's order; TMDb stays popup-only (D274). On a computer the glass glides to its new width and the chevron with
+its right end (φ⁻² + (n−1)·φ⁻⁴ s; φ⁻³ s when it closes up); the TV steps at once. A failed or empty fetch only takes the spinner
+away (φ⁻³ s, scale 0.618). A title already fetched draws everything at once, with no motion, as does every change under reduced
+motion (the spinner then stands still at 55 %). Popup: the ticked rows plus a **Fetching…** row with the same spinner while
+fetching. Easing `cubic-bezier(0.236, 0, 0, 1)`. Code: `design/Ratings.tsx` (`useHandOver`, `useGlide`), `design/progressRatings.scss`.
+
 **Golden ratings pill (ds.t10): approved by the user 2026-11-07, 18px base, built, not accepted.** Computer layout only; phone, tablet
 and TV keep the line below. This departs from the earlier "one group in the first metadata row, no pills" wording by the user's
 approval of the 18px proposal. Tokens `--jfmod-s<n>` from `design/_golden.scss` ([title-pages.md](title-pages.md)).
