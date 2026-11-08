@@ -818,19 +818,11 @@ h2.sect2 { margin: 1.618em 0 0.618em; font-size: 1.236em; font-weight: 600; line
 &:not(html)[data-theme='light'] .barsearch:hover { background: rgba(0, 0, 0, 0.1); }
 .hero2 .barsearch, &:not(html)[data-theme='light'] .hero2 .barsearch { background: rgba(255, 255, 255, 0.09); color: rgba(255, 255, 255, 0.854); }
 &.dev-tablet .barsearch { position: static; transform: none; flex: 1 1 auto; width: auto; max-width: none; min-width: 0; margin: 0 1em; }
-/* The field stays centred and whole at every computer width. Under 1180 px the three link labels fold into their icons: 3em round
-   stops (the tools' box; exception: upstream's 3em icon button) with a 1.5em glyph and the link's name as its tooltip (the user,
-   2026-11-07; design by Fable). `.lbl` drops `_chrome.scss`'s span margin, which would otherwise reach the new label span. */
+/* The field stays centred and whole at every computer width. When room runs short the three link labels fold into their
+   icons first, and the wordmark goes after them (ds.t13: Bar.tsx's `fold` and `noname`, _golden.scss). `.lbl` drops
+   `_chrome.scss`'s span margin, which would otherwise reach the new label span. */
 .bar .nav .lbl { margin: 0; }
 .bar .nav [data-tip]::after { display: none; }
-@media (max-width: 1179px) {
-    &.dev-computer .bar .nav .lbl { display: none; }
-    &.dev-computer .bar .nav a { position: relative; display: flex; align-items: center; justify-content: center; width: 3em; height: 3em; border-radius: 50%; }
-    &.dev-computer .bar .nav a:hover { background: var(--tint); }
-    &.dev-computer .bar .nav a[data-tip]::after { display: block; }
-    &.dev-computer .bar .nav span { margin-right: 0; }
-    &.dev-computer .bar .nav svg { width: 1.5em; height: 1.5em; margin-right: 0; }
-}
 &.dev-tablet .bar .spacer { display: none; }
 &.dev-tablet .bar .name { display: none; }
 &.layout-tv .barsearch { background: var(--paper); -webkit-backdrop-filter: none; backdrop-filter: none; color: var(--text-70); }
@@ -864,7 +856,7 @@ h2.sect2 { margin: 1.618em 0 0.618em; font-size: 1.236em; font-weight: 600; line
 .pi { position: relative; display: flex; flex: none; align-items: center; justify-content: center; width: 2em; height: 2em; border-radius: 50%; cursor: pointer; transition: background-color var(--d1) var(--ease); }
 .hmenu svg { flex: none; width: 1.236em; height: 1.236em; }
 /* A tooltip: paper, Title Case, a 0.382 s wait, then a 0.236 s fade. Not on a phone or a TV. */
-[data-tip]::after { content: attr(data-tip); position: absolute; z-index: 20; left: 50%; bottom: 100%; margin-bottom: 0.382em; padding: 0.236em 0.618em; border-radius: 0.618em; background: var(--paper); color: var(--text); font: 400 0.854rem/1.35 'Noto Sans', sans-serif; letter-spacing: 0; text-transform: none; white-space: nowrap; box-shadow: 0 0.236em 1em rgba(0, 0, 0, 0.45); pointer-events: none; visibility: hidden; opacity: 0; transform: translateX(-50%); transition: opacity var(--d1) var(--ease), visibility 0s linear var(--d1); }
+[data-tip]::after { content: attr(data-tip); position: absolute; z-index: 20; left: 50%; bottom: 100%; margin-bottom: 0.382em; padding: 0.236em 0.618em; border-radius: 0.618em; background: var(--paper); color: var(--text); font: 400 0.854rem/1.35 jfmod-inter, 'Noto Sans', sans-serif; letter-spacing: 0; text-transform: none; white-space: nowrap; box-shadow: 0 0.236em 1em rgba(0, 0, 0, 0.45); pointer-events: none; visibility: hidden; opacity: 0; transform: translateX(-50%); transition: opacity var(--d1) var(--ease), visibility 0s linear var(--d1); }
 [data-tip]:hover::after, [data-tip].tipon::after { visibility: visible; opacity: 1; transition: opacity var(--d1) var(--ease) var(--d2), visibility 0s linear var(--d2); }
 .bar [data-tip]::after { bottom: auto; top: 100%; margin: 0.236em 0 0; }
 .bar .bic:last-of-type[data-tip]::after { left: auto; right: 0; transform: none; }

@@ -3,7 +3,7 @@
 /* Runtime adaptations only; the source recipes stay in the three imported copies. */
 
 .jfds {
-    font-family: jfmod-noto, 'Noto Sans', sans-serif;
+    font-family: jfmod-inter, 'Noto Sans', sans-serif;
 
     font-size: 14.88px;
 
@@ -620,16 +620,21 @@
     position: absolute;
 }
 
+/* The top bar's height for page offsets outside `.jfds` (ds.t13): one Bφ² control with Bφ⁻² above and below, φ² + 2φ⁻²
+   = 3.382 B, at each layout's B (_golden.scss). --jfmod-scale set on html zooms it with the bar. */
+html {
+    --jfmod-barh: calc(18px * 3.3819660113 * var(--jfmod-scale, 1));
+}
+
+html.layout-mobile { --jfmod-barh: calc(17.4px * 3.3819660113 * var(--jfmod-scale, 1)); }
+html.layout-tv { --jfmod-barh: calc(24.2px * 3.3819660113 * var(--jfmod-scale, 1)); }
+
 .jfmod-libraryGridPage {
     padding-top: 0;
 }
 
 .jfmod-legacyDs .jfmod-libraryGridPage {
-    padding-top: 3.226em;
-}
-
-.layout-tv .jfmod-legacyDs .jfmod-libraryGridPage {
-    padding-top: 3.85em;
+    padding-top: var(--jfmod-barh);
 }
 
 .jfmod-dsAppBar.MuiAppBar-root {
@@ -659,12 +664,6 @@
     margin: 0;
 
     cursor: pointer;
-}
-
-@media (max-width: 1365px) {
-    .jfds .bar .name {
-        display: none;
-    }
 }
 
 .jfds.barroot {
@@ -708,13 +707,11 @@
 .jfmod-dsHomePage .homeSectionsContainer { padding-bottom: 2.618em; }
 .jfmod-dsHomeShell > [aria-hidden='true'] { display: none; }
 .page.jfmod-searchPage { padding-top: 0 !important; }
-.jfmod-legacyDs .page.jfmod-searchPage { padding-top: 3.226em !important; }
-.layout-tv .jfmod-legacyDs .page.jfmod-searchPage { padding-top: 3.85em !important; }
+.jfmod-legacyDs .page.jfmod-searchPage { padding-top: var(--jfmod-barh) !important; }
 .page.jfmod-signinPage { padding: 0 !important; }
 .page.jfmod-dsBrowse { padding-top: 0 !important; }
 .page.jfmod-dsBrowse > :not(.jfmod-entryDetailsRoot) { display: none; }
-.jfmod-legacyDs .page.jfmod-dsBrowse { padding-top: 3.226em !important; }
-.layout-tv .jfmod-legacyDs .page.jfmod-dsBrowse { padding-top: 3.85em !important; }
+.jfmod-legacyDs .page.jfmod-dsBrowse { padding-top: var(--jfmod-barh) !important; }
 
 /* Upstream reserves player/absolute-tab room with !important; the native Home owns its foot spacing. */
 .page.jfmod-dsHomePage,
@@ -722,19 +719,14 @@
 
 /* The shell renders the ground's bar separately; preserve the source art under it and its content offset. */
 .jfmod-dsBrowse .ground {
-    margin-top: -3.226em;
-    padding-top: 3.226em;
+    margin-top: calc(-1 * var(--jfmod-bar));
+    padding-top: var(--jfmod-bar);
 }
 
-.layout-tv .jfmod-dsBrowse .ground {
-    margin-top: -3.85em;
-    padding-top: 3.85em;
-}
-
-/* The phone's bar is a whole pixel taller than its em height; the art starts under the bar's top edge, leaving no seam. */
+/* The phone's bar can round a whole pixel taller than its height; the art starts under the bar's top edge, leaving no seam. */
 .layout-mobile .jfmod-dsBrowse .ground {
-    margin-top: calc(-3.226em - 1px);
-    padding-top: calc(3.226em + 1px);
+    margin-top: calc(-1 * var(--jfmod-bar) - 1px);
+    padding-top: calc(var(--jfmod-bar) + 1px);
 }
 
 /* dsC: dialogHelper owns its invisible lifecycle host; the design owns every painted child. */
@@ -817,17 +809,11 @@
 .page.jfmod-dsTitle { padding-top: 0 !important; }
 .jfmod-dsTitle > :not(.jfmod-dsTitleHost):not(.jfmod-entryDetailsRoot) { display: none; }
 .jfmod-dsTitle > .jfmod-entryDetailsRoot { display: none; }
-.jfmod-legacyDs .page.jfmod-dsTitle { padding-top: 3.226em !important; }
-.layout-tv .jfmod-legacyDs .page.jfmod-dsTitle { padding-top: 3.85em !important; }
+.jfmod-legacyDs .page.jfmod-dsTitle { padding-top: var(--jfmod-barh) !important; }
 
 .jfmod-dsTitle .ground {
-    margin-top: -3.226em;
-    padding-top: 3.226em;
-}
-
-.layout-tv .jfmod-dsTitle .ground {
-    margin-top: -3.85em;
-    padding-top: 3.85em;
+    margin-top: calc(-1 * var(--jfmod-bar));
+    padding-top: var(--jfmod-bar);
 }
 
 /* A window taller than the page: the ground, not upstream's full-window backdrop, fills the rest. */
@@ -1006,7 +992,7 @@
     padding: 0;
 }
 
-/* Controller mounts carry no typography: source components choose Noto or Inter themselves. */
+/* Controller mounts carry no typography: source components choose their font themselves (Inter since ds.t13). */
 .jfds .jfmod-nativeEntryDetails,
 .jfds .jfmod-traktMount,
 .jfds .jfmod-ratingsMount {
@@ -1433,10 +1419,7 @@
 .page.jfmod-dsPrefs > :not(.jfmod-dsPrefsHost) { display: none; }
 
 .page.jfmod-dsPrefs,
-.page.jfmod-dsPrefsReact { padding-top: 3.226em !important; }
-
-.layout-tv .page.jfmod-dsPrefs,
-.layout-tv .page.jfmod-dsPrefsReact { padding-top: 3.85em !important; }
+.page.jfmod-dsPrefsReact { padding-top: var(--jfmod-barh) !important; }
 
 .jfds {
     a.srow2 {

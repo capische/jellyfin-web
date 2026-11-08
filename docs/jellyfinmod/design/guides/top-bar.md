@@ -1,5 +1,23 @@
 # Top bar and search
 
+**The bar on B (ds.t13), approved by the user 2026-11-07 ("Keep the wordmark, fold the labels first", "Looks good for me"; workspace
+`reviews/golden-pages/`), built, not accepted.** Every layout draws the bar on the golden scale (`design/_golden.scss`), so
+`--jfmod-scale` zooms it: one row of Bφ² controls with Bφ⁻² above and below (`--jfmod-bar`, 60.9 px at the computer's and tablet's
+B = 18 px, 58.9 px on a phone at 17.4 px, 81.9 px on the TV at 24.2 px), its content on the page gutter (`--jfmod-gut`: computer
+and TV Bφ², tablet Bφ¹, phone B), its own font B. Computer: logo disc Bφ¹, the wordmark at B 700 Bφ⁻² after it, Favorites, Shows
+and Movies Bφ⁻¹ after that as Bφ²-high pills padded Bφ⁻² (glyph box 1.2 B, which draws the mockup's tight B icon; label B 600,
+current one primary); the field Bφ⁷ wide (at most 42 %), Bφ² high, half-height corners, padding 0 B 0 Bφ⁻¹, Bφ¹ glyph Bφ⁻²
+before the words, typed ring 0.135 B (TV Bφ⁻³); SyncPlay, Cast and the avatar Bφ² circles with Bφ¹ glyphs, Bφ⁻³ apart. **When
+room runs short the labels fold first, then the wordmark goes:** `Bar.tsx` measures the bar's width against its own font and
+adds `fold` below 88 B (1584 px at 18 px; Bφ² round stops, Bφ¹ glyphs, the name as tooltip) and `noname` below 68.5 B (1233 px);
+both keep at least B between the links and the field, measured with the English labels. A 1440 computer at scale 1 shows the
+wordmark and the icons; 1920 shows the labels. The tablet always folds both, its field filling the gap with Bφ¹ either side. The
+phone's menu, SyncPlay, Cast, Search and avatar are Bφ² stops. The TV's back, home, Favorites, Shows and Movies are Bφ² stops,
+the clock at B 600; **the TV's Search page shows no title in the bar** (the user, 2026-11-07). Page offsets follow the height:
+`--jfmod-bar` inside `.jfds` (the title and browse grounds), `--jfmod-barh` on `html` for the legacy pages (`_runtime.scss`).
+The old 1366 px wordmark and 1180 px label media queries are gone. This supersedes the sizes below (3.226em bar, 3em icons,
+29.03em field) and D254's order.
+
 **dsF sweep (2026-11-04), built, not accepted:** a computer window under 600 px takes the phone's bar. The TV bar shows the page's title on Queue, Search and Preferences. The retained header tabs are hidden only while `html.jfmod-chrome.layout-tv` is active; upstream interfaces keep their tabs. On the TV the hero holds the page's top, so the bar stays on screen. The TV bar has a heart for Favorites, which replaces the header's retained Home and Favorites tabs; the mockup has no place for those tabs and they sat over the search field.
 
 **TV libraries (ds.t6, built, needs the user's look):** Home no longer draws My Media and the mockup's TV bar has no library links, so the TV could not open Shows or Movies at all. The TV bar now has a Shows and a Movies icon after Favorites, the computer bar's icons, nothing else.

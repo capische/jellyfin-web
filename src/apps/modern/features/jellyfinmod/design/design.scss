@@ -3,7 +3,12 @@
     @import './chrome';
     @import './spinner';
     @import './ds';
-    @import './golden';
 }
 
 @import './runtime';
+
+// The golden scale last, so its tokens and ds.t13's page values win over the copies and the runtime adapters.
+// stylelint-disable-next-line no-duplicate-selectors -- a second scope, after the runtime adapters.
+.jfds {
+    @import './golden';
+}

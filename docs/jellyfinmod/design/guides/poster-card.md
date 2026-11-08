@@ -1,5 +1,12 @@
 # Poster card
 
+**Home's rows on B (ds.t13), approved by the user 2026-11-07 (workspace `reviews/golden-pages/home.html`), built, not accepted.**
+On Home a card's own font is B (`_golden.scss`), so its corners (Bφ⁻¹), marks, disc, foot pill, ring and caption follow the
+scale and `--jfmod-scale`. Row titles Bφ¹ at 400, line 1, Bφ² above and B over the posters; posters Bφ⁵ and stills Bφ⁶ on a
+computer and tablet, Bφ¹ apart (each cell padded half of that so the ring keeps its room), the first on the gutter. The phone
+keeps 38.2 % and 61.8 % of the row, Bφ⁻¹ apart; the TV keeps 6 posters or 4 stills a row. Other pages keep the values below
+until their own design is approved.
+
 **Foot pill without Download (ds.t11), user 2026-11-07 ("too many download icons"), built, not accepted:** the foot pill is Watched, Favourite, More on every card that draws it (`Cell`, the title pages' cards). Download stays the disc of a card with no file; Download or Get Another Quality is in More: a native item's menu through `moreMenuItem`'s card items, a missing title's own menu (Download, More Info, View Queue). The pill still hugs its buttons and centres. The corner mark is unchanged. Code: `design/Cell.tsx`, `design/useCellModel.ts`, `design/TitlePage.tsx`.
 
 **D284, approved by the user, 2026-11-06; built, live acceptance pending:** Continue Watching keeps a placeholder next episode (`IsPlaceHolder: true`) as the existing file-less episode card: Not Downloaded mark, Get a Release action, no Play and no watched-progress bar; the Home hero skips placeholders.

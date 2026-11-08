@@ -1,5 +1,12 @@
 # Title pages and art ground
 
+**Home's hero on B (ds.t13), approved by the user 2026-11-07 (workspace `reviews/golden-pages/home.html`), built, not accepted.**
+The hero takes the golden head's type and steps (`_golden.scss`) on every layout, on the page gutter, Bφ¹ above its foot:
+title Bφ² at 700, line 1 (phone Bφ¹); the metadata at B with bullets and a plain-text rating; the ratings on their own card-glass
+pill under it (the hero wraps them in `.jfmod-metaRatings`, as the head does), B below; the overview at B, at most Bφ⁸ wide, B
+below the pill; the action pill Bφ¹ below, Play's words at B in its 3.333em, More Info B, round actions Bφ² with Bφ¹ glyphs. The
+top fade over the art is Bφ⁴. The font of every page is Inter since ds.t13 (was Noto Sans for the title and reading text).
+
 **Bigger poster and golden track strip (ds.t12): approved by the user 2026-11-07 ("bigger i like more"), built, not accepted,
 gate 1 on beta.** On a computer the poster is no longer s6: **poster : column = 1 : φ²** of the head's inner width after the s1
 gap (`width: calc((100% - s1) / 3.618)`, 2:3 kept): 319.7 / 837.0 px at a 1280 window, 363.9 / 952.8 at 1440, 496.6 / 1300.1 at
@@ -91,7 +98,7 @@ The original template remains hidden as the controller's data/select/command hos
 Dashboard, mod settings, wizard and other native detail types retain their existing presentation.
 
 The source head has the poster and one column (27.6% / remainder, 1em gap). Phone: centered poster at 61.8%, title and metadata,
-then the action pill and 5% content gutters. The source art ground, static image/filter/fade, Noto title/reading text, Inter dense
+then the action pill and 5% content gutters. The source art ground, static image/filter/fade, title/reading text (Inter since ds.t13), Inter dense
 controls, white Play, glass pickers and solid TV/capability fallback values are unchanged. Root observes real layout/theme markers
 without a reload. A shared upstream heading rule is neutralized so it cannot truncate titles or replace the source phone size.
 

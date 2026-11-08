@@ -1,14 +1,22 @@
+/* stylelint-disable no-descending-specificity -- ds.t13's page values override the copies in the order the pages read. */
+
 /* The golden scale (the user, 2026-11-07: "keep css easier to zoom out or zoom in the whole design"; "use new golden rules
    for ALL pages"). One knob, one base, the base's powers of φ ≈ 1.618 (workspace rule, 2026-11-01).
    --jfmod-scale  unitless zoom, default 1. Set it on `.jfds` (or any ancestor) and every surface that reads these tokens zooms:
-                  the tokens are computed here, so a value set below `.jfds` does not reach them.
-   --jfmod-base   the surface's body size: 18px on a computer (1.2097 × the 14.88px root) × --jfmod-scale. Plain px, never em,
-                  so a smaller caption never compounds it.
-   --jfmod-s<n>   --jfmod-base × φⁿ, n = -7 … 8 (--jfmod-s0 is the base).
-   Computer only for now: phone, tablet and TV bases are designed separately. Read by the title head (title-pages.md).
+                  the tokens are computed here, so a value set below `.jfds` does not reach them. The page offsets outside
+                  `.jfds` (`--jfmod-barh`, _runtime.scss) read it from `html`, so set it there to zoom everything at once.
+   --jfmod-base   B, the surface's body size, approved per layout (the user, 2026-11-07, "Agree"): computer and tablet 18px,
+                  phone 17.4px, TV 24.2px (1.2097 × each layout's root), × --jfmod-scale. Plain px, never em, so a smaller
+                  caption never compounds it.
+   --jfmod-s<n>   B × φⁿ, n = -7 … 8 (--jfmod-s0 is B).
+   --jfmod-gut    the page gutter: phone B, tablet Bφ¹, computer and TV Bφ².
+   --jfmod-bar    the top bar's height: one Bφ² control with Bφ⁻² above and below.
+   Read by the title head (computer, title-pages.md) and, from ds.t13, by the bar, Home and Search on every layout (below).
    webOS-safe: calc() with var() only, no min()/max()/clamp(). */
-&.dev-computer:not(.layout-tv) {
+& {
     --jfmod-base: calc(18px * var(--jfmod-scale, 1));
+    --jfmod-gut: var(--jfmod-s2);
+    --jfmod-bar: calc(var(--jfmod-s2) + 2 * var(--jfmod-s-2));
     --jfmod-s-7: calc(var(--jfmod-base) * 0.0344418537);
     --jfmod-s-6: calc(var(--jfmod-base) * 0.05572809);
     --jfmod-s-5: calc(var(--jfmod-base) * 0.0901699437);
@@ -25,4 +33,403 @@
     --jfmod-s6: calc(var(--jfmod-base) * 17.94427191);
     --jfmod-s7: calc(var(--jfmod-base) * 29.0344418537);
     --jfmod-s8: calc(var(--jfmod-base) * 46.9787137637);
+}
+
+&.dev-tablet { --jfmod-gut: var(--jfmod-s1); }
+
+&.dev-phone {
+    --jfmod-base: calc(17.4px * var(--jfmod-scale, 1));
+    --jfmod-gut: var(--jfmod-s0);
+}
+
+&.dev-tv { --jfmod-base: calc(24.2px * var(--jfmod-scale, 1)); }
+
+/* ---------------------------------------------------------------------------------------------------------------------
+   ds.t13, the top bar, Home and Search on B (approved by the user 2026-11-07: "Looks good for me"; mockups
+   reviews/golden-pages, rulebook GUIDELINES.md §1). Every length is a token above, so the one --jfmod-scale zooms them.
+   Named exceptions: Play 3.333em high with 3em corners; the poster disc 3.236em and the foot pill's 2em buttons, now of B;
+   the 0.135em ring; 40 px icon targets; 2:3 posters and 16:9 stills; the hero's share of the window; the column counts
+   (search 5, tablet 3, phone 2; the TV's rows 6 and 4; the phone's rows 38.2 % and 61.8 %); the glass recipes' px blur.
+   --------------------------------------------------------------------------------------------------------------------- */
+
+/* The bar: one row of Bφ² controls, Bφ⁻² above and below, its content on the page's gutter. Its own font is B, so the em
+   values it keeps (tooltips, the field's words) follow too. Bar.tsx folds the labels (`fold`, below 88B) before it drops the
+   wordmark (`noname`, below 68.5B), measured from this font size (the user, 2026-11-07: "Keep the wordmark, fold the labels
+   first"); the tablet always has both. */
+.bar,
+.tvbar {
+    box-sizing: border-box;
+    height: var(--jfmod-bar);
+    padding: 0 var(--jfmod-gut);
+    font-size: var(--jfmod-s0);
+}
+
+.bar .logo {
+    flex: none;
+    width: var(--jfmod-s1);
+    height: var(--jfmod-s1);
+    margin-right: var(--jfmod-s-2);
+}
+
+.bar .name {
+    margin-right: 0;
+    font-size: 1em;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.bar .nav {
+    margin-left: var(--jfmod-s-1);
+    font-size: 1em;
+    font-weight: 600;
+}
+
+.bar .nav a > span {
+    height: var(--jfmod-s2);
+    padding: 0 var(--jfmod-s-2);
+    margin-right: 0;
+    border-radius: var(--jfmod-s2);
+    white-space: nowrap;
+}
+
+.bar .nav a:hover > span { background: var(--tint); }
+
+/* The glyph reads as the mockup's B icon drawn tight: its 24-unit box at 1.2 B shows the same 20 units at B. */
+.bar .nav svg {
+    width: calc(var(--jfmod-s0) * 1.2);
+    height: calc(var(--jfmod-s0) * 1.2);
+    margin: 0 calc(var(--jfmod-s-2) - var(--jfmod-s0) * 0.1) 0 calc(var(--jfmod-s0) * -0.1);
+}
+
+.bar.fold .nav .lbl { display: none; }
+
+.bar.fold .nav a {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--jfmod-s2);
+    height: var(--jfmod-s2);
+    border-radius: 50%;
+}
+
+.bar.fold .nav a > span { padding: 0; }
+.bar.fold .nav a:hover > span { background: none; }
+.bar.fold .nav a:hover { background: var(--tint); }
+.bar.fold .nav a[data-tip]::after { display: block; }
+
+.bar.fold .nav svg {
+    width: var(--jfmod-s1);
+    height: var(--jfmod-s1);
+    margin: 0;
+}
+
+.bar.noname .name { display: none; }
+
+.bar .bic,
+.tvbar button,
+.tvbar .bic {
+    align-items: center;
+    justify-content: center;
+    width: var(--jfmod-s2);
+    height: var(--jfmod-s2);
+    border-radius: 50%;
+}
+
+.bar .bic + .bic,
+.bar .bic + .avatar,
+.tvbar button + button,
+.tvbar .bic + .bic,
+.tvbar .bic + .avatar { margin-left: var(--jfmod-s-3); }
+
+.bar .icon,
+.tvbar svg {
+    width: var(--jfmod-s1);
+    height: var(--jfmod-s1);
+    margin: 0;
+}
+
+.bar .avatar,
+.tvbar .avatar {
+    flex: none;
+    width: var(--jfmod-s2);
+    height: var(--jfmod-s2);
+    margin-left: var(--jfmod-s-3);
+}
+
+.bar .avatar svg {
+    width: var(--jfmod-s1);
+    height: var(--jfmod-s1);
+}
+
+.tvbar .avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tvbar .ttl,
+.tvbar .clock {
+    margin-left: var(--jfmod-s-1);
+    font-size: 1em;
+    font-weight: 600;
+}
+
+/* The phone's menu is a Bφ² stop like the icons after it. */
+&.dev-phone .bar svg.menu {
+    box-sizing: border-box;
+    width: var(--jfmod-s2);
+    height: var(--jfmod-s2);
+    padding: calc((var(--jfmod-s2) - var(--jfmod-s1)) / 2);
+    margin: 0;
+}
+
+&.dev-phone .bar .bic { height: var(--jfmod-s2); }
+
+.barsearch {
+    width: var(--jfmod-s7);
+    height: var(--jfmod-s2);
+    padding: 0 var(--jfmod-s0) 0 var(--jfmod-s-1);
+    border-radius: calc(var(--jfmod-s2) / 2);
+    font-size: var(--jfmod-s0);
+}
+
+.barsearch svg {
+    width: var(--jfmod-s1) !important;
+    height: var(--jfmod-s1) !important;
+    margin: 0 var(--jfmod-s-2) 0 0 !important;
+}
+
+.barsearch.on { box-shadow: 0 0 0 calc(var(--jfmod-s0) * 0.135) var(--primary); }
+&.layout-tv .barsearch.on { box-shadow: 0 0 0 var(--jfmod-s-3) var(--primary); }
+&.dev-tablet .barsearch { margin: 0 var(--jfmod-s1); }
+
+/* Home's hero: the head's type and steps (titleTop.scss, ds.t10) on sharp art. */
+.hero2 .pic::after { height: var(--jfmod-s4); }
+
+.hero2 .herotext {
+    right: var(--jfmod-gut);
+    bottom: var(--jfmod-s1);
+    left: var(--jfmod-gut);
+    font-size: var(--jfmod-s0);
+}
+
+.herotext h1 {
+    font-size: var(--jfmod-s2);
+    font-weight: 700;
+    line-height: 1;
+}
+
+&.dev-phone .herotext h1 { font-size: var(--jfmod-s1); }
+
+.herotext .meta {
+    margin-top: 0;
+    font-size: var(--jfmod-s0);
+}
+
+.herotext .meta > * {
+    margin: var(--jfmod-s-2) var(--jfmod-s-1) 0 0;
+    line-height: 1.618;
+}
+
+&.dev-phone .herotext .meta > * { margin: var(--jfmod-s-2) calc(var(--jfmod-s-1) / 2) 0; }
+
+.herotext .meta > * + :not(.jfmod-metaRatings)::before {
+    content: '\2022';
+    margin-right: var(--jfmod-s-1);
+    opacity: 0.809;
+}
+
+.herotext .meta .badge {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    font-size: 1em;
+}
+
+/* The ratings take their own line under the words: a card-glass pill, each mark beside its value, a chevron last. */
+.herotext .meta > .jfmod-metaRatings {
+    order: 1;
+    flex-basis: 100%;
+    justify-content: inherit;
+    margin: 0;
+}
+
+.herotext .jfmod-metaRatings .rgwrap {
+    display: inline-block;
+    margin-top: var(--jfmod-s0);
+    vertical-align: top;
+}
+
+.herotext .rgwrap .rgroup {
+    box-sizing: border-box;
+    height: var(--jfmod-s2);
+    padding: 0 var(--jfmod-s0);
+    margin: 0;
+    border-radius: var(--jfmod-s2);
+    background: var(--card-glass-bg);
+    backdrop-filter: var(--card-glass-filter);
+    line-height: 1;
+}
+
+&.layout-tv .herotext .rgwrap .rgroup,
+&.no-bf .herotext .rgwrap .rgroup {
+    background: rgba(0, 0, 0, 0.66);
+    backdrop-filter: none;
+}
+
+.herotext .rgwrap.on .rgroup { background: var(--tint); }
+
+@media (hover: hover) {
+    .herotext .rgwrap:hover .rgroup { background: var(--tint); }
+}
+
+.herotext .rgwrap .ritem {
+    flex-direction: row;
+    padding: 0;
+    margin: 0;
+}
+
+.herotext .rgwrap .ritem + .ritem { margin-left: var(--jfmod-s0); }
+
+.herotext .rgwrap .ritem .mk0 {
+    align-items: center;
+    height: var(--jfmod-s0);
+    margin: 0 var(--jfmod-s-2) 0 0;
+}
+
+.herotext .rgwrap .ritem .rm { height: var(--jfmod-s0); }
+
+.herotext .rgwrap .ritem b {
+    font-size: var(--jfmod-s0);
+    line-height: 1;
+}
+
+.herotext .rgwrap .ritem b.pc { padding-left: 0; }
+
+.herotext .rgwrap .jfmod-rchev {
+    display: block;
+    flex: none;
+    width: var(--jfmod-s0);
+    height: var(--jfmod-s0);
+    margin-left: var(--jfmod-s0);
+    opacity: 0.764;
+}
+
+.herotext .rgwrap .rcentre {
+    right: 0;
+    left: 0;
+}
+
+.herotext .rgwrap .rcentre > .pmenu.rmenu { margin-top: var(--jfmod-s-2); }
+
+.herotext p,
+&.dev-phone .herotext p {
+    width: auto;
+    max-width: var(--jfmod-s8);
+    margin: var(--jfmod-s0) 0 0;
+    font-size: var(--jfmod-s0);
+    line-height: 1.618;
+}
+
+.herotext .actbar,
+&.dev-phone .herotext .actbar {
+    margin-top: var(--jfmod-s1);
+    padding: var(--jfmod-s-2);
+}
+
+/* The last round action as far from the pill's end as from its top and bottom (the head's rule, ds.t10). */
+.herotext .actbar { padding-right: calc(var(--jfmod-s-2) + (3.333 * var(--jfmod-s0) - var(--jfmod-s2)) / 2); }
+
+.herotext .actbar .play {
+    min-width: var(--jfmod-s4);
+    padding: 0 var(--jfmod-s0);
+    margin-right: var(--jfmod-s-2);
+    font-size: var(--jfmod-s0);
+    line-height: 1;
+}
+
+.herotext .actbar .play svg {
+    width: var(--jfmod-s0);
+    height: var(--jfmod-s0);
+    margin-right: var(--jfmod-s-2);
+}
+
+.herotext .actbar .txt {
+    height: var(--jfmod-s2);
+    padding: 0 var(--jfmod-s0);
+    font-size: var(--jfmod-s0);
+}
+
+.herotext .actbar .dbtn {
+    width: var(--jfmod-s2);
+    height: var(--jfmod-s2);
+    min-width: 40px;
+    min-height: 40px;
+}
+
+.herotext .actbar .dbtn svg {
+    width: var(--jfmod-s1);
+    height: var(--jfmod-s1);
+}
+
+/* Cards on Home and Search: their own font is B, so the corner marks, disc, foot pill, ring, corners and caption (all em)
+   follow the scale; posters Bφ⁵ and stills Bφ⁶, Bφ¹ apart (each cell padded half of that, so the ring keeps its room). */
+.jfmod-homeRowRoot & .cell,
+.searchresults .cell { font-size: var(--jfmod-s0); }
+
+.jfmod-homeRowRoot & .sect { padding: 0 var(--jfmod-gut); }
+
+.jfmod-homeRowRoot & h2.rowt {
+    padding: var(--jfmod-s2) 0 calc(var(--jfmod-s0) - var(--jfmod-s1) / 2);
+    font-size: var(--jfmod-s1);
+    line-height: 1;
+}
+
+.jfmod-homeRowRoot & .ds-rowframe { margin: 0 calc(var(--jfmod-s1) / -2) calc(var(--jfmod-s1) / -2); }
+.jfmod-homeRowRoot & .tile { padding: calc(var(--jfmod-s1) / 2); }
+
+.jfmod-homeRowRoot &.dev-computer .cell.p,
+.jfmod-homeRowRoot &.dev-tablet .cell.p { width: calc(var(--jfmod-s5) + var(--jfmod-s1)); }
+
+.jfmod-homeRowRoot &.dev-computer .cell.w,
+.jfmod-homeRowRoot &.dev-tablet .cell.w { width: calc(var(--jfmod-s6) + var(--jfmod-s1)); }
+
+/* The phone keeps its shares of the row, flush left, Bφ⁻¹ between cards; its first row starts Bφ¹ under the hero. */
+.jfmod-homeRowRoot &.dev-phone .ds-rowframe { margin: 0; }
+.jfmod-homeRowRoot &.dev-phone .tile { padding: 0 var(--jfmod-s-1) var(--jfmod-s0) 0; }
+.jfmod-homeRowRoot &.dev-phone h2.rowt { padding: var(--jfmod-s1) 0 var(--jfmod-s0); }
+
+/* Search: Bφ¹ across and Bφ² down (vertical = horizontal × φ), five a row, the tablet three (the user, 2026-11-07). */
+&:not(html) .libgrid.searchresults {
+    padding: calc(var(--jfmod-s1) - var(--jfmod-s2) / 2) var(--jfmod-gut) var(--jfmod-s2);
+}
+
+.searchresults .searchgrid { margin: 0 calc(var(--jfmod-s1) / -2); }
+.searchresults .tile { padding: calc(var(--jfmod-s2) / 2) calc(var(--jfmod-s1) / 2); }
+&.dev-tablet .searchresults .searchgrid .cell.p { width: 33.333%; }
+
+/* The phone: two a row, B across and Bφ¹ down; the field Bφ² high, Bφ⁻² under the bar. */
+&:not(html).dev-phone .libgrid.searchresults { padding: var(--jfmod-s0) 0 var(--jfmod-s2) var(--jfmod-gut); }
+&.dev-phone .searchresults .searchgrid { margin: 0; }
+&.dev-phone .searchresults .tile { padding: 0 var(--jfmod-s0) var(--jfmod-s1) 0; }
+&.dev-phone .sfield { padding: var(--jfmod-s-2) var(--jfmod-gut) 0; }
+
+&.dev-phone .sfield .in {
+    height: var(--jfmod-s2);
+    padding: 0 var(--jfmod-s0) 0 var(--jfmod-s-1);
+    border-radius: var(--jfmod-s2);
+    font-size: var(--jfmod-s0);
+}
+
+&.dev-phone .sfield .in svg {
+    width: var(--jfmod-s1);
+    height: var(--jfmod-s1);
+    margin-right: var(--jfmod-s-2);
+}
+
+/* The TV's alphabet (emulated TV clients only), at B under the bar. */
+.alpha {
+    margin: var(--jfmod-s-2) 0 0;
+    font-size: var(--jfmod-s0);
 }

@@ -91,8 +91,9 @@ const HeroBody: FC<Props> = ({ item, backdrop, overview, details, onPlay, error 
                 {item.ProductionYear && <span>{item.ProductionYear}</span>}
                 {!!item.RunTimeTicks && <span>{datetime.getDisplayDuration(item.RunTimeTicks)}</span>}
                 {item.OfficialRating && <span className='badge'>{item.OfficialRating}</span>}
-                {api && user?.Id && item.Id && <NativeRatingsLine key={item.Id} api={api} userId={user.Id} itemId={item.Id}
-                    title={Promise.resolve(nativeRatingTitle(item))} knownType={item.Type} itemType={Promise.resolve(item.Type ?? undefined)} />}
+                {/* The ratings take their own line under the words, as on the title head (ds.t13). */}
+                {api && user?.Id && item.Id && <span className='jfmod-metaRatings'><NativeRatingsLine key={item.Id} api={api} userId={user.Id} itemId={item.Id}
+                    title={Promise.resolve(nativeRatingTitle(item))} knownType={item.Type} itemType={Promise.resolve(item.Type ?? undefined)} /></span>}
             </div>
             {overview && <p>{overview}</p>}
             <ItemsContainer isPlain className='actbar glassy focuscontainer-x'>
