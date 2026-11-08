@@ -414,6 +414,11 @@
         background: none;
     }
 
+    /* Above dialogHelper's 999999 (!important) container, under the spinner: the picker's Sources list and its (i). */
+    &.menuportal.overdialog {
+        z-index: 1000000;
+    }
+
     &.menuportal .pmenu {
         margin-top: 0;
     }
