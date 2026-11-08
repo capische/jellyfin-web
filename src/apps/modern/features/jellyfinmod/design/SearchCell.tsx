@@ -113,7 +113,7 @@ const SearchCellView: FC<ViewProps> = ({ item, over, data, onPrepare }) => {
             <Icon name={item.mediaType === 'movie' ? 'movie' : 'tv'} className='fallback' />}
         {mark && <span className='mark glassy' title={tip}>{mark}</span>}
         {add && <span className={'disc hov glassy' + (add.adding ? ' on' : '')} role='button' tabIndex={0}
-            aria-label={`Download ${item.title}`} data-tip='Download' aria-busy={add.adding || undefined}
+            aria-label={`Add ${item.title} to Library & Download`} data-tip='Add to Library & Download' aria-busy={add.adding || undefined}
             aria-disabled={add.adding || undefined} data-jfmod-add={item.key} onKeyDown={activate}
             onClick={event => {
                 const button = own(event);

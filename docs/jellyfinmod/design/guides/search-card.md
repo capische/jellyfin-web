@@ -2,7 +2,7 @@
 
 **A TMDB result's disc is Download (ds.t17), the user 2026-11-07 ("Yes, + with download disc that adds and opens the picker"),
 built, not accepted.** On a computer the hover/focus disc of a result not in the library is the **Download** cloud (`Cloud`, as a
-library title without a file, but drawn `<Cloud add />`: a filled plus badge on the cloud's top right, r = 4.4 of the 24 box, cut out of the cloud by a 5.5 ring, its plus knocked out at stroke 1.9, so it says "adds something new" (the user's variant 1, 2026-11-07); accessible name `Download <title>`, tip Download), no longer the +. One click adds the title, exactly
+library title without a file, but drawn `<Cloud add />`: a filled plus badge on the cloud's top right, r = 4.4 of the 24 box, cut out of the cloud by a 5.5 ring, its plus knocked out at stroke 1.9, so it says "adds something new" (the user's variant 1, 2026-11-07); accessible name `Add <title> to Library & Download`, tip **Add to Library & Download** (the user, 2026-11-07)), no longer the +. One click adds the title, exactly
 as the + did (the same library choice, the importing arc while it adds, the card turning into the library card, the
 administrator's Undo line), then opens the existing release picker for the new entry, the whole movie or series
 (`openReleasePickerForEntry`). Closed without a grab, the title stays in the library with no file, as after a plain add. The card
