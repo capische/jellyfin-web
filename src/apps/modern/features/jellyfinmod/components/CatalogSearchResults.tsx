@@ -20,6 +20,7 @@ import { usePluginHealth } from '../hooks/useEntries';
 import type { BrowseRow } from '../types/browse';
 import type { Entry, TmdbMetadata } from '../types/entry';
 import { getEntryPath, getTmdbImage, getTmdbPath } from '../utils/entryLinks';
+import { openReleasePickerForEntry } from '../integration/releasePicker';
 import { SearchCell, type SearchCardItem } from '../design/SearchCell';
 import { SearchRows } from '../design/Search';
 import { CellSkeleton } from '../design/Cell';
@@ -284,7 +285,8 @@ const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
         });
     };
 
-    const add = useCallback(async (metadata: TmdbMetadata, button: HTMLElement) => {
+    /** Adds a TMDB result to its library; answers the entry, or nothing when the add was cancelled or failed. */
+    const add = useCallback(async (metadata: TmdbMetadata, button: HTMLElement): Promise<Entry | undefined> => {
         if (!api) return;
         const identity = identityOf(metadata.mediaType, metadata.tmdbId);
         let targetLibraryId = targetFor(metadata.mediaType);
@@ -307,6 +309,7 @@ const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
             // that existed before this action, even for an administrator.
             if (user?.Policy?.IsAdministrator && result.created) setUndoEntry(result.entry);
             else toast('Added to catalog');
+            return result.entry;
         } catch (error) {
             if (!active.current) return;
             toast('Could not add this title');
@@ -321,6 +324,15 @@ const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
             }
         }
     }, [api, chooseLibrary, targetFor, user?.Id, user?.Policy?.IsAdministrator]);
+
+    /**
+     * The Download disc (ds.t17): the same add, then the release picker for the whole title. Closed without a grab, the title
+     * stays in the library with no file, as after a plain add.
+     */
+    const download = useCallback(async (metadata: TmdbMetadata, button: HTMLElement) => {
+        const entry = await add(metadata, button);
+        if (entry && api && active.current) await openReleasePickerForEntry(api, entry.id);
+    }, [add, api]);
 
     const undo = () => {
         const entry = undoEntry;
@@ -398,7 +410,9 @@ const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
         if (entry) return { ...base, entry, href: '#' + getEntryPath(entry.id, serverId) };
         return { ...base,
             href: canBrowse ? '#' + getTmdbPath(metadata.mediaType, metadata.tmdbId, serverId) : undefined,
-            add: { adding: adding.has(identity), onAdd: (_item, button) => { add(metadata, button).catch(console.error); } } };
+            add: { adding: adding.has(identity),
+                onAdd: button => { add(metadata, button).catch(console.error); },
+                onDownload: button => { download(metadata, button).catch(console.error); } } };
     };
     const imageOf = (item: ItemDto) => (item.Id && item.ImageTags?.Primary ? __legacyApiClient__?.getScaledImageUrl(item.Id,
         { type: 'Primary', maxWidth: 400, tag: item.ImageTags.Primary }) : undefined);

@@ -2700,3 +2700,16 @@ disc (Play, Download, the ring) and foot pill. Plugin: `RatingsAutoFetch`, `Rati
 [card glass](design/guides/card-glass.md), [title pages](design/guides/title-pages.md), [search card](design/guides/search-card.md).
 Verified only on the computer, dark, 1440, in Playwright Chromium; phone, tablet, TV, light theme, real Chrome, the browser runners
 and the Codex review are later gates.
+
+## ds.t17 — Search's TMDB result: Download adds and opens the picker (2026-11-07)
+
+**Built (not accepted), gate 1: computer first look on beta.** The user: "Yes, + with download disc that adds and opens the
+picker". On a Search result not in the library the hover/focus disc is the Download cloud (`Download <title>`); one click adds the
+title as the + did, then opens the existing release picker for the whole movie or series; closed without a grab the title stays
+in the library with no file. Add to Library (the add alone) moves to the card's More, on a new foot pill with More only (a TMDB
+result has no item for Watched or Favourite), beside Download. Automation: adding starts no search; the entry is monitored, so with
+automation on the next scheduled run (hourly trigger, `AutomationIntervalHours`) searches it, as after any add; no plugin change.
+Code: `design/SearchCell.tsx`, `components/CatalogSearchResults.tsx`. Guides: [search card](design/guides/search-card.md),
+[menus](design/guides/menus.md). Runners that click `[data-jfmod-add]` (`tmdb-browse`, `detail-design`, `browser-review`,
+`s11-fresh`, `undo-race`) now also get the picker and need a close step; not run. Verified only on the computer, dark, 1440, in
+Playwright Chromium; phone, tablet, TV, light theme, real Chrome and the Codex review are later gates.

@@ -1,5 +1,15 @@
 # Search card
 
+**A TMDB result's disc is Download (ds.t17), the user 2026-11-07 ("Yes, + with download disc that adds and opens the picker"),
+built, not accepted.** On a computer the hover/focus disc of a result not in the library is the **Download** cloud (`Cloud`, as a
+library title without a file; accessible name `Download <title>`, tip Download), no longer the +. One click adds the title, exactly
+as the + did (the same library choice, the importing arc while it adds, the card turning into the library card, the
+administrator's Undo line), then opens the existing release picker for the new entry, the whole movie or series
+(`openReleasePickerForEntry`). Closed without a grab, the title stays in the library with no file, as after a plain add. The card
+gains the poster card's foot pill with **More** alone (it has no item to mark watched or favourite): **Download** (the disc's
+action) and **Add to Library** (the add only). The add starts no search: a monitored title is searched by automation's next
+scheduled run, as after any add. Code: `design/SearchCell.tsx` (`AddMenu`), `components/CatalogSearchResults.tsx` (`download`).
+
 **Library titles take Home's disc and foot pill (ds.t16), the user 2026-11-07 ("Search - if in library. Play if file exists.
 Download should be … if in Library but not on the disk"), built, not accepted.** A library title's card (`CatalogSearchResults`
 → `SearchCell` with its browse row) draws the poster card's centre disc from `design/Cell.tsx` (`CellDisc`, `useCellModel`):
@@ -59,7 +69,7 @@ Base unit 1em (the surface's font size; TV 125 %, phone 90 %). φ steps named.
 
 ## Marks and the add disc
 
-- **TMDB result:** the + as a library poster's disc ([poster-card.md](poster-card.md)), on upstream's own hover overlay markup (`cardOverlayContainer`,
+- **TMDB result (since ds.t17 the Download cloud, adding and then opening the picker; Add to Library in More; see the top):** the + as a library poster's disc ([poster-card.md](poster-card.md)), on upstream's own hover overlay markup (`cardOverlayContainer`,
   `cardOverlayFab-primary`, the Material `add` glyph), as Play and the mod's cloud are on a library card: hidden at rest; on the
   cell's hover or focus the poster dims 23.6 % and the glass disc appears, growing 1.146 and filling under the pointer; keyboard ring
   `0 0 0 0.15em` primary. While adding, the disc stays shown
@@ -95,6 +105,7 @@ keeps its place.
 
 ## Rules
 
-- The whole cell opens the title: a library title its library page, a TMDB result its browse page. The + adds without opening.
+- The whole cell opens the title: a library title its library page, a TMDB result its browse page. The disc and the pill act without
+  opening it.
 - No flex gap, `min()`, `max()` or `:has` (older webOS).
 - Departing from these values is a design decision for the user.
