@@ -46,12 +46,12 @@ and wizard retain their current markup/presentation. [Removed files and complete
 
 **Status:** approved redesign D212–D231, D251, D254, D259/D262; rd2 built, not accepted. Rulebook sections 1–9 and Departures.
 
-`src/apps/modern/features/jellyfinmod/shell/sharedChrome.scss`, `chromeFont.scss`, `motionChrome.scss`, `ChromeTheme.tsx` and
+`src/apps/modern/features/jellyfinmod/shell/sharedChrome.scss`, `motionChrome.scss`, `ChromeTheme.tsx` and
 `useChromeScope.ts` provide the shared presentation. The root `html.jfmod-chrome` marker exists only inside the signed-in mod
 app layout, outside `/catalog/settings` (including setup); Dashboard, server wizard and public screens never acquire it.
 This also scopes body portals. The marker and observers are removed on leaving the layout or entering an excluded route.
 
-- Base 1em: Noto Sans, bundled real 400/600/700 under the isolated `jfmod-noto` family. Inter stays on dense controls and dialogs;
+- Base 1em: **Inter** (ds.t13, the user 2026-11-07: "stick with Inter it's the one you use for mock ups"), the bundled `jfmod-inter` (`components/interFont.scss`), for the page text and the dense controls alike; `chromeFont.scss` and its `jfmod-noto` faces are gone. Was: Noto Sans for the page text, Inter on dense controls and dialogs;
   release names stay monospace. Body pitch 1.618; row headings 1.618em/400; page titles 1.618em/600; hero 2.618em/600 (phone 1.618em).
 - Paper and ink read upstream theme tokens; dark defaults #202020 and white, light #e8e8e8 and black 87%. Primary #00a4dc
   means selection/focus or a form's main action; failure ink #ff7b72 (light #c62828). Sign Out remains neutral.

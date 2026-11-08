@@ -1,5 +1,5 @@
 import { DesignMenus } from './MenuPresentation';
-import React, { type FC, type KeyboardEvent, type ReactNode, useCallback, useEffect, useLayoutEffect, useState } from 'react';
+import React, { type FC, type KeyboardEvent, type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { getKeyName } from 'scripts/keyboardNavigation';
 import { useLocation } from 'react-router-dom';
 import { SyncPlayUserAccessType } from '@jellyfin/sdk/lib/generated-client/models/sync-play-user-access-type';
@@ -23,9 +23,14 @@ import { Icon, type IconName } from './Icon';
 import { Menu } from './Menu';
 
 const isFavorites = (pathname: string, search: string) => pathname === '/favorites' || pathname === '/home' && new URLSearchParams(search).get('tab') === '1';
-const pageTitles = new Map([['/tv', 'Shows'], ['/movies', 'Movies'], ['/search', 'Search'], ['/catalog/queue', 'Queue'], ['/mypreferencesmenu', 'Settings'],
+const pageTitles = new Map([['/tv', 'Shows'], ['/movies', 'Movies'], ['/catalog/queue', 'Queue'], ['/mypreferencesmenu', 'Settings'],
     ['/mypreferencesdisplay', 'Display'], ['/mypreferenceshome', 'Home'], ['/mypreferencesplayback', 'Playback'], ['/mypreferencessubtitles', 'Subtitles'],
     ['/mypreferencescontrols', 'Controls'], ['/userprofile', 'Profile'], ['/quickconnect', 'Quick Connect']]);
+
+/** Below these many B the computer's link labels fold into icons, and then the wordmark goes (ds.t13, the user 2026-11-07:
+ * "Keep the wordmark, fold the labels first"). Each keeps at least B between the links and the centred field. */
+const FOLD_LABELS = 88;
+const DROP_WORDMARK = 68.5;
 
 const activate = (event: KeyboardEvent<HTMLElement>) => {
     if (getKeyName(event.nativeEvent) !== 'Enter') return;
@@ -99,7 +104,26 @@ export const Bar: FC<{ onDrawer?: React.MouseEventHandler<HTMLElement> }> = ({ o
     const [tv, setTv] = useState(document.documentElement.classList.contains('layout-tv'));
     const [phone, setPhone] = useState(readEnvironment().device === 'phone');
     const [scrolled, setScrolled] = useState(false);
+    const [fit, setFit] = useState('');
+    const barRef = useRef<HTMLDivElement>(null);
     const { data: groups } = useSyncPlayGroups();
+    useLayoutEffect(() => {
+        const measure = () => {
+            const bar = barRef.current;
+            if (!bar || tv || phone) {
+                setFit('');
+                return;
+            }
+            // The bar's own font is B (_golden.scss), so the thresholds follow the layout's base and --jfmod-scale.
+            const base = parseFloat(getComputedStyle(bar).fontSize) || 18;
+            const width = bar.getBoundingClientRect().width;
+            const tablet = readEnvironment().device === 'tablet';
+            setFit((tablet || width < FOLD_LABELS * base ? ' fold' : '') + (tablet || width < DROP_WORDMARK * base ? ' noname' : ''));
+        };
+        measure();
+        window.addEventListener('resize', measure);
+        return () => window.removeEventListener('resize', measure);
+    }, [tv, phone]);
     useLayoutEffect(() => {
         // Home's retained tab strip needs the same space as the replacement bar above it.
         const header = document.querySelector<HTMLElement>('.skinHeader .headerTop');
@@ -175,10 +199,10 @@ export const Bar: FC<{ onDrawer?: React.MouseEventHandler<HTMLElement> }> = ({ o
         </>;
     }
     const scrollClass = scrolled ? ' glassbar' : '';
-    const barClass = tv ? 'tvbar focuscontainer-x' : 'bar over focuscontainer-x' + scrollClass;
+    const barClass = tv ? 'tvbar focuscontainer-x' : 'bar over focuscontainer-x' + scrollClass + fit;
     return <>
         <Root className={'barroot' + (onArt ? ' onart' : '')}>
-            <div className={barClass}>
+            <div ref={barRef} className={barClass}>
                 {leading}
                 {!phone && <BarSearch />}
                 <span className='spacer' />

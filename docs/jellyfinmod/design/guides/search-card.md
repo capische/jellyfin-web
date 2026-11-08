@@ -1,5 +1,13 @@
 # Search card
 
+**Search on B (ds.t13), approved by the user 2026-11-07 (workspace `reviews/golden-pages/search.html`), built, not accepted.** The
+results' cells take their own font at B (`_golden.scss`), so the poster's corners, the + disc, the ring and the three-line
+caption follow the scale and `--jfmod-scale`. The grid sits on the page gutter, its first row Bφ¹ under the bar; cells are Bφ¹
+apart across and Bφ² down (vertical = horizontal × φ; each cell padded half of that). Five a row on a computer and the TV,
+**three on a tablet** (the user: "tablet 3 across"; was 4), two on a phone with B across and Bφ¹ down and the field a Bφ² pill
+Bφ⁻² under the bar. The cast line cuts sooner at B (accepted by the user). The inline 3.3 % padding on the results is gone. This
+supersedes the 1em cell padding and the 3.236em side padding below.
+
 **dsB (2026-11-04), built, not accepted:** `design/SearchCell.tsx`, `Search.tsx`, `BrowsePage.tsx`, `Head.tsx` and `Poster.tsx` draw the approved mockup elements/classes directly. Search has the source 5/4/2 grid, 1em tile padding (phone 0/.618em/1em/0), three fixed caption slots, a computer-only hover/focus + and lazy ratio/fallback images. Page size 0 leaves cast blank. Browse cells/heads/episode rows are native too; ranking, Add, Undo, routes and data remain unchanged. Older restyling below now applies only where explicitly retained. [Full delta and validation](../dsB.md).
 
 **rd3 browse heads (built, not accepted):** the browse title uses the shared art-ground head and blue

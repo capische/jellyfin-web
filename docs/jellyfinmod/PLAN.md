@@ -2639,3 +2639,20 @@ only choose: History, Keep and Remove act on the selected file from the title's 
 [buttons and row actions](design/guides/buttons-and-row-actions.md), [media marks](design/guides/media-marks.md),
 [title pages](design/guides/title-pages.md), [pending version](design/guides/pending-version.md). The full suites, phone/TV
 matrix, light theme, real Chrome and the Codex review are later gates.
+
+## ds.t13 — the top bar, Home and Search on the golden scale, in Inter (2026-11-07)
+
+**Built (not accepted), gate 1: computer first look on beta (main-items line only).** The user approved the golden pages
+(workspace `reviews/golden-pages/`, rulebook `reviews/design-system/GUIDELINES.md` §1): the bases per layout ("Agree": computer
+and tablet 18 px, phone 17.4 px, TV 24.2 px), the new top bar, "Keep the wordmark, fold the labels first; tablet 3 across", the
+Search cast cut ("Accept that"), Home's first row under the fold ("Perfect"), no "Search" title in the TV bar, and Inter for
+every page ("stick with Inter it's the one you use for mock ups"); then "Looks good for me". `design/_golden.scss` now sets B on
+every layout (`--jfmod-base`, `--jfmod-gut`, `--jfmod-bar`) and draws the bar, Home's hero and rows, and the Search grid from the
+tokens, so the one `--jfmod-scale` zooms them; `Bar.tsx` folds the labels below 88 B, then drops the wordmark below 68.5 B; page
+offsets read the bar's height (`--jfmod-bar`, `--jfmod-barh`); `.jfds` and the shared chrome use `jfmod-inter`, and
+`shell/chromeFont.scss` (the Noto faces) is deleted. Guides: [top bar](design/guides/top-bar.md),
+[title pages](design/guides/title-pages.md) (Home's hero), [poster card](design/guides/poster-card.md),
+[search card](design/guides/search-card.md), [shared chrome](design/guides/shared-chrome.md). Verified only on the computer, dark,
+at 1440 and 1920 in Playwright Chromium; tablet, phone, TV, the light theme, real Chrome, the runners and the Codex review are
+later gates. Other pages (libraries, Favorites, Preferences, …) keep their values until their own designs.
+

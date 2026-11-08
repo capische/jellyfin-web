@@ -33,4 +33,4 @@ or behaves differently.
   page shows a character from its range), from the `@fontsource/inter` 5.3.0 package, in `assets/fonts/inter/` with `OFL.txt`
   beside them. They are declared by `@font-face` in `components/interFont.scss` under the family name `jfmod-inter`, first in
   the picker dialog's font stack. The family is complete enough to replace Jellyfin's default font later: put `jfmod-inter`
-  first in the theme's font stack and import `interFont.scss` from the mod shell.
+  first in the theme's font stack and import `interFont.scss` from the mod shell. Since ds.t13 (the user, 2026-11-07) it is the font of every signed-in mod page.

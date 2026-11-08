@@ -421,7 +421,7 @@ const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
             <button ref={undoButton} type='button' className='btn focusable' onClick={undo}>Undo</button>
         </div>}
         {!browseFailed && !fetching && <DiscoveryNotice failedTypes={failedTypes} />}
-        <div className='libgrid searchresults' style={{ paddingRight: '3.3%' }}><div className='grid searchgrid itemsContainer' aria-busy={loading}>
+        <div className='libgrid searchresults'><div className='grid searchgrid itemsContainer' aria-busy={loading}>
             {cards.map(item => <SearchCell key={item.key} item={item} />)}
             {loading && !browseFailed && Array.from({ length: 10 }, (_, index) => <CellSkeleton key={index} library />)}
         </div></div>

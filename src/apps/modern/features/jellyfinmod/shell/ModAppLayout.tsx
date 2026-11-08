@@ -24,7 +24,6 @@ import '../components/modFont.scss';
 import '../components/lightGlass.scss';
 import './sharedChrome.scss';
 import './motionChrome.scss';
-import './chromeFont.scss';
 import { useChromeScope } from './useChromeScope';
 import { paintPreferencesPages } from '../integration/prefsPages';
 import { Bar } from '../design/Bar';
