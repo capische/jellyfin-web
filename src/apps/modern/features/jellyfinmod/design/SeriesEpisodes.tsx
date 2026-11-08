@@ -15,7 +15,7 @@ import { openReleasePicker } from '../integration/releasePicker';
 import { restoreFocusTo } from '../integration/stockHeaderButton';
 import { sameItemId } from '../constants/versions';
 import { getTmdbImage } from '../utils/entryLinks';
-import type { EntryEpisode } from '../types/entry';
+import { type EntryEpisode, FileState } from '../types/entry';
 import { BrowseCell } from './BrowsePage';
 import { Icon, Cloud } from './Icon';
 import { Menu } from './Menu';
@@ -147,11 +147,14 @@ export const SeriesMainButton: FC<{ series: SeriesModel }> = ({ series }) => {
 
 const seasonName = (season: number) => (season > 0 ? 'Season ' + season : 'Specials');
 
-const EpisodeCard: FC<{ episode: SeriesEpisode; selected: boolean; boundary: boolean; onSelect: () => void }> = ({ episode, selected, boundary, onSelect }) => {
+/** A file is on its way: the card's progress ring will say so later (the user, 2026-11-07); no Download meanwhile. */
+const inFlight = (episode: SeriesEpisode) => [FileState.Searching, FileState.Grabbed, FileState.Downloading].includes(episode.entryEpisode?.state ?? FileState.None);
+
+const EpisodeCard: FC<{ episode: SeriesEpisode; selected: boolean; boundary: boolean; onSelect: () => void; onDownload?: (opener: HTMLElement) => void }> = ({ episode, selected, boundary, onSelect, onDownload }) => {
     const runtime = episode.ticks ? datetime.getDisplayDuration(episode.ticks) : '';
     return <div role='button' tabIndex={0} aria-pressed={selected} data-season={episode.season}
         aria-label={`S${episode.season}:E${episode.number ?? ''} ${episode.title}`}
-        className={'cell w focusable ecard' + (selected ? ' sel' : '') + (boundary ? ' sfirst' : '')}
+        className={'cell w focusable ecard' + (onDownload ? ' act' : '') + (selected ? ' sel' : '') + (boundary ? ' sfirst' : '')}
         onClick={onSelect} onKeyDown={event => { if (event.key === 'Enter') onSelect(); }}>
         <div className='tile'><Poster src={episode.image} icon='tv'>
             <span className='corner'>
@@ -160,6 +163,11 @@ const EpisodeCard: FC<{ episode: SeriesEpisode; selected: boolean; boundary: boo
                 {!episode.airs && !episode.hasFile && <span className='cmark glassy' data-ds-state-kind='not-downloaded' title='Not Downloaded'><DownloadMark kind='not-downloaded' size='card' /></span>}
             </span>
             {!!episode.progress && <span className='prog'><i style={{ width: episode.progress + '%' }} /></span>}
+            {onDownload && <button type='button' className='disc hov glassy focusable' data-ds-primary-action='get' aria-label={'Download ' + episode.title}
+                onClick={event => {
+                    event.stopPropagation();
+                    onDownload(event.currentTarget);
+                }}><Cloud /></button>}
         </Poster>
         <div className='capt'><div className='ln t'>{episode.number != null && episode.number + '. '}{episode.title}</div>
             <div className='ln d'>{runtime && <span>{runtime}</span>}{runtime && !!episode.rating && <span className='bullet' aria-hidden='true'>•</span>}
@@ -245,7 +253,9 @@ export const EpisodeStrip: FC<{ series: SeriesModel }> = ({ series }) => {
         </Menu>}
         <div ref={strip} className='erail' onScroll={sync}>
             {episodes.map((episode, index) => <EpisodeCard key={episode.key} episode={episode} selected={index === selectedIndex}
-                boundary={index > 0 && episodes[index - 1].season !== episode.season} onSelect={() => series.select(episode.key)} />)}
+                boundary={index > 0 && episodes[index - 1].season !== episode.season} onSelect={() => series.select(episode.key)}
+                onDownload={series.canAcquire && !episode.hasFile && !episode.airs && episode.entryEpisode && !inFlight(episode) ?
+                    opener => series.download(episode, opener) : undefined} />)}
         </div>
     </div>;
 };
