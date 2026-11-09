@@ -13,7 +13,8 @@ Phone, tablet and TV keep the strip below until their own gate.
   ink; Subtitles the language and its role mark, or **Subtitles Off**; a file without such tracks **No Audio** / **No Subtitles**.
 - **One file:** Video is plain: the resolution, the range, codec and bit depth, then the size at s-1/600 muted; no chevron, no focus
   stop, no Video tab. Audio or Subtitles with a single entry are plain the same way. (The one-file list's pending entry stays under
-  the controls; its administrator note is not shown on the computer.)
+  the controls.) No list shows the administrator's Delete note any more (the user 2026-11-09: it made no sense there); stock
+  Delete's confirmation still carries it.
 - **A 1280 px window or narrower** gives Video its own line (`.gpk::after`, the mockup's 1024 window); Audio then starts the second
   line on the column's edge.
 - **The chooser** (`.vlist.chooser`, one at a time): paper, s-2 under the controls from the column's left, s7 wide (at most the column),
@@ -66,7 +67,7 @@ gate 1 on beta.** Reference: workspace `reviews/dropdown-golden/` and its `NOTES
 - **The Video rows only choose, on every layout:** no History, Keep or Remove on a row. They act on the selected file from the
   title's More menu ([menus.md](menus.md), *Selected Version*). The TV's Right/Left along a row (D199) is gone: on a choice row they
   keep the focus, so the remote never leaves the open list sideways; the pending entry still walks to its X. The one-file Video
-  field stays a dropdown (its list holds the pending entry and the admin note).
+  field stays a dropdown (its list holds the pending entry).
 Phone, tablet and TV keep their sizes below (only the size's move to the caption and the rows' actions apply there).
 
 **Golden closed strip (ds.t10): approved by the user 2026-11-07, 18px base, built, not accepted.** Title head, computer layout only;

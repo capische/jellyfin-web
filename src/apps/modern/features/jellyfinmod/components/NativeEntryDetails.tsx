@@ -103,14 +103,13 @@ const pageKind = (data: EntryDetail | null | undefined, itemId: string, seasonOf
 
 /**
  * Stock Delete media on a title with several files deletes more than one version (V1, analysis C8): its confirmation on
- * this page gets a warning, and the administrator's file list the same line. V1 only: a plugin without `versions.v1`
+ * this page gets a warning. V1 only: a plugin without `versions.v1`
  * gets the page as it was before V1.
  */
-const usePageDeleteWarning = (view: HTMLElement, data: EntryDetail | null | undefined, versions: VersionDto[], capabilities: string[]) => {
+const usePageDeleteWarning = (view: HTMLElement, data: EntryDetail | null | undefined, versions: VersionDto[], capabilities: string[]): void => {
     const warning = data && capabilities.includes(VERSIONS_V1_CAPABILITY) && versions.length > 1 ?
         deleteWarningText(versions.length, data.entry.mediaType) : null;
     useDeleteWarning(view, warning);
-    return warning;
 };
 
 /** Which copy this device starts with (V1 decision 4). */
@@ -770,7 +769,7 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
         onClick: getRelease,
         before: ['jfmod-seasonTotal']
     });
-    const deleteWarning = usePageDeleteWarning(view, data, versions, capabilities);
+    usePageDeleteWarning(view, data, versions, capabilities);
     const sources = useMediaSources(api, userId, itemId, versions.length > 0);
     const preferred = usePreferredVersion(versions, capabilities, sources);
     const afterRemove = useCallback((removed: VersionDto) => {
@@ -843,7 +842,7 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
         {/* The device decides the strip's look: a computer draws quiet controls and one chooser (ds.t19). */}
         {strip && <DesignEnvironment>
             <FileChooser view={view} versions={versions} preferred={preferred} removeDate={removeDate}
-                note={isAdmin ? deleteWarning : null} sources={sources.data} strip={strip}
+                sources={sources.data} strip={strip}
                 pending={<PendingVersion entryId={entry.id} episodeId={episode?.id} versions={versions} isAdmin={isAdmin}
                     onFinished={pendingFinished} />} />
             <TrackDropdowns api={api} view={view} sources={sources.data} strip={strip} />
