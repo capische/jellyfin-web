@@ -844,7 +844,7 @@ export class HtmlVideoPlayer {
             // Stopped or replaced while waiting: that start owns the element now. The manager
             // is told it never started, not that it succeeded.
             if (generation !== this.#playGeneration) {
-                return Promise.reject({ playbackCancelled: true });
+                return Promise.reject(Object.assign(new Error('Playback cancelled'), { playbackCancelled: true }));
             }
             this.armInitialAudioTrack();
             return playWithPromise(elem, this.onError);
