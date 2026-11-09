@@ -1,5 +1,45 @@
 # Track strip and dropdown (the custom dropdown)
 
+**Quiet controls and one chooser on the computer (ds.t19): approved by the user 2026-11-08, built, not accepted, computer first
+look.** The user, of workspace `reviews/netflix-tracks/codex.html`: "I love this one. Less chrome. Same control." Computer title
+head only (`.jfds.dev-computer:not(.layout-tv)`, the ds.t19 block of `design/titleTop.scss`), tokens `sN` = `--jfmod-s<n>` (B = 18 px).
+Phone, tablet and TV keep the strip below until their own gate.
+
+- **Closed:** three quiet controls s0 under the action pill, s-2 apart, no captions and no glass: each the kind's s0 icon (Material
+  `display`, `audio`, `subs`, muted ink), the value at B, an s-1 chevron at 61.8 %; s2 high, padding s-2 s-1, s-1 corners, the tint
+  on hover and while open (the chevron turned), an s-5 primary outline s-3 out for the keyboard. Video's text sits on the column's
+  edge (`margin-left −s-1`). Values: Video the resolution in 600 and its range mark outlined (s-3 padding, s-6 line, s-5 corners;
+  the codec, bit depth and size are the chooser's); Audio the language and the audio run ([media-marks.md](media-marks.md)) in muted
+  ink; Subtitles the language and its role mark, or **Subtitles Off**; a file without such tracks **No Audio** / **No Subtitles**.
+- **One file:** Video is plain: the resolution, the range, codec and bit depth, then the size at s-1/600 muted; no chevron, no focus
+  stop, no Video tab. Audio or Subtitles with a single entry are plain the same way. (The one-file list's pending entry stays under
+  the controls; its administrator note is not shown on the computer.)
+- **A 1280 px window or narrower** gives Video its own line (`.gpk::after`, the mockup's 1024 window); Audio then starts the second
+  line on the column's edge.
+- **The chooser** (`.vlist.chooser`, one at a time): paper, s-2 under the controls from the column's left, s7 wide (at most the column),
+  s0 corners, s-2 padding, an s-6 hairline (`--hair`), shadow 0 s-1 s1 black 61.8 %, over the page. Head: a tab per choosable field
+  (Video, Audio, Subtitles; s2 high, s-1 sides, s-2 corners, the open one on the tint, the others 61.8 %) and a round s2 **Close**.
+  Rows at least s2, padding s-1 s0 with the text s0 + 2·s-1 in, s-1 corners: the name at B / 600 (blue when current, with the s-1
+  check s0 from the left), an s-1 detail line in the head's muted ink (Video: the codec, bit depth and range marks and the episode
+  range or removal date; Audio: the audio run, role mark and extra words; Subtitles: the role mark and extra words), the trailing size
+  (Video) or format chip (Subtitles) s-1 at the right. The list scrolls past s5; a foot line s-1 at 61.8 % under an s-6 rule
+  (*Select the file to play.* / *Select a language or the commentary track.* / *SDH includes sound cues. Forced translates selected
+  dialogue.*).
+- **Behaviour:** a click opens the chooser on that control's tab with the focus on the current row; a tab (or Left / Right on a row)
+  closes this field's list and opens that field's; picking a row sets the stock select as before (Play, audio and subtitles follow
+  upstream's code), updates the control and closes the chooser; Escape, a click outside or Close leave without a change, Escape and Close
+  returning the focus to the control. Each field keeps its own rows, data and selection logic (`FileChooser`, `TrackDropdown`).
+- **The series page** (computer only) shows the selected episode's three controls the same way, read from the episode's media
+  sources (`EpisodeTrackFields` in `TitlePage.tsx`); a choice there is passed to Play (`mediaSourceId`, `audioStreamIndex`,
+  `subtitleStreamIndex`, `useSeriesEpisodes`) and forgotten when another episode is selected.
+- Code: `design/TrackField.tsx` (`QuietField`, `ChooserFrame`, `walkList`), `components/FileChooser.tsx`, `components/TrackDropdown.tsx`,
+  `design/TitlePage.tsx`, `design/SeriesEpisodes.tsx`, `design/titleTop.scss`; the strip mounts in `DesignEnvironment`
+  (`components/NativeEntryDetails.tsx`) so it knows the device.
+
+**History (the computer's strip before ds.t19).** The ds.t12, ds.t10 and earlier notes below describe the computer's glass fields
+with captions, now replaced there by the controls above; their phone, tablet and TV values still hold. `TIGHT_EMS` and `.gpk.tight`
+are gone.
+
 **Golden track dropdowns and choice-only Video rows (ds.t12): approved by the user 2026-11-07 ("I like it. Let's keep what codex
 suggested"; field height "Codex version"; "file size should be moved to Video similarly like 576 KBPS"), built, not accepted,
 gate 1 on beta.** Reference: workspace `reviews/dropdown-golden/` and its `NOTES.md`; where they differ on height the user's later

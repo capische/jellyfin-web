@@ -1,9 +1,10 @@
 import type { MediaSourceInfo } from '@jellyfin/sdk/lib/generated-client/models/media-source-info';
-import React, { type FC, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { type FC, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { TrackField, ChooseRow } from '../design/TrackField';
 import { DesignMediaMarks } from '../design/MediaMarks';
 import { Icon } from '../design/Icon';
+import { DesignContext } from '../design/Root';
 
 import { bestFirst, describeVersion, fileMarks, findSource, sameItemId } from '../constants/versions';
 import type { VersionDto } from '../types/versions';
@@ -13,12 +14,6 @@ const SOURCE_SELECTOR = '.selectSource';
 const FORM_SELECTOR = '.trackSelections';
 /** Audio's and Subtitles' fixed cells (17.8em and 13.2em, `ds.css`) on the phone, tablet and TV, which Video's width is left after. */
 const TRACK_CELLS_EMS = 31;
-/**
- * Under this strip width (in the head's base) a computer's fields are narrower than the user's last size, 245 px at 18 px, and
- * their marks move up to the caption line, which keeps only its first word (`.gpk.tight`, the user 2026-11-07). 13.61 is a named
- * exception to the golden ratio: the user picked the size on the page.
- */
-const TIGHT_EMS = 3 * 13.61 + 2 * 0.3819660113;
 /**
  * Under this Video cell width the strip stacks as on the phone (D199). 11.7em is a named exception to the golden ratio (φ⁵, 11.09em,
  * until D238): it is where the pending entry's quality stays on its line: a 996 px window keeps 11.74em
@@ -214,7 +209,6 @@ export const useTrackStrip = (view: HTMLElement, enabled: boolean): StripHosts |
             below.classList.toggle('hide', form.classList.contains('hide'));
             const now = stacks(strip);
             strip.classList.toggle('stacked', now);
-            strip.classList.toggle('tight', !now && strip.clientWidth < TIGHT_EMS * parseFloat(getComputedStyle(strip).fontSize));
             setStacked(now);
         };
         restack();
@@ -253,6 +247,8 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, removeDa
     useViewerChoice(view, chosen);
     useDevicePreference(view, versions.length > 1 ? preferred : null, chosen);
     const [open, setOpen] = useState(false);
+    // A computer shows one file plainly, with nothing to open (ds.t19); phone, tablet and TV keep its list (pending entry, note).
+    const plain = useContext(DesignContext) === 'computer' && versions.length < 2;
     const selected = selectedVersion(versions, current);
     // The size moved to the caption (`VIDEO · 13.2 GB`, the user 2026-11-07); each row keeps its own.
     const summary = (version: VersionDto, closed = false) => <>
@@ -268,7 +264,7 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, removeDa
     const opening = useCallback(() => setOpen(true), []);
     const closing = useCallback(() => setOpen(false), []);
     return <>
-        {createPortal(<TrackField kind='v' name='Video' extra={describeVersion(selected).size ?? undefined} value={summary(selected, true)} stacked={strip.stacked} onOpen={opening} onClose={closing}>
+        {createPortal(<TrackField kind='v' name='Video' extra={describeVersion(selected).size ?? undefined} value={summary(selected, true)} enabled={!plain} stacked={strip.stacked} onOpen={opening} onClose={closing}>
             {bestFirst(versions).map(version => <ChooseRow key={version.mediaSourceId} sourceId={version.mediaSourceId} selected={version === selected}
                 onChoose={() => choose(version)} title={[version.episodeRange, removeDate(version)].filter(Boolean).join(' · ')}>
                 {summary(version)}

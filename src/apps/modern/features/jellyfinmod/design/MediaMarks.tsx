@@ -46,7 +46,7 @@ export const DesignMediaMarks: FC<{ parsed: MarkSource }> = ({ parsed }) => {
     }
     return <>
         {parsed.codec && <span className='mk codec'>{CODECS[parsed.codec] ?? parsed.codec}</span>}
-        {hdr.filter(value => value !== 'DV').map(value => <span key={value} className='mk hdr'>{value}</span>)}
+        {hdr.filter(value => value !== 'DV').map(value => <span key={value} className={'mk hdr' + (value.endsWith('-bit') ? ' depth' : '')}>{value}</span>)}
         {hdr.includes('DV') && <Format name='Vision' />}{audio.includes('Atmos') && <Format name='Atmos' />}{audioMark}
     </>;
 };

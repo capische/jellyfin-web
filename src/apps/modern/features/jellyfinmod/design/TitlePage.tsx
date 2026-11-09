@@ -1,4 +1,6 @@
 import type { BaseItemDto } from '@jellyfin/sdk/lib/generated-client';
+import { useQuery } from '@tanstack/react-query';
+import { useApi } from 'hooks/useApi';
 import React, { type FC, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { appHost } from 'components/apphost';
 import layoutManager from 'components/layoutManager';
@@ -21,7 +23,9 @@ import { TrackField, ChooseRow } from './TrackField';
 import { useStacked } from './useStacked';
 import { readTitle, runTitleCommand, type TitleCard, type TitleCommand, type InlinePart, type TitleTrack } from './titleModel';
 import { DesignMediaMarks } from './MediaMarks';
-import { streamMarks } from '../constants/versions';
+import { findSource, linesOfSize, streamMarks } from '../constants/versions';
+import { getLanguageNames, getMediaSources } from '../api/modApi';
+import { TrackLanguage, TrackText } from '../components/TrackDropdown';
 import { formatBytes } from '../constants/queue';
 import { rememberCommandOpener } from '../integration/commandOpener';
 import { usePlayedAction, type PlayedItem } from '../hooks/usePlayedAction';
@@ -164,6 +168,63 @@ const TrackValue: FC<{ option?: TitleTrack['options'][number]; closed?: boolean 
     {option?.video && <span className='marks'><DesignMediaMarks parsed={streamMarks(option.video)} /></span>}
     {!!option?.size && <span className={closed ? 'size2' : 'sz2'}>{formatBytes(option.size)}</span>}
 </>;
+
+/**
+ * The selected episode's Video, Audio and Subtitles on a computer's series page (ds.t19): the title page's quiet controls and
+ * chooser over the episode's own media sources; Play sends the choices (`useSeriesEpisodes`). Phone, tablet and TV show none.
+ */
+const EpisodeTrackFields: FC<{ series: SeriesModel }> = ({ series }) => {
+    const { api, user } = useApi();
+    const episode = series.selected;
+    const itemId = episode?.hasFile ? episode.item?.Id ?? '' : '';
+    const userId = user?.Id ?? '';
+    const sources = useQuery({
+        queryKey: ['JellyfinMod', api?.basePath, userId, 'MediaSources', itemId],
+        queryFn: ({ signal }) => getMediaSources(api!, userId, itemId, { signal }),
+        enabled: !!api && !!userId && !!itemId, staleTime: 2000, retry: false
+    }).data;
+    const names = useQuery({
+        queryKey: ['JellyfinMod', api?.basePath, 'LanguageNames'],
+        queryFn: ({ signal }) => getLanguageNames(api!, { signal }),
+        enabled: !!api, staleTime: Infinity, retry: false
+    }).data;
+    if (!episode || !itemId || !sources?.length) return null;
+    const chosen = series.tracks?.key === episode.key ? series.tracks : { key: episode.key };
+    const set = (next: Omit<typeof chosen, 'key'>) => series.setTracks({ ...chosen, ...next, key: episode.key });
+    const source = findSource(sources, chosen.source) ?? sources[0];
+    const streams = source.MediaStreams ?? [];
+    const audios = streams.filter(stream => stream.Type === 'Audio');
+    const subtitles = streams.filter(stream => stream.Type === 'Subtitle');
+    const audio = chosen.audio ?? source.DefaultAudioStreamIndex ?? audios[0]?.Index;
+    const subtitle = chosen.subtitle ?? source.DefaultSubtitleStreamIndex ?? -1;
+    const option = (candidate: typeof source, index: number) => {
+        const video = candidate.MediaStreams?.find(stream => stream.Type === 'Video');
+        const lines = video && linesOfSize(video.Width, video.Height);
+        return { value: candidate.Id ?? '', text: lines ? lines + 'p' : 'Video ' + (index + 1), video, size: candidate.Size };
+    };
+    const current = audios.find(stream => stream.Index === audio);
+    const subtitleNow = subtitles.find(stream => stream.Index === subtitle);
+    return <div className='gpk'>
+        <TrackField kind='v' name='Video' value={<TrackValue closed option={option(source, sources.indexOf(source))} />} enabled={sources.length > 1}
+            stacked={false}>
+            {sources.map((candidate, index) => <ChooseRow key={candidate.Id} sourceId={candidate.Id ?? undefined} selected={candidate === source}
+                onChoose={() => set({ source: candidate.Id ?? undefined, audio: undefined, subtitle: undefined })}><TrackValue option={option(candidate, index)} /></ChooseRow>)}
+        </TrackField>
+        <TrackField kind='a' name='Audio' enabled={audios.length > 1} stacked={false} title={current?.DisplayTitle ?? undefined}
+            value={current ? <TrackText stream={current} names={names} /> : <TrackLanguage language='None' />}
+            quietValue={current ? undefined : <TrackLanguage language='No Audio' />}>
+            {audios.map(stream => <ChooseRow key={stream.Index} trackValue={String(stream.Index)} selected={stream === current} title={stream.DisplayTitle ?? undefined}
+                onChoose={() => set({ audio: stream.Index })}><TrackText stream={stream} names={names} /></ChooseRow>)}
+        </TrackField>
+        <TrackField kind='s' name='Subtitles' enabled={subtitles.length > 0} stacked={false} title={subtitleNow?.DisplayTitle ?? undefined}
+            value={subtitleNow ? <TrackText stream={subtitleNow} names={names} /> : <TrackLanguage language='Off' />}
+            quietValue={subtitleNow ? undefined : <TrackLanguage language={subtitles.length ? 'Subtitles Off' : 'No Subtitles'} />}>
+            <ChooseRow trackValue='-1' selected={!subtitleNow} onChoose={() => set({ subtitle: -1 })}><TrackLanguage language='Off' /></ChooseRow>
+            {subtitles.map(stream => <ChooseRow key={stream.Index} trackValue={String(stream.Index)} selected={stream === subtitleNow} title={stream.DisplayTitle ?? undefined}
+                onChoose={() => set({ subtitle: stream.Index })}><TrackText stream={stream} names={names} /></ChooseRow>)}
+        </TrackField>
+    </div>;
+};
 
 /** The source cell's disc and foot pill, forwarding the original card commands. */
 const PosterActions: FC<{ card: TitleCard; view: HTMLElement }> = ({ card, view }) => {
@@ -391,6 +452,7 @@ const Content: FC<{ view: HTMLElement; type: string; art: string; item?: BaseIte
     return <div ref={ref} className={titleTop ? 'jfmod-titleTop' : undefined}>
         <Head titleTop={titleTop} title={model.title} poster={model.image} art={environment.art || (environment.type === 'Person' ? model.image : undefined)} lines={lines} pill={pill} wide={environment.type === 'Episode'} icon={environment.type === 'Person' ? 'person' : undefined}>
             <Slot view={view} name='notice' /><Slot view={view} name='tracks' />
+            {seriesMain && device === 'computer' && <EpisodeTrackFields series={series} />}
             {model.tracks.length > 0 && <div ref={stackRef} className={'gpk' + (stacked ? ' stacked' : '')}>
                 {model.tracks.map(track => <TrackField key={track.name} kind={track.kind} name={track.name}
                     value={<TrackValue closed option={track.options.find(option => option.value === track.value) ?? track.options[0]} />}

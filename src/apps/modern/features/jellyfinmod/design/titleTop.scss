@@ -359,118 +359,150 @@
         cursor: default;
     }
 
-    /* ds.t12 (the user 2026-11-07): s-1 under the pill; each field the caption's s0 line over the value's s1 line with s-2 above
-       and below (60.88 px), s1 corners. Three s6 fields in one row; a window too narrow for them shrinks all three alike, and
-       the computer never stacks (the user, 2026-11-07: "No stacking, stacking for mobile, and probably tablet portrait"). */
+    /* ds.t19 (the user 2026-11-08, workspace reviews/netflix-tracks/codex.html: "Less chrome. Same control."): Video, Audio and
+       Subtitles as three quiet controls s0 under the pill, s-2 apart: the kind's s0 icon, the value at B, an s-1 chevron, s2 high,
+       padding s-2 s-1, s-1 corners, no glass until hovered or open. The first control's text sits on the column's edge. */
     .gpk {
-        margin-top: var(--jfmod-s-1);
-        line-height: 1.618;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0 var(--jfmod-s-2);
+        margin-top: var(--jfmod-s0);
+        line-height: 1;
     }
 
     .gpk .seg {
         display: flex;
-        flex-direction: column;
-        justify-content: center;
-        min-height: 0;
-        padding: var(--jfmod-s-2) var(--jfmod-s0);
-        border-radius: var(--jfmod-s1);
-    }
-
-    .gpk .seg.on { box-shadow: 0 0 0 var(--jfmod-s-4) var(--primary); }
-
-    .gpk:not(.stacked) .seg { margin-left: var(--jfmod-s-2); }
-
-    .gpk:not(.stacked) .seg.v,
-    .gpk:not(.stacked) .seg.a,
-    .gpk:not(.stacked) .seg.s {
-        flex: 0 1 var(--jfmod-s6);
+        flex: none;
+        align-items: center;
+        gap: var(--jfmod-s-2);
+        position: static;
         width: auto;
         min-width: 0;
+        min-height: var(--jfmod-s2);
+        margin: 0;
+        padding: var(--jfmod-s-2) var(--jfmod-s-1);
+        border-radius: var(--jfmod-s-1);
+        background: transparent;
+        box-shadow: none;
+        white-space: nowrap;
     }
 
-    .gpk:not(.stacked) .seg.v { margin-left: 0; }
+    .gpk .seg.v {
+        order: 1;
+        margin-left: calc(-1 * var(--jfmod-s-1));
+    }
 
-    .gpk.stacked .seg { margin-top: var(--jfmod-s-2); }
+    .gpk .seg.a { order: 3; }
 
-    .gpk.stacked .seg.v { margin-top: 0; }
+    .gpk .seg.s { order: 4; }
 
-    .gpk .cap {
-        overflow: hidden;
-        font-size: var(--jfmod-s-1);
-        line-height: 1.618;
-        letter-spacing: var(--jfmod-s-7);
-        white-space: nowrap;
-        text-overflow: ellipsis;
+    .gpk .seg.focusable:hover,
+    .gpk .seg[aria-expanded='true'] { background: var(--tint); }
+
+    .gpk .seg:not(.focusable) {
+        background: transparent;
+        cursor: default;
+    }
+
+    .gpk .seg:focus-visible {
+        outline: var(--jfmod-s-5) solid var(--primary);
+        outline-offset: var(--jfmod-s-3);
+    }
+
+    .gpk .seg > .kicon {
+        width: var(--jfmod-s0);
+        height: var(--jfmod-s0);
+        color: var(--jfmod-head-muted);
+    }
+
+    .gpk .seg > .chev {
+        width: var(--jfmod-s-1);
+        height: var(--jfmod-s-1);
         opacity: 0.618;
     }
 
+    .gpk .seg[aria-expanded='true'] > .chev { transform: rotate(180deg); }
+
     .gpk .val {
+        display: flex;
+        align-items: center;
+        gap: var(--jfmod-s-2);
+        min-width: 0;
         font-size: var(--jfmod-s0);
-        line-height: 1.618;
+        line-height: 1;
     }
 
-    /* ds.t12, the open lists in the fields' language: paper s0 corners, s-2 padding and gap; rows at least s2, s-2 s-1 s-2 s0,
-       s-1 corners; the name s0, marks, Atmos run and size s-1 as in the field; the second line s-1 at an s0 pitch. */
-    .gpk .seg > .vlist {
-        margin-top: var(--jfmod-s-2);
-        padding: var(--jfmod-s-2);
-        border-radius: var(--jfmod-s0);
-        box-shadow: 0 var(--jfmod-s-2) var(--jfmod-s1) rgba(0, 0, 0, 0.45);
+    .gpk .val .r {
+        margin: 0;
+        font-weight: 400;
     }
 
-    .gpk .vrow {
-        min-height: var(--jfmod-s2);
-        padding: var(--jfmod-s-2) var(--jfmod-s-1) var(--jfmod-s-2) var(--jfmod-s0);
-        border-radius: var(--jfmod-s-1);
-        line-height: 1.618;
+    .gpk .seg.v .val .r { font-weight: 600; }
+
+    .gpk .val .marks {
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: var(--jfmod-s-3);
+        max-height: none;
+        overflow: visible;
+        font-size: var(--jfmod-s-1);
     }
 
-    .gpk .vrow .r {
-        margin-right: var(--jfmod-s-1);
-        font-size: var(--jfmod-s0);
-    }
+    .gpk .val .marks::before { display: none; }
 
-    .gpk .vrow .marks { font-size: var(--jfmod-s-1); }
-
-    .gpk .vrow .marks .mk {
-        margin-right: var(--jfmod-s-3);
+    .gpk .val .marks .mk {
+        margin: 0;
         font-size: 1em;
         letter-spacing: 0;
     }
 
-    .gpk .vrow .sz2 {
-        padding-left: var(--jfmod-s-1);
+    .gpk .val .qx,
+    .gpk .val .size2 {
+        margin: 0;
+        padding: 0;
         font-size: var(--jfmod-s-1);
         font-weight: 600;
         letter-spacing: 0;
-    }
-
-    .gpk .vrow .atm {
-        margin-right: var(--jfmod-s-1);
-        font-size: var(--jfmod-s-1);
-        letter-spacing: var(--jfmod-s-7);
-    }
-
-    .gpk .vrow .atm svg { margin-right: var(--jfmod-s-3); }
-
-    .gpk .vrow .atm .n { margin-left: var(--jfmod-s-2); }
-
-    .gpk .vrow .trackextra {
-        font-size: var(--jfmod-s-1);
-        line-height: var(--jfmod-s0);
         color: var(--jfmod-head-muted);
         opacity: 1;
     }
 
-    .gpk .vrow.sel::before {
-        left: var(--jfmod-s-3);
-        width: var(--jfmod-s-1);
-        height: var(--jfmod-s-1);
-        margin-top: calc(var(--jfmod-s-1) / -2);
+    /* With a choice of files the closed value is the resolution and its range; the codec, bit depth and size are the chooser's
+       (one file shows them all, its size last). The range is outlined: s-3 padding, s-6 line, s-5 corners. */
+    .gpk .seg.v.focusable .val .mk.codec,
+    .gpk .seg.v.focusable .val .mk.depth,
+    .gpk .seg.v.focusable .val .size2 { display: none; }
+
+    .gpk .seg.v .val .mk.hdr:not(.depth) {
+        order: -1;
+        padding: var(--jfmod-s-3);
+        border: var(--jfmod-s-6) solid currentColor;
+        border-radius: var(--jfmod-s-5);
+        line-height: 1;
     }
 
-    .gpk .vrow.foc,
-    .gpk .vrow:focus { box-shadow: inset 0 0 0 var(--jfmod-s-4) var(--primary); }
+    .gpk .val .atm,
+    .gpk .seg.a .val .atm {
+        flex-wrap: nowrap;
+        height: auto;
+        margin: 0;
+        overflow: visible;
+        font-size: var(--jfmod-s-1);
+        letter-spacing: var(--jfmod-s-7);
+        color: var(--jfmod-head-muted);
+    }
+
+    .gpk .seg.a .val .atm::before { display: none; }
+
+    .gpk .val .atm svg,
+    .gpk .vrow .atm svg { margin-right: var(--jfmod-s-3); }
+
+    .gpk .val .atm .n,
+    .gpk .vrow .atm .n { margin-left: var(--jfmod-s-2); }
+
+    /* A subtitle's format is the chooser's; the closed value is its language and role. */
+    .gpk .seg.s .val .marks { display: none; }
 
     /* The commentary bubble: an s0 glyph, its own 16:14, no frame (other role words keep their outline). */
     .gpk .rflag.glyph {
@@ -486,55 +518,6 @@
         fill: currentColor;
     }
 
-    .gpk .val .r { margin-right: var(--jfmod-s-1); }
-
-    .gpk .val .marks { font-size: var(--jfmod-s-1); }
-
-    .gpk .val .marks .mk {
-        margin-right: var(--jfmod-s-3);
-        font-size: 1em;
-        letter-spacing: 0;
-    }
-
-    /* The whole-mark drop (D242) measured on the marks' own size. */
-    .gpk .seg.v .val .marks { max-height: 1.2em; }
-
-    .gpk .seg.v .val .marks::before { height: 1.2em; }
-
-    .gpk .val .chev {
-        width: var(--jfmod-s0);
-        height: var(--jfmod-s0);
-        margin-left: var(--jfmod-s-1);
-    }
-
-    .gpk .val .chev.end { margin-left: auto; }
-
-    .gpk .val .atm {
-        margin-right: var(--jfmod-s-1);
-        font-size: var(--jfmod-s-1);
-        letter-spacing: var(--jfmod-s-7);
-    }
-
-    .gpk .val .atm svg { margin-right: var(--jfmod-s-3); }
-
-    .gpk .val .atm .n { margin-left: var(--jfmod-s-2); }
-
-    /* A narrow field drops the Audio mark's parts whole, 5.1 first, then DD+ Atmos, as Video drops its marks (D242); the zero-wide
-       ::before holds the first line at 1em so the dropped ones stay hidden. */
-    .gpk .seg.a .val .atm {
-        flex: 0 1 auto;
-        flex-wrap: wrap;
-        align-content: flex-start;
-        min-width: 0;
-        height: 1em;
-        overflow: hidden;
-    }
-
-    .gpk .seg.a .val .atm::before {
-        content: '';
-        height: 1em;
-    }
-
     /* The subtitle format chip, the same in the field and the list. */
     .gpk .marks .mk.tag {
         height: var(--jfmod-s0);
@@ -543,43 +526,192 @@
         font-size: var(--jfmod-s-1);
     }
 
-    /* Below the user's last size (245 px fields, `TIGHT_EMS` in FileChooser) the marks move up beside the caption's first word and
-       the value line keeps the name and the chevron (the user, 2026-11-07). The value's children join the field's grid; the
-       caption word and the marks s-2 apart, one φ step over the marks' own s-3. */
-    .gpk.tight .seg {
-        display: grid;
-        grid-template-columns: auto minmax(0, 1fr) auto;
+    /* A 1280 px window or narrower gives Video its own line (the mockup's 1024 window). */
+    @media (max-width: 1280px) {
+        .gpk::after {
+            content: '';
+            flex-basis: 100%;
+            order: 2;
+        }
+
+        .gpk .seg.a { margin-left: calc(-1 * var(--jfmod-s-1)); }
+    }
+
+    /* The one chooser: paper s-2 under the controls, s7 wide (at most the column), s0 corners, s-2 padding, an s-6 hairline,
+       shadow 0 s-1 s1 at 61.8 %; tabs s2 high with s-1 sides and s-2 corners, the open one on the tint; a round s2 Close; rows at
+       least s2, padding s-1 s0, the name at B / 600 over an s-1 detail line in the head's muted ink, the trailing size or format
+       s-1 at the right; the s-1 check s0 from the left; the list scrolls past s5; a s-1 foot line under an s-6 rule. */
+    .gpk > .vlist.chooser {
+        position: absolute;
+        z-index: 7;
+        top: calc(100% + var(--jfmod-s-2));
+        left: 0;
+        width: var(--jfmod-s7);
+        max-width: 100%;
+        margin: 0;
+        padding: var(--jfmod-s-2);
+        border: var(--jfmod-s-6) solid var(--hair);
+        border-radius: var(--jfmod-s0);
+        background: var(--paper);
+        color: var(--text);
+        box-shadow: 0 var(--jfmod-s-1) var(--jfmod-s1) rgba(0, 0, 0, 0.618);
+        font-size: var(--jfmod-s0);
+        line-height: 1.618;
+        white-space: normal;
+    }
+
+    .gpk .vlist.chooser .chead {
+        display: flex;
         align-items: center;
-        column-gap: var(--jfmod-s-2);
+        gap: var(--jfmod-s-2);
+        padding: var(--jfmod-s-2) var(--jfmod-s-1) var(--jfmod-s-1);
     }
 
-    .gpk.tight .seg > .cap {
+    .gpk .vlist.chooser .ctabs {
+        display: flex;
+        flex: 1;
+        align-items: center;
+        gap: var(--jfmod-s-2);
+    }
+
+    .gpk .vlist.chooser .ctab,
+    .gpk .vlist.chooser .cclose {
+        height: var(--jfmod-s2);
+        padding: 0 var(--jfmod-s-1);
+        border: 0;
+        border-radius: var(--jfmod-s-2);
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        cursor: pointer;
+    }
+
+    .gpk .vlist.chooser .ctab { opacity: 0.618; }
+
+    .gpk .vlist.chooser .ctab.on {
+        background: var(--tint);
+        opacity: 1;
+    }
+
+    .gpk .vlist.chooser .cclose {
+        display: grid;
+        place-items: center;
+        width: var(--jfmod-s2);
+        margin-left: auto;
+        padding: 0;
+        border-radius: 50%;
+    }
+
+    .gpk .vlist.chooser .cclose svg {
+        width: var(--jfmod-s0);
+        height: var(--jfmod-s0);
+    }
+
+    .gpk .vlist.chooser .ctab:hover,
+    .gpk .vlist.chooser .cclose:hover { background: var(--tint); }
+
+    .gpk .vlist.chooser .ctab:focus-visible,
+    .gpk .vlist.chooser .cclose:focus-visible {
+        outline: var(--jfmod-s-5) solid var(--primary);
+        outline-offset: calc(-1 * var(--jfmod-s-5));
+    }
+
+    .gpk .vlist.chooser .clist {
+        max-height: var(--jfmod-s5);
+        padding: var(--jfmod-s-3);
+        overflow-y: auto;
+        scrollbar-width: thin;
+    }
+
+    .gpk .vlist.chooser .vrow {
+        display: grid;
+        grid-template-columns: auto auto minmax(0, 1fr) auto;
+        align-items: center;
+        min-height: var(--jfmod-s2);
+        padding: var(--jfmod-s-1) var(--jfmod-s0) var(--jfmod-s-1) calc(var(--jfmod-s0) + 2 * var(--jfmod-s-1));
+        border-radius: var(--jfmod-s-1);
+        line-height: 1.618;
+        white-space: nowrap;
+    }
+
+    .gpk .vlist.chooser .vrow > * { margin: 0; }
+
+    .gpk .vlist.chooser .vrow .r {
         grid-row: 1;
-        grid-column: 1;
+        grid-column: 1 / 4;
+        justify-self: start;
+        font-size: var(--jfmod-s0);
+        font-weight: 600;
     }
 
-    .gpk.tight .cap .x { display: none; }
-
-    .gpk.tight .seg > .val { display: contents; }
-
-    .gpk.tight .seg .val > .r {
+    .gpk .vlist.chooser .vrow .marks,
+    .gpk .vlist.chooser .vrow .atm,
+    .gpk .vlist.chooser .vrow .rflag,
+    .gpk .vlist.chooser .vrow .trackextra {
         grid-row: 2;
-        grid-column: 1 / 3;
-        min-width: 0;
+        margin-right: var(--jfmod-s-1);
+        font-size: var(--jfmod-s-1);
+        line-height: 1.618;
+        color: var(--jfmod-head-muted);
+        opacity: 1;
     }
 
-    .gpk.tight .seg .val > .marks,
-    .gpk.tight .seg .val > .atm {
-        grid-row: 1;
-        grid-column: 2 / 4;
-        margin-right: 0;
-    }
+    .gpk .vlist.chooser .vrow .marks,
+    .gpk .vlist.chooser .vrow .atm { grid-column: 1; }
 
-    .gpk.tight .seg .val > .marks > .mk:last-child { margin-right: 0; }
+    .gpk .vlist.chooser .vrow .rflag { grid-column: 2; }
 
-    .gpk.tight .seg .val > .chev {
-        grid-row: 2;
+    .gpk .vlist.chooser .vrow .trackextra {
         grid-column: 3;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .gpk .vlist.chooser .vrow .marks {
+        display: flex;
+        align-items: center;
+        gap: var(--jfmod-s-3);
+    }
+
+    .gpk .vlist.chooser .vrow .marks .mk {
+        margin: 0;
+        font-size: 1em;
+        letter-spacing: 0;
+    }
+
+    .gpk .vlist.chooser .vrow .sz2,
+    .gpk .vlist.chooser[data-list='s'] .vrow .marks {
+        grid-row: 1 / 3;
+        grid-column: 4;
+        margin: 0;
+        padding-left: var(--jfmod-s-1);
+        font-size: var(--jfmod-s-1);
+        font-weight: 600;
+        letter-spacing: 0;
+        color: var(--jfmod-head-muted);
+        opacity: 1;
+    }
+
+    .gpk .vlist.chooser[data-list='s'] .vrow .rflag { grid-column: 1; }
+
+    .gpk .vlist.chooser[data-list='s'] .vrow .trackextra { grid-column: 2 / 4; }
+
+    .gpk .vlist.chooser .vrow.sel::before {
+        left: var(--jfmod-s0);
+        width: var(--jfmod-s-1);
+        height: var(--jfmod-s-1);
+        margin-top: calc(var(--jfmod-s-1) / -2);
+    }
+
+    .gpk .vlist.chooser .vrow.foc,
+    .gpk .vlist.chooser .vrow:focus { box-shadow: inset 0 0 0 var(--jfmod-s-4) var(--primary); }
+
+    .gpk .vlist.chooser .cfoot {
+        margin: var(--jfmod-s-2) var(--jfmod-s-1) 0;
+        padding: var(--jfmod-s-1) 0 var(--jfmod-s-2);
+        border-top: var(--jfmod-s-6) solid var(--hair);
+        font-size: var(--jfmod-s-1);
+        opacity: 0.618;
     }
 
     .jfmod-titleReading {
@@ -622,8 +754,8 @@
 }
 
 /* A click that opened a list leaves no ring on its selected row (the keyboard's ring above). */
-.ds-pointer .jfds.dev-computer:not(.layout-tv) .jfmod-titleTop .jfmod-titleHead .gpk .vrow.foc,
-.ds-pointer .jfds.dev-computer:not(.layout-tv) .jfmod-titleTop .jfmod-titleHead .gpk .vrow:focus { box-shadow: none; }
+.ds-pointer .jfds.dev-computer:not(.layout-tv) .jfmod-titleTop .jfmod-titleHead .gpk .vlist.chooser .vrow.foc,
+.ds-pointer .jfds.dev-computer:not(.layout-tv) .jfmod-titleTop .jfmod-titleHead .gpk .vlist.chooser .vrow:focus { box-shadow: none; }
 
 /* A pointer click that opened a source leaves the pill's own glass, not a lit pill (ratings.md, one highlight). */
 .ds-pointer .jfds.dev-computer:not(.layout-tv) .jfmod-titleTop .jfmod-titleHead .rgwrap:not(.on) .rgroup.foc { background: var(--card-glass-bg); }
