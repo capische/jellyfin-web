@@ -142,13 +142,32 @@ export const SeriesMainButton: FC<{ series: SeriesModel }> = ({ series }) => {
     }
     if (!episode.hasFile) {
         if (!series.canAcquire) return null;
-        return <button type='button' className='play mainb focusable' aria-label='Download' onClick={event => series.download(episode, event.currentTarget)}>
-            <Cloud />Download</button>;
+        return <button type='button' className='play mainb epb focusable' aria-label={episodeLabel('Download', episode)}
+            onClick={event => series.download(episode, event.currentTarget)}><Cloud /><EpisodeCopy word='Download' episode={episode} /></button>;
     }
-    return <button type='button' className='play focusable' aria-label='Play' onClick={() => series.play(episode)}><Icon name='play' />Play</button>;
+    return <button type='button' className='play epb focusable' aria-label={episodeLabel('Play', episode)} onClick={() => series.play(episode)}>
+        <Icon name='play' /><EpisodeCopy word='Play' episode={episode} /></button>;
 };
 
 const seasonName = (season: number) => (season > 0 ? 'Season ' + season : 'Specials');
+/** An episode's own name; none when the show only numbers them ("Episode 3"). */
+const ownTitle = (episode: SeriesEpisode) => (/^\s*(episode|ep\.?)\s*\d+\s*$/i.test(episode.title) ? '' : episode.title.trim());
+const episodeWords = (word: string, episode: SeriesEpisode) => (episode.number == null ? word : `${word} Episode ${episode.number}`);
+const episodeLabel = (word: string, episode: SeriesEpisode) => [episodeWords(word, episode), ownTitle(episode)].filter(Boolean).join(', ');
+
+/**
+ * The main button's words in two rows (the user, 2026-11-08): the action and number, then the season and runtime. The episode's
+ * own name is on its card in the rail, so here it is only the hover hint. A hidden "… Episode 88" sets the width, so the
+ * button holds still from episode to episode.
+ */
+const EpisodeCopy: FC<{ word: string; episode: SeriesEpisode }> = ({ word, episode }) => {
+    const runtime = episode.ticks ? datetime.getDisplayDuration(episode.ticks) : '';
+    return <span className='epc' title={ownTitle(episode) || undefined}>
+        <b>{episodeWords(word, episode)}</b>
+        <span className='ghost' aria-hidden='true'>{word} Episode 88</span>
+        <span className='sm f'>{seasonName(episode.season)}{runtime && ' · ' + runtime}</span>
+    </span>;
+};
 
 /** A file is on its way: the card's progress ring says so (the user, 2026-11-07, ds.t16); no Download meanwhile. */
 const inFlight = (episode: SeriesEpisode) => [FileState.Searching, FileState.Grabbed, FileState.Downloading].includes(episode.entryEpisode?.state ?? FileState.None);

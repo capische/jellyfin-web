@@ -350,6 +350,51 @@
         height: var(--jfmod-s1);
     }
 
+    /* A series' main button names its episode in two rows (the user, 2026-11-08; from option A of
+       reviews/episode-play-button/fable.html, without the title row): the action at s0 700, then the season and runtime at
+       s-1 600 (φ^-1 ink), s-3 apart, inside Play's 3.333em height. The small row never widens it. */
+    .actbar .play.epb {
+        justify-content: flex-start;
+        text-align: left;
+    }
+
+    .actbar .play.epb .epc {
+        display: flex;
+        flex-direction: column;
+        gap: var(--jfmod-s-3);
+        min-width: 0;
+    }
+
+    .actbar .play.epb .epc b,
+    .actbar .play.epb .ghost {
+        font-weight: 700;
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* "… Episode 88" sets the width, so the button holds still from episode to episode. */
+    .actbar .play.epb .ghost {
+        height: 0;
+        overflow: hidden;
+        visibility: hidden;
+        margin-top: calc(-1 * var(--jfmod-s-3));
+    }
+
+    .actbar .play.epb .sm {
+        width: 0;
+        min-width: 100%;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        font-size: var(--jfmod-s-1);
+        line-height: 1.236;
+    }
+
+    .actbar .play.epb .f {
+        font-weight: 600;
+        opacity: 0.618;
+    }
+
     /* An unaired episode's main button: the date, disabled, in the labelled button's disabled look (ds.t14). */
     .actbar .play.off,
     .actbar .play.off:hover {
