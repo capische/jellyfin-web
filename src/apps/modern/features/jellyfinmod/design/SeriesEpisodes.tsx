@@ -44,6 +44,14 @@ export interface SeriesEpisode {
     airs?: string;
 }
 
+/** An episode's chosen file and stream indexes (Jellyfin's `MediaStream.Index`; -1 is subtitles off); unset is the file's default. */
+export interface EpisodeTracks {
+    key: string;
+    source?: string;
+    audio?: number;
+    subtitle?: number;
+}
+
 const seasonRank = (season: number) => (season > 0 ? season : 100000);
 const order = (a: SeriesEpisode, b: SeriesEpisode) => seasonRank(a.season) - seasonRank(b.season) || (a.number ?? 0) - (b.number ?? 0);
 
@@ -114,11 +122,15 @@ export const useSeriesEpisodes = (series?: BaseItemDto) => {
     let selectedIndex = episodes.findIndex(episode => episode.key === chosen);
     if (selectedIndex < 0) selectedIndex = firstUnwatched(episodes);
     const selected = episodes[selectedIndex] as SeriesEpisode | undefined;
+    // The file, audio and subtitles chosen for an episode on the computer's controls (ds.t19); Play sends them as a title page does.
+    const [tracks, setTracks] = useState<EpisodeTracks>();
     const play = useCallback((episode: SeriesEpisode) => {
         if (!episode.item?.Id) return;
+        const picked = tracks?.key === episode.key ? tracks : undefined;
         playbackManager.play({ ids: [episode.item.Id], serverId: series?.ServerId,
-            startPositionTicks: episode.progress ? episode.item.UserData?.PlaybackPositionTicks ?? 0 : undefined }).catch(console.error);
-    }, [series?.ServerId]);
+            startPositionTicks: episode.progress ? episode.item.UserData?.PlaybackPositionTicks ?? 0 : undefined,
+            mediaSourceId: picked?.source, audioStreamIndex: picked?.audio, subtitleStreamIndex: picked?.subtitle }).catch(console.error);
+    }, [series?.ServerId, tracks]);
     const refetch = detail.refetch;
     const download = useCallback((episode: SeriesEpisode, opener: HTMLElement) => {
         const data = detail.data;
@@ -129,7 +141,8 @@ export const useSeriesEpisodes = (series?: BaseItemDto) => {
             .then(() => restoreFocusTo(opener), () => restoreFocusTo(opener));
     }, [api, detail.data, refetch]);
     // The series page's main button follows the selection; Get Another Quality only beside Play (the user, 2026-11-07).
-    return { episodes, selected, selectedIndex, select: setChosen, play, download, canAcquire, active: episodes.length > 0, showsPlay: !!selected?.hasFile };
+    return { episodes, selected, selectedIndex, select: setChosen, play, download, canAcquire, active: episodes.length > 0, showsPlay: !!selected?.hasFile,
+        tracks, setTracks };
 };
 export type SeriesModel = ReturnType<typeof useSeriesEpisodes>;
 

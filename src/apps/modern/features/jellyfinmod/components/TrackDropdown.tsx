@@ -30,6 +30,8 @@ interface Entry {
     /** Upstream's option text, as the entry's tooltip. */
     title: string;
     content: ReactNode;
+    /** The closed value on a computer, which has no caption to name the field: `Subtitles Off`, `No Audio`. */
+    quiet?: ReactNode;
 }
 
 interface NativeSelect {
@@ -99,7 +101,7 @@ const RoleMark: FC<{ role: TrackRole }> = ({ role }) => <span className={role ==
  * The language in 600 and its short modifier (D60), which wraps out of sight first when the cell is narrow (D78); a language
  * still too long is cut with an ellipsis.
  */
-const TrackLanguage: FC<{ language: string; modifier?: string | null }> = ({ language, modifier }) => <span className='r'>
+export const TrackLanguage: FC<{ language: string; modifier?: string | null }> = ({ language, modifier }) => <span className='r'>
     <span className='language'>{language}</span>
     {modifier && <span className='modifier'>({modifier})</span>}
 </span>;
@@ -108,7 +110,7 @@ const TrackLanguage: FC<{ language: string; modifier?: string | null }> = ({ lan
  * One track as its cell and its row draw it (D59, D76): language and modifier, the format marks, at most one role mark. The
  * track's own title is never drawn as it is; its extra words are the list's second line (`trackExtraWords`, D81 option A).
  */
-const TrackText: FC<{ stream: MediaStream; names: Record<string, string> | undefined }> = ({ stream, names }) => {
+export const TrackText: FC<{ stream: MediaStream; names: Record<string, string> | undefined }> = ({ stream, names }) => {
     const code = stream.Language?.toLowerCase() ?? '';
     const language = names?.[code] ?? (stream.Language || 'Unknown');
     const format = stream.Type === 'Subtitle' ? subtitleFormat(stream) : null;
@@ -134,7 +136,7 @@ interface TrackDropdownProps {
 const TrackDropdown: FC<TrackDropdownProps & { stacked: boolean }> = ({ name, entries, value, enabled, onChoose, stacked }) => {
     const current = entries.find(entry => entry.value === value) ?? entries[0];
     if (!current) return null;
-    return <TrackField kind={name === 'Audio' ? 'a' : 's'} name={name} value={current.content} title={current.title} extra={current.extra} enabled={enabled && entries.length > 1} stacked={stacked}>
+    return <TrackField kind={name === 'Audio' ? 'a' : 's'} name={name} value={current.content} quietValue={current.quiet} title={current.title} extra={current.extra} enabled={enabled && entries.length > 1} stacked={stacked}>
         {entries.map(entry => <ChooseRow key={entry.value} trackValue={entry.value} selected={entry === current} title={entry.title} onChoose={() => onChoose(entry.value)}>
             {entry.content}{entry.extra && <span className='trackextra'>{entry.extra}</span>}
         </ChooseRow>)}
@@ -160,16 +162,22 @@ const TrackRow: FC<TrackRowProps> = ({ view, host, selector, name, type, sources
     // A file without such tracks keeps its cell, at its fixed width, reading None, so switching the file never resizes the
     // strip or its lists (user, 2026-10-29; D131, replacing D30's hidden segment).
     if (state.hidden) {
-        const none = [{ value: '', title: `No ${name.toLowerCase()}`, content: <TrackLanguage language='None' />, extra: undefined }];
+        const none = [{ value: '', title: `No ${name.toLowerCase()}`, content: <TrackLanguage language='None' />, extra: undefined,
+            quiet: <TrackLanguage language={'No ' + name} /> }];
         return createPortal(<TrackDropdown stacked={stacked} name={name} entries={none} value='' enabled={false} onChoose={choose} />, host);
     }
     const streams = (findSource(sources, state.sourceId) ?? sources[0])?.MediaStreams ?? [];
     const entries = state.options.map(option => {
         const stream = streams.find(candidate => candidate.Type === type && String(candidate.Index) === option.value);
         let content: ReactNode = <TrackLanguage language={option.text} />;
-        if (stream) content = <TrackText stream={stream} names={names} />;
-        else if (type === 'Subtitle' && option.value === '-1') content = <TrackLanguage language='Off' />;
-        return { value: option.value, title: option.text, content, extra: stream ? trackExtraWords(stream) || undefined : undefined };
+        let quiet: ReactNode;
+        if (stream) {
+            content = <TrackText stream={stream} names={names} />;
+        } else if (type === 'Subtitle' && option.value === '-1') {
+            content = <TrackLanguage language='Off' />;
+            quiet = <TrackLanguage language='Subtitles Off' />;
+        }
+        return { value: option.value, title: option.text, content, quiet, extra: stream ? trackExtraWords(stream) || undefined : undefined };
     });
     return createPortal(<TrackDropdown stacked={stacked} name={name} entries={entries} value={state.value} enabled={!state.disabled} onChoose={choose} />,
         host);

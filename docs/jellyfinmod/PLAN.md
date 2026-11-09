@@ -2718,3 +2718,18 @@ Fixed with it (the user's report, "Dropdown does not fit"): the picker's Search 
 scrolling dialog and cut off while it was short; a field's list in a dialog now opens over the dialog (`.overdialog`,
 `menuPosition`, above the pill when there is no room below), at its field's width and type. Guide:
 [release picker sources](design/guides/release-picker-sources.md).
+
+## ds.t19 — Video, Audio and Subtitles as quiet controls with one chooser (2026-11-08)
+
+**Built (not accepted), gate 1: computer first look on beta.** The user chose Codex's design (workspace
+`reviews/netflix-tracks/codex.html`): "I love this one. Less chrome. Same control." On a computer the three glass fields under the
+action pill become quiet icon-led controls (`4K [HDR10] ⌄`, `English DD+ Atmos 5.1 ⌄`, `Subtitles Off ⌄`) and a click opens one
+paper chooser with Video / Audio / Subtitles tabs; one file shows its video plainly; a 1280 px window or narrower puts Video on its
+own line. The rows, data and selection stay `FileChooser`'s and `TrackDropdown`'s (the stock selects remain the source of truth, so
+Play sends the chosen source, audio and subtitle indexes as before). New with it: the series page shows the selected episode's
+controls (it had no strip) and Play passes the choices. Code: `design/TrackField.tsx`, `design/titleTop.scss`,
+`components/FileChooser.tsx`, `components/TrackDropdown.tsx`, `components/NativeEntryDetails.tsx`, `design/TitlePage.tsx`,
+`design/SeriesEpisodes.tsx`, `design/MediaMarks.tsx`. Guides: [track dropdown](design/guides/track-dropdown.md),
+[media marks](design/guides/media-marks.md), [title pages](design/guides/title-pages.md). Verified only on the computer (1920,
+1440, 1024), dark, in Playwright Chromium; phone, tablet, TV, the light theme, real Chrome, the runners and the Codex review are
+later gates.

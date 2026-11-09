@@ -38,6 +38,7 @@ import { itemRatingsKey } from './NativeRatingsLine';
 import RetentionStatus from './RetentionStatus';
 import SeasonTotal from './SeasonTotal';
 import TrackDropdowns from './TrackDropdown';
+import { DesignEnvironment } from '../design/Root';
 
 interface NativeEntryDetailsProps {
     api: Api;
@@ -839,11 +840,14 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
     }
     return <section aria-label='JellyfinMod' data-jfmod-entry-id={entry.id} data-jfmod-episode-id={episode?.id}>
         <LibraryUndo entryId={entry.id} view={view} />
-        {strip && <FileChooser view={view} versions={versions} preferred={preferred} removeDate={removeDate}
-            note={isAdmin ? deleteWarning : null} sources={sources.data} strip={strip}
-            pending={<PendingVersion entryId={entry.id} episodeId={episode?.id} versions={versions} isAdmin={isAdmin}
-                onFinished={pendingFinished} />} />}
-        {strip && <TrackDropdowns api={api} view={view} sources={sources.data} strip={strip} />}
+        {/* The device decides the strip's look: a computer draws quiet controls and one chooser (ds.t19). */}
+        {strip && <DesignEnvironment>
+            <FileChooser view={view} versions={versions} preferred={preferred} removeDate={removeDate}
+                note={isAdmin ? deleteWarning : null} sources={sources.data} strip={strip}
+                pending={<PendingVersion entryId={entry.id} episodeId={episode?.id} versions={versions} isAdmin={isAdmin}
+                    onFinished={pendingFinished} />} />
+            <TrackDropdowns api={api} view={view} sources={sources.data} strip={strip} />
+        </DesignEnvironment>}
         <FileHistoryPopover anchor={historyFor?.anchor ?? null} version={historyFor?.version ?? null} history={history}
             onClose={closeHistory} />
         {windowDialog}

@@ -1,5 +1,10 @@
 # Media marks
 
+**Computer track controls (ds.t19): approved by the user 2026-11-08, built, not accepted, computer first look.** A bit-depth mark
+carries `.depth` beside `.hdr` (`DesignMediaMarks`), so the computer's closed Video control can show the range alone, outlined
+(s-3 padding, s-6 line in `currentColor`, s-5 corners), and keep the codec and bit depth for the chooser's detail line. Every other
+use draws the marks as below. See [track-dropdown.md](track-dropdown.md).
+
 **Golden list marks (ds.t12): approved by the user 2026-11-07, built, not accepted.** In the computer title head's open lists the
 marks match the closed field: video marks s-1, s-3 apart, no tracking; the Atmos run s-1 with s-7 tracking (glyph 0.82em, s-3
 after it, channels s-2 after the format); the subtitle chip s-1 type, s0 high, s-3 side padding, s-4 corners, in the field and the

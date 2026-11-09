@@ -1,9 +1,23 @@
-import React, { type FC, type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { type FC, type ReactNode, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import focusManager from 'components/focusManager';
 import inputManager from 'scripts/inputManager';
 import { getKeyName } from 'scripts/keyboardNavigation';
 import { isBackKey } from '../shell/dpadModals';
-import { Icon } from './Icon';
+import { Icon, type IconName } from './Icon';
+import { DesignContext } from './Root';
+
+type TrackKind = 'v' | 'a' | 's';
+interface ChooserTab { name: string; kind: string }
+
+const KIND_ICON: Record<TrackKind, IconName> = { v: 'display', a: 'audio', s: 'subs' };
+/** The chooser's foot line for each kind (the approved mockup's words, workspace `reviews/netflix-tracks/codex.html`). */
+const KIND_FOOT: Record<TrackKind, string> = { v: 'Select the file to play.', a: 'Select a language or the commentary track.',
+    s: 'SDH includes sound cues. Forced translates selected dialogue.' };
+
+/** The strip's other choosable fields, in Video, Audio, Subtitles order: the computer chooser's tabs. */
+const chooserTabs = (trigger: HTMLElement | null): ChooserTab[] => Array.from(trigger?.parentElement?.querySelectorAll<HTMLElement>('.seg.focusable[data-jfmod-kind]') ?? [])
+    .map(field => ({ name: field.dataset.jfmodTrackField ?? '', kind: field.dataset.jfmodKind ?? '' }))
+    .sort((a, b) => 'vas'.indexOf(a.kind) - 'vas'.indexOf(b.kind));
 
 /**
  * Left/Right inside an open list: only the pending entry has a button (its X), walked from the entry; a choice row keeps the
@@ -14,10 +28,95 @@ const sideStop = (row: HTMLElement, key: string) => {
     return stops[stops.indexOf(document.activeElement as HTMLElement) + (key === 'ArrowLeft' ? -1 : 1)] ?? (row.matches('.vrow') ? row : undefined);
 };
 
-/** ds2.js stripAt/seg: open lists are paper, inline on narrow screens, anchored to their cell otherwise. */
-export const TrackField: FC<{ kind: 'v' | 'a' | 's'; name: string; value: ReactNode; enabled?: boolean; stacked: boolean;
-    children?: ReactNode; onOpen?: () => void; onClose?: () => void; closeOnChoose?: boolean; title?: string; extra?: string }> = ({ kind, name, value, enabled = true, stacked, children, onOpen, onClose, closeOnChoose = true, title, extra }) => {
+/** The open list's arrow keys: Up and Down walk its rows (Up from the first returns to the field, or the chooser's tab); Left and
+ * Right walk a pending entry's X, and in the computer's chooser they switch to the next tab. */
+type Chooser = { kind: string; tabs: ChooserTab[]; switchTo: (name: string) => void } | null;
+
+/** Left and Right on a row of the computer's chooser open the tab beside this one, as the mockup's keys do. */
+const switchTab = (event: React.KeyboardEvent<HTMLElement>, key: string, chooser: Chooser) => {
+    if (!chooser || (key !== 'ArrowLeft' && key !== 'ArrowRight')) return false;
+    const at = chooser.tabs.findIndex(tab => tab.kind === chooser.kind);
+    const to = chooser.tabs[(at + (key === 'ArrowLeft' ? -1 : 1) + chooser.tabs.length) % chooser.tabs.length];
+    event.preventDefault();
+    event.stopPropagation();
+    if (to && to.kind !== chooser.kind) chooser.switchTo(to.name);
+    return true;
+};
+
+/** Up and Down walk the rows; Up from the first returns to the field, or to the chooser's open tab. */
+const verticalStop = (list: HTMLElement, row: HTMLElement, key: string, back: HTMLElement | null) => {
+    const rows = Array.from(list.querySelectorAll<HTMLElement>('.vrow, .pend'));
+    const destination = rows[rows.indexOf(row) + (key === 'ArrowUp' ? -1 : 1)];
+    const next = destination?.matches('.vrow') ? destination : destination?.querySelector<HTMLElement>('button.focusable');
+    return next ?? (key === 'ArrowUp' && row === rows[0] ? back : undefined);
+};
+
+/** The open list's arrow keys: rows up and down, a pending entry's X sideways, the chooser's tabs sideways from a row. */
+const walkList = (event: React.KeyboardEvent<HTMLElement>, chooser: Chooser, trigger: HTMLElement | null) => {
+    const key = getKeyName(event.nativeEvent);
+    const row = (event.target as HTMLElement).closest<HTMLElement>('.vrow, .pend');
+    if (!row || (row.matches('.vrow') && switchTab(event, key, chooser))) return;
+    let next: HTMLElement | null | undefined;
+    if (key === 'ArrowLeft' || key === 'ArrowRight') next = sideStop(row, key);
+    if (key === 'ArrowUp' || key === 'ArrowDown') {
+        next = verticalStop(event.currentTarget, row, key, chooser ? event.currentTarget.querySelector<HTMLElement>('.ctab.on') : trigger);
+    }
+    if (!next) return;
+    event.preventDefault();
+    event.stopPropagation();
+    focusManager.focus(next);
+    next.scrollIntoView({ block: 'nearest' });
+};
+
+/** The computer's one chooser around a field's rows: a tab per choosable field and Close, the rows, a foot line. */
+const ChooserFrame: FC<{ kind: TrackKind; name: string; tabs: ChooserTab[]; onTab: (name: string) => void; onClose: () => void; children?: ReactNode }> = ({ kind, name, tabs, onTab, onClose, children }) => <>
+    <div className='chead'>
+        <div className='ctabs' role='group' aria-label='Choose what to change'>{tabs.map(tab => <button key={tab.kind} type='button'
+            className={'ctab' + (tab.kind === kind ? ' on' : '')} aria-pressed={tab.kind === kind}
+            onClick={() => { if (tab.kind !== kind) onTab(tab.name); }}>{tab.name}</button>)}</div>
+        <button type='button' className='cclose' aria-label='Close' onClick={onClose}><Icon name='close' /></button>
+    </div>
+    <div className='clist' role='listbox' aria-label={name}>{children}</div>
+    <p className='cfoot'>{KIND_FOOT[kind]}</p>
+</>;
+
+/** A computer's quiet control (ds.t19): the kind's icon, the value, a chevron when there is a choice; plain and no focus stop without. */
+interface QuietFieldProps {
+    kind: TrackKind;
+    name: string;
+    title?: string;
+    enabled: boolean;
+    open: boolean;
+    onToggle: () => void;
+    onKeyDown: (event: React.KeyboardEvent) => void;
+    children: ReactNode;
+}
+
+const QuietField = React.forwardRef<HTMLDivElement, QuietFieldProps>(({ kind, name, title, enabled, open, onToggle, onKeyDown, children }, ref) => {
+    if (!enabled) {
+        return <div ref={ref} className={'seg ' + kind} title={title} data-jfmod-track-field={name} data-jfmod-kind={kind}>
+            <Icon name={KIND_ICON[kind]} className='kicon' /><span className='val'>{children}</span>
+        </div>;
+    }
+    return <div ref={ref} role='button' tabIndex={0} aria-haspopup='listbox' aria-expanded={open} aria-label={name} className={'seg ' + kind + ' focusable'}
+        title={title} data-jfmod-track-field={name} data-jfmod-kind={kind} onClick={onToggle} onKeyDown={onKeyDown}>
+        <Icon name={KIND_ICON[kind]} className='kicon' /><span className='val'>{children}</span><Icon name='down' className='chev' />
+    </div>;
+});
+QuietField.displayName = 'QuietField';
+
+/**
+ * ds2.js stripAt/seg: open lists are paper, inline on narrow screens, anchored to their cell otherwise. On a computer (ds.t19, the
+ * user 2026-11-08) the field is a quiet control (its kind's icon, the value, a chevron) and its list opens in one paper chooser
+ * under the strip, with a tab per choosable field: a tab closes this list and opens that field's, so each field keeps its own rows.
+ */
+export const TrackField: FC<{ kind: TrackKind; name: string; value: ReactNode; enabled?: boolean; stacked: boolean;
+    children?: ReactNode; onOpen?: () => void; onClose?: () => void; closeOnChoose?: boolean; title?: string; extra?: string;
+    /** The closed value on a computer, where no caption names the field (`Subtitles Off`); `value` otherwise. */
+    quietValue?: ReactNode }> = ({ kind, name, value, enabled = true, stacked, children, onOpen, onClose, closeOnChoose = true, title, extra, quietValue }) => {
+    const quiet = useContext(DesignContext) === 'computer';
     const [open, setOpen] = useState(false);
+    const [tabs, setTabs] = useState<ChooserTab[]>([]);
     const [focus, setFocus] = useState(false);
     const trigger = useRef<HTMLDivElement>(null);
     const list = useRef<HTMLDivElement>(null);
@@ -78,53 +177,53 @@ export const TrackField: FC<{ kind: 'v' | 'a' | 's'; name: string; value: ReactN
     // A dropdown over the page under its own field, stacked or not; only the phone opens it in the card (D197), right
     // under its field (`data-list` orders it there, since a portal appends it after the strip's last field).
     const inCard = stacked && document.documentElement.classList.contains('layout-mobile');
-    const sheet = open && <div ref={list} className='vlist focuscontainer-y' data-list={kind} role='listbox' tabIndex={-1} aria-label={name} onClick={choose}
+    const switchTo = (other: string) => {
+        close();
+        trigger.current?.parentElement?.querySelector<HTMLElement>(`.seg[data-jfmod-track-field="${other}"]`)?.click();
+    };
+    const back = () => {
+        close();
+        trigger.current?.focus();
+    };
+    const sheet = open && <div ref={list} className={'vlist focuscontainer-y' + (quiet ? ' chooser' : '')} data-list={kind}
+        role={quiet ? undefined : 'listbox'} aria-label={quiet ? undefined : name} tabIndex={-1} onClick={choose}
         onFocusCapture={event => {
             const target = event.target as HTMLElement;
             const row = target.closest<HTMLElement>('.vrow');
             focused.current = { source: row?.dataset.jfmodMediaSourceId, track: row?.dataset.jfmodTrack,
                 control: target.hasAttribute('data-jfmod-pending-remove') ? 'data-jfmod-pending-remove' : undefined };
         }}
-        onKeyDown={event => {
-            const key = getKeyName(event.nativeEvent);
-            const row = (event.target as HTMLElement).closest<HTMLElement>('.vrow, .pend');
-            if (!row) return;
-            let next: HTMLElement | null | undefined;
-            if (key === 'ArrowLeft' || key === 'ArrowRight') next = sideStop(row, key);
-            if (key === 'ArrowUp' || key === 'ArrowDown') {
-                const rows = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('.vrow, .pend'));
-                const destination = rows[rows.indexOf(row) + (key === 'ArrowUp' ? -1 : 1)];
-                next = destination?.matches('.vrow') ? destination : destination?.querySelector<HTMLElement>('button.focusable');
-                if (!next && key === 'ArrowUp' && row === rows[0]) next = trigger.current;
-            }
-            if (!next) return;
-            event.preventDefault();
-            event.stopPropagation();
-            focusManager.focus(next);
-            next.scrollIntoView({ block: 'nearest' });
-        }}>{children}</div>;
+        onKeyDown={event => walkList(event, quiet ? { kind, tabs, switchTo } : null, trigger.current)}>{quiet ? <ChooserFrame kind={kind} name={name} tabs={tabs} onTab={switchTo} onClose={back}>{children}</ChooserFrame> : children}</div>;
     const toggle = () => {
-        if (enabled) {
-            if (open) {
-                close();
-            } else {
-                onOpen?.();
-                setOpen(true);
-            }
+        if (!enabled) return;
+        if (open) {
+            close();
+            return;
+        }
+        // The computer chooser's tabs (only its quiet fields carry a kind, so elsewhere this is empty).
+        setTabs(chooserTabs(trigger.current));
+        onOpen?.();
+        setOpen(true);
+    };
+    const keys = (event: React.KeyboardEvent) => {
+        if (event.target === event.currentTarget && ['Enter', ' '].includes(event.key)) {
+            event.preventDefault();
+            toggle();
         }
     };
+    const role = enabled ? 'button' : undefined;
+    const control = enabled ? { tabIndex: 0, 'aria-haspopup': 'listbox' as const, 'aria-expanded': open } : {};
+    if (quiet) {
+        return <><QuietField ref={trigger} kind={kind} name={name} title={title} enabled={enabled} open={open} onToggle={toggle}
+            onKeyDown={keys}>{quietValue ?? value}{!enabled && extra && <span className='qx'>{extra}</span>}</QuietField>{sheet}</>;
+    }
 
-    return <><div ref={trigger} role={enabled ? 'button' : undefined} tabIndex={enabled ? 0 : undefined}
+    return <><div ref={trigger} role={role} {...control}
         className={'seg ' + kind + ' glassy' + (open || focus ? ' on' : '') + (enabled ? ' focusable' : '')}
-        title={title} aria-label={name} aria-haspopup={enabled ? 'listbox' : undefined} aria-expanded={enabled ? open : undefined} data-jfmod-track-field={name}
+        title={title} aria-label={name} data-jfmod-track-field={name}
         onFocus={event => { if (event.target === event.currentTarget) setFocus(true); }} onBlur={() => setFocus(false)}
         onClick={event => { if (!list.current?.contains(event.target as Node)) toggle(); }}
-        onKeyDown={event => {
-            if (event.target === event.currentTarget && ['Enter', ' '].includes(event.key)) {
-                event.preventDefault();
-                toggle();
-            }
-        }}>
+        onKeyDown={keys}>
         <span className='cap'>{name}{extra && <span className='x'>{' · ' + extra}</span>}</span><span className='val'>{value}{enabled && <Icon name={open ? 'up' : 'down'} className='chev end' />}</span>
         {!inCard && sheet}
     </div>{inCard && sheet}</>;

@@ -1,5 +1,9 @@
 # Title pages and art ground
 
+**Video, Audio and Subtitles as quiet controls (ds.t19): approved by the user 2026-11-08, built, not accepted, computer first look.**
+On a computer the track strip under the pill is three quiet controls with one chooser ([track-dropdown.md](track-dropdown.md)),
+s0 under the pill; a series page shows them for the selected episode, and Play sends the episode's choices.
+
 **Person page on the golden head (ds.t15), the user's brief 2026-11-07, built, not accepted, gate 1 on beta (computer, dark).**
 On a computer a person's page takes the title head and rows below as they are (`jfmod-titleTop`, `TitlePage.tsx`): the photo at
 poster : column = 1 : φ², the name s2 / 700, Born and Birth place as metadata words with a bullet between them, the ♥ ⋯ pill (a
