@@ -37,8 +37,6 @@ export interface FileChooserProps {
     preferred?: VersionDto | null;
     /** `12 Oct` when the file has a scheduled removal. */
     removeDate: (version: VersionDto) => string | null;
-    /** A line under the rows for administrators, such as what stock Delete removes (V1). */
-    note?: string | null;
     /** The page item's media sources, once read: each file's marks come from its streams (P7.FU6). */
     sources?: MediaSourceInfo[];
     /** The strip's hosts (`useTrackStrip`): the Video segment and the place under the strip. */
@@ -241,13 +239,13 @@ export const useTrackStrip = (view: HTMLElement, enabled: boolean): StripHosts |
  * The native Video picker uses the same select mutation and device preference as the former chooser. Its rows only choose a
  * file (ds.t12, the user 2026-11-07): History, Keep and Remove act on the selected file from the title's More menu.
  */
-const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, removeDate, note, sources, strip, pending }) => {
+const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, removeDate, sources, strip, pending }) => {
     const current = useSelectedSource(view);
     const chosen = useRef(false);
     useViewerChoice(view, chosen);
     useDevicePreference(view, versions.length > 1 ? preferred : null, chosen);
     const [open, setOpen] = useState(false);
-    // A computer shows one file plainly, with nothing to open (ds.t19); phone, tablet and TV keep its list (pending entry, note).
+    // A computer shows one file plainly, with nothing to open (ds.t19); phone, tablet and TV keep its list (pending entry).
     const plain = useContext(DesignContext) === 'computer' && versions.length < 2;
     const selected = selectedVersion(versions, current);
     // The size moved to the caption (`VIDEO · 13.2 GB`, the user 2026-11-07); each row keeps its own.
@@ -270,7 +268,7 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, removeDa
                 {summary(version)}
                 {(version.episodeRange || removeDate(version)) && <span className='trackextra'>{[version.episodeRange, removeDate(version) && 'removes ' + removeDate(version)].filter(Boolean).join(' · ')}</span>}
             </ChooseRow>)}
-            {pending}{note && <div className='vnote'>{note}</div>}
+            {pending}
         </TrackField>, strip.video)}
         {!open && createPortal(pending, strip.below)}
     </>;

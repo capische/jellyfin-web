@@ -707,7 +707,6 @@ h2.sect2 { margin: 1.618em 0 0.618em; font-size: 1.236em; font-weight: 600; line
 .pm svg { display: block; width: 0.62em; height: 0.62em; }
 .vrow .sz2 { margin-left: auto; padding-left: 0.8em; font-size: 78%; font-weight: 700; letter-spacing: 0.05em; opacity: 0.7; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .vrow .icons { display: flex; flex: none; margin-left: 0.382em; }
-.vnote { padding: 0.618em 1em 0.618em 1.2em; font-size: 86%; opacity: 0.8; line-height: 1.35; border-top: 1px solid var(--hair); }
 .pend { display: flex; align-items: center; padding: 0.618em 0 0 0.2em; font-family: jfmod-inter, system-ui, sans-serif; color: var(--text); }
 .vlist .pend { padding: 0.382em 0.382em 0.382em 1em; }
 .pend .dm { margin-right: 0.45em; color: var(--text-70); }
@@ -818,7 +817,6 @@ h2.sect2 { margin: 1.618em 0 0.618em; font-size: 1.236em; font-weight: 600; line
 .vrow.sel::before, .mi.sel::before { content: ''; position: absolute; left: 0.236em; top: 50%; width: 0.618em; height: 0.618em; margin-top: -0.309em; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300a4dc' stroke-width='4.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 12.5l5 5L20 6.5'/%3E%3C/svg%3E") center / contain no-repeat; }
 .mi.foc, .vrow.foc { border-radius: 0.618em; box-shadow: inset 0 0 0 0.236em var(--primary); }
 .mi.hv { background: var(--hover-fill); }
-.vnote { border-top: 0; padding: 0.618em 1em 0.382em; }
 .vlist .pend { border-radius: 0.618em; }
 
 
