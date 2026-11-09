@@ -90,6 +90,19 @@ button { font: inherit; color: inherit; }
 .dbtn.off { opacity: 0.45; cursor: default; }
 .actbar .play { font: inherit; font-size: 0.9em; font-weight: 600; flex: 1 1 auto; min-width: 0; height: 3.333em; margin-right: 0.382em; border: 0; border-radius: 3em; padding: 0 1em; background: rgba(255, 255, 255, 0.854); color: #101010; display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; cursor: pointer; }
 &:not(html):not(.dev-phone) .actbar .play { flex: none; min-width: 6.854em; }
+/* A series' main button names its episode in two rows on every layout (ds.t18, the user 2026-11-08; guide
+   buttons-and-row-actions.md): the action at the button's size, 700, then the season and runtime at the layout's s-1, 600, in
+   61.8% ink, s-3 apart (never smaller than the layout's s-1, which an em of a phone's or tablet's smaller button would be). A hidden "… Episode 88" sets the width, so the button holds still from episode to episode. */
+.actbar .play.epb { justify-content: flex-start; text-align: left; }
+.actbar .play.epb .epc { display: flex; flex-direction: column; gap: var(--jfmod-s-3); min-width: 0; }
+.actbar .play.epb .epc b, .actbar .play.epb .ghost { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.actbar .play.epb .ghost { height: 0; overflow: hidden; visibility: hidden; margin-top: calc(-1 * var(--jfmod-s-3)); }
+.actbar .play.epb .sm { width: 0; min-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: var(--jfmod-s-1); line-height: 1.236; }
+.actbar .play.epb .f { font-weight: 600; opacity: 0.618; }
+/* A phone has no room for the words and every action: the button keeps its width and the pill scrolls sideways. */
+&.dev-phone .actbar .play.epb { flex: none; }
+&.dev-phone .actbar:has(.play.epb) { overflow-x: auto; scrollbar-width: none; }
+&.dev-phone .actbar:has(.play.epb)::-webkit-scrollbar { display: none; }
 .actbar .play svg { width: 1.4em; height: 1.4em; margin-right: 0.3em; }
 .actbar .play:hover, .actbar .play.sim-hover { background: #fff; }
 &:not(html)[data-theme='light']:not(.layout-tv) .actbar .play { background: rgba(16, 16, 16, 0.854); color: #fff; }
