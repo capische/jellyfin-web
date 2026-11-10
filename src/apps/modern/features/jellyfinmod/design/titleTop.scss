@@ -649,6 +649,7 @@
 
     .gpk .vlist.chooser .vrow {
         display: flex;
+        flex-wrap: nowrap;
         align-items: center;
         gap: var(--jfmod-s-2);
         min-height: calc(var(--jfmod-s1) + 2 * var(--jfmod-s-2));

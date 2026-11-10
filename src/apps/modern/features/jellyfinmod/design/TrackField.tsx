@@ -112,13 +112,24 @@ const useTabsUnderControls = (head: React.RefObject<HTMLDivElement>, tabs: Choos
         const right = Math.max(...boxes.map(box => (box as DOMRect).right)) - origin;
         chooser.style.left = origin - strip0 - inset + 'px';
         chooser.style.width = right + gap + close.getBoundingClientRect().width + 2 * inset + 'px';
-        setPlace(boxes.map(box => ({ left: (box as DOMRect).left - origin, width: (box as DOMRect).width })));
+        const next = boxes.map(box => ({ left: (box as DOMRect).left - origin, width: (box as DOMRect).width }));
+        setPlace(was => (was && was.length === next.length && was.every((tab, index) => tab.left === next[index].left
+            && tab.width === next[index].width) ? was : next));
     }, [head, tabs]);
-    useLayoutEffect(measure, [measure]);
+    // Every render: a control's value can change width while the chooser is open (language names arriving); unchanged
+    // measurements keep the state, so this settles.
+    useLayoutEffect(measure);
     useEffect(() => {
+        const chooser = head.current?.closest<HTMLElement>('.vlist.chooser');
         window.addEventListener('resize', measure);
-        return () => window.removeEventListener('resize', measure);
-    }, [measure]);
+        return () => {
+            window.removeEventListener('resize', measure);
+            // The sheet's node can outlive the frame (a live switch to another layout): leave it no computer geometry.
+            chooser?.classList.remove('jfmod-tabsUnder');
+            chooser?.style.removeProperty('left');
+            chooser?.style.removeProperty('width');
+        };
+    }, [head, measure]);
     return place;
 };
 
@@ -236,13 +247,17 @@ export const TrackField: FC<{ kind: TrackKind; name: string; value: ReactNode; e
         };
         window.addEventListener('keydown', key, true);
         document.addEventListener('pointerdown', outside);
+        // On a computer the focus leaving the control and its chooser closes it, so Tab to another control and Enter never
+        // leaves two choosers open (Codex review of ds.t19, P2).
+        if (quiet) document.addEventListener('focusin', outside);
         inputManager.on(window, command);
         return () => {
             window.removeEventListener('keydown', key, true);
             document.removeEventListener('pointerdown', outside);
+            document.removeEventListener('focusin', outside);
             inputManager.off(window, command);
         };
-    }, [close, open]);
+    }, [close, open, quiet]);
     useLayoutEffect(() => {
         if (!open || !list.current) return;
         const selected = list.current.querySelector<HTMLElement>('[aria-selected=true]') ?? list.current.querySelector<HTMLElement>('.focusable');

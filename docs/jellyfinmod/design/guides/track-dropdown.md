@@ -13,8 +13,8 @@ Phone, tablet and TV keep the strip below until their own gate.
   value is the name (Video's resolution in 600, Audio's language, Subtitles' language, or **Subtitles Off**; **No Audio** / **No
   Subtitles** without such tracks), then the Dolby two-row lockup ([media-marks.md](media-marks.md)) and, for Audio, the channels at
   s-1 / 600 (`QuietTrack`). The rest are the details: Video the codec, other ranges, bit depth and size; Audio the format word the lockup does not
-  already say (`TrueHD`, `DD+` or `TrueHD` under Atmos, `DTS-HD MA`, `AAC`; not `DD` under AUDIO or `DD+` under DIGITAL+, the user
-  2026-11-10), the role and the extra words; Subtitles the format, role and extra words, joined by ` · `.
+  already say (`TrueHD`, under AUDIO or ATMOS, since it says lossless; `DTS-HD MA`, `AAC`; not `DD` under AUDIO, `DD+` under
+  DIGITAL+ or `DD+` under ATMOS, the user 2026-11-10), the role and the extra words; Subtitles the format, role and extra words, joined by ` · `.
   The closed control shows none of them and has no tip or native title (the user 2026-11-10: "Dropdown got info - that's
   enough"; a paper tip above the control was built 2026-11-09 and removed).
 - **One file:** Video is plain: no chevron, no focus stop, no Video tab, the same value. Audio or Subtitles with a single entry
@@ -41,14 +41,16 @@ Phone, tablet and TV keep the strip below until their own gate.
   at each end, shown while that end has more rows, and between them an s-5 track (`--hair`) s-3 from the chevrons with an s-3 thumb
   (s-1 corners) whose place and length are the visible part's (`ScrollRail`). It is a reading aid, not a control: the wheel, touch
   and the keys scroll the list. Only `.clist` scrolls: the outer chooser has no height cap or scroll, keeping the head in place.
-- **Behaviour:** a click opens the chooser on that control's tab with the focus on the current row; a tab (or Left / Right on a row)
+- **Behaviour:** a click opens the chooser on that control's tab with the focus on the current row; the focus leaving the control
+  and its chooser (Tab to another control) closes it, so two choosers are never open; a tab (or Left / Right on a row)
   closes this field's list and opens that field's; picking a row sets the stock select as before (Play, audio and subtitles follow
   upstream's code), updates the control and closes the chooser; Escape, a click outside or Close leave without a change, Escape and Close
   returning the focus to the control. Opening and walking rows reveal them inside `.clist` only, without scrolling the page or
   the clipped title artwork; list scrolling leaves the navigation bar's page-scroll state alone. Each field keeps its own rows,
   data and selection logic (`FileChooser`, `TrackDropdown`).
 - **The series page** (computer only) shows the selected episode's three controls the same way, read from the episode's media
-  sources (`EpisodeTrackFields` in `TitlePage.tsx`); a choice there is passed to Play (`mediaSourceId`, `audioStreamIndex`,
+  sources (`EpisodeTrackFields` in `TitlePage.tsx`), its file by default the one Play would start (`deviceMediaSource`), and an
+  Audio or Subtitles choice names that file too; a choice there is passed to Play (`mediaSourceId`, `audioStreamIndex`,
   `subtitleStreamIndex`, `useSeriesEpisodes`) and forgotten when another episode is selected. While another episode's media
   sources load, the previous sources keep the controls and their space in place, inactive; changing episode closes the old
   chooser. The new episode's controls replace them when its sources arrive. No controls remain for an episode without a file

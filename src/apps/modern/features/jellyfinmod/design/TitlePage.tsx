@@ -28,6 +28,7 @@ import { getLanguageNames, getMediaSources } from '../api/modApi';
 import { TrackLanguage, TrackText } from '../components/TrackDropdown';
 import { formatBytes } from '../constants/queue';
 import { rememberCommandOpener } from '../integration/commandOpener';
+import { deviceMediaSource } from '../integration/deviceSource';
 import { usePlayedAction, type PlayedItem } from '../hooks/usePlayedAction';
 import { useSeriesEpisodes, SeriesMainButton, EpisodeStrip, GuestStars, type SeriesModel } from './SeriesEpisodes';
 
@@ -201,10 +202,13 @@ const EpisodeTrackFields: FC<{ series: SeriesModel }> = ({ series }) => {
     }).data;
     if (!episode || !itemId || !sources?.length) return null;
     const chosen = series.tracks?.key === episode.key ? series.tracks : { key: episode.key };
+    // A track choice names its file too, so Play starts the file whose streams were shown.
     const set = (next: Omit<typeof chosen, 'key'>) => {
         if (!isPlaceholderData) series.setTracks({ ...chosen, ...next, key: episode.key });
     };
-    const source = findSource(sources, chosen.source) ?? sources[0];
+    // The file Play would start unless one is chosen (Codex review of ds.t19, P2): the device's copy, as `useSeriesEpisodes` plays it.
+    const resume = episode.progress ? episode.item?.UserData?.PlaybackPositionTicks ?? 0 : 0;
+    const source = findSource(sources, chosen.source) ?? deviceMediaSource(sources, null, { startPosition: resume }) ?? sources[0];
     const streams = source.MediaStreams ?? [];
     const audios = streams.filter(stream => stream.Type === 'Audio');
     const subtitles = streams.filter(stream => stream.Type === 'Subtitle');
@@ -229,14 +233,14 @@ const EpisodeTrackFields: FC<{ series: SeriesModel }> = ({ series }) => {
             value={current ? <TrackText stream={current} names={names} /> : <TrackLanguage language='None' />}
             quietValue={current ? undefined : <TrackLanguage language='No Audio' />}>
             {audios.map(stream => <ChooseRow key={stream.Index} trackValue={String(stream.Index)} selected={stream === current} title={stream.DisplayTitle ?? undefined}
-                onChoose={() => set({ audio: stream.Index })}><TrackText stream={stream} names={names} /></ChooseRow>)}
+                onChoose={() => set({ source: source.Id ?? undefined, audio: stream.Index })}><TrackText stream={stream} names={names} /></ChooseRow>)}
         </TrackField>
         <TrackField kind='s' name='Subtitles' enabled={subtitles.length > 0} stacked={false} title={subtitleNow?.DisplayTitle ?? undefined}
             value={subtitleNow ? <TrackText stream={subtitleNow} names={names} /> : <TrackLanguage language='Off' />}
             quietValue={subtitleNow ? undefined : <TrackLanguage language={subtitles.length ? 'Subtitles Off' : 'No Subtitles'} />}>
-            <ChooseRow trackValue='-1' selected={!subtitleNow} onChoose={() => set({ subtitle: -1 })}><TrackLanguage language='Off' /></ChooseRow>
+            <ChooseRow trackValue='-1' selected={!subtitleNow} onChoose={() => set({ source: source.Id ?? undefined, subtitle: -1 })}><TrackLanguage language='Off' /></ChooseRow>
             {subtitles.map(stream => <ChooseRow key={stream.Index} trackValue={String(stream.Index)} selected={stream === subtitleNow} title={stream.DisplayTitle ?? undefined}
-                onChoose={() => set({ subtitle: stream.Index })}><TrackText stream={stream} names={names} /></ChooseRow>)}
+                onChoose={() => set({ source: source.Id ?? undefined, subtitle: stream.Index })}><TrackText stream={stream} names={names} /></ChooseRow>)}
         </TrackField>
     </div>;
 };
