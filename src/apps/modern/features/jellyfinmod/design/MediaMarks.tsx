@@ -82,9 +82,9 @@ export const audioQuiet = (parsed: MarkSource): { lockup: DolbyKind | null; form
         else lockup = audio.startsWith('DD+') ? 'digitalplus' : 'audio';
     }
     const format = audio.split(' ').filter(word => word && word !== 'Atmos').join(' ') || null;
-    // The lockup already says plain DD (AUDIO) and DD+ (DIGITAL+), so the details do not repeat it (the user 2026-11-10); TrueHD
-    // and the format under Atmos stay, since the lockup does not tell them apart.
-    return { lockup, format: (lockup === 'audio' && format === 'DD') || lockup === 'digitalplus' ? null : format };
+    // The lockup already says plain DD (AUDIO) and DD+ (DIGITAL+), and DD+ is Atmos's usual carrier, so the details do not repeat
+    // them (the user 2026-11-10); TrueHD stays, under AUDIO or ATMOS, since it says the sound is lossless.
+    return { lockup, format: lockup && format !== 'TrueHD' ? null : format };
 };
 
 /**
