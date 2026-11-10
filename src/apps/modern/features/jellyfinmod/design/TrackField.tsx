@@ -83,8 +83,8 @@ type TabPlace = { left: number; width: number }[] | null;
 
 /**
  * Each tab under its own control (the user 2026-11-10): while the controls share one line, a tab takes its control's left edge and
- * width and the chooser widens to the controls plus Close, its edge moved out by its inset so the tabs line up; otherwise (Video on
- * its own line, a 1280 px window) the tabs stay a row.
+ * width and the chooser runs from the first tab's control to Close after the last, its edge moved out by its inset so the tabs line
+ * up; otherwise (Video on its own line, a 1280 px window) the tabs stay a row.
  */
 const useTabsUnderControls = (head: React.RefObject<HTMLDivElement>, tabs: ChooserTab[]): TabPlace => {
     const [place, setPlace] = useState<TabPlace>(null);
@@ -99,14 +99,18 @@ const useTabsUnderControls = (head: React.RefObject<HTMLDivElement>, tabs: Choos
         chooser.classList.toggle('jfmod-tabsUnder', oneLine);
         if (!oneLine) {
             chooser.style.removeProperty('width');
+            chooser.style.removeProperty('left');
             setPlace(null);
             return;
         }
-        const origin = strip.getBoundingClientRect().left;
+        // The chooser starts at the first tab's control (the user 2026-11-10: a plain Video has no tab, so no gap under it).
+        const strip0 = strip.getBoundingClientRect().left;
+        const origin = Math.min(...boxes.map(box => (box as DOMRect).left));
         const style = getComputedStyle(chooser);
         const inset = parseFloat(style.paddingLeft) + parseFloat(style.borderLeftWidth);
         const gap = parseFloat(getComputedStyle(head.current as HTMLElement).columnGap) || 0;
         const right = Math.max(...boxes.map(box => (box as DOMRect).right)) - origin;
+        chooser.style.left = origin - strip0 - inset + 'px';
         chooser.style.width = right + gap + close.getBoundingClientRect().width + 2 * inset + 'px';
         setPlace(boxes.map(box => ({ left: (box as DOMRect).left - origin, width: (box as DOMRect).width })));
     }, [head, tabs]);
