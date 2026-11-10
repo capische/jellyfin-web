@@ -49,7 +49,7 @@ const HeroBody: FC<Props> = ({ item, backdrop, overview, details, onPlay, error 
     const played = useTogglePlayedMutation();
     const runPlayed = usePlayedAction();
     const favorite = useToggleFavoriteMutation();
-    const shown = useShownUserData(item.UserData?.Played, item.UserData?.IsFavorite);
+    const shown = useShownUserData(item.Id, item.UserData?.Played, item.UserData?.IsFavorite);
     const [height, setHeight] = useState(heroHeight);
     useLayoutEffect(() => {
         const resize = () => setHeight(heroHeight());
