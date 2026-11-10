@@ -8,26 +8,33 @@ Phone, tablet and TV keep the strip below until their own gate.
 - **Closed:** three quiet controls s0 under the action pill, s-2 apart, no captions and no glass: each the kind's s0 icon (Material
   `display`, `audio`, `subs`, muted ink), the value at B, an s-1 chevron at 61.8 %; s2 high, padding s-2 s-1, s-1 corners, the tint
   on hover and while open (the chevron turned), an s-5 primary outline s-3 out for the keyboard. Video's box starts on the pills'
-  left edge, its icon s-1 in (the user 2026-11-09). Values: Video the resolution in 600 and its range mark outlined (s-3 padding, s-6 line, s-5 corners;
-  the codec, bit depth and size are the chooser's); Audio the language and the audio run ([media-marks.md](media-marks.md)) in muted
-  ink; Subtitles the language and its role mark, or **Subtitles Off**; a file without such tracks **No Audio** / **No Subtitles**.
-- **One file:** Video is plain: the resolution, the range, codec and bit depth, then the size at s-1/600 muted; no chevron, no focus
-  stop, no Video tab. Audio or Subtitles with a single entry are plain the same way. (The one-file list's pending entry stays under
-  the controls.) No list shows the administrator's Delete note any more (the user 2026-11-09: it made no sense there); stock
-  Delete's confirmation still carries it.
+  left edge, its icon s-1 in (the user 2026-11-09).
+- **One line, details on demand** (the user 2026-11-09, workspace `reviews/netflix-tracks/scroll-and-lines.html`, top section): the
+  value is the name (Video's resolution in 600, Audio's language, Subtitles' language, or **Subtitles Off**; **No Audio** / **No
+  Subtitles** without such tracks), then the Dolby two-row lockup ([media-marks.md](media-marks.md)) and, for Audio, the channels at
+  s-1 / 600 (`QuietTrack`). The rest are the details: Video the codec, other ranges, bit depth and size; Audio the format word
+  (`DD+`, `TrueHD`, `DTS-HD MA`, `AAC`), the role and the extra words; Subtitles the format, role and extra words, joined by ` · `.
+  On the closed control they are a paper tip s-2 **above** it (the user: "Hover on top"; the chooser opens below), on hover after
+  0.382 s and on keyboard focus, never while its chooser is open: s-2 s0 padding, s-1 corners, an s-6 hairline, B type, at most s7
+  wide. The control has no native title.
+- **One file:** Video is plain: no chevron, no focus stop, no Video tab, the same value and tip. Audio or Subtitles with a single entry
+  are plain the same way. (The one-file list's pending entry stays under the controls.) No list shows the administrator's Delete
+  note any more (the user 2026-11-09: it made no sense there); stock Delete's confirmation still carries it.
 - **A 1280 px window or narrower** gives Video its own line (`.gpk::after`, the mockup's 1024 window); Audio then starts the second
   line on the column's edge.
-- **The chooser** (`.vlist.chooser`, one at a time): paper, s-2 under the controls from the column's left, s7 wide (at most the column),
-  s0 corners, s-2 padding, an s-6 hairline (`--hair`), shadow 0 s-1 s1 black 61.8 %, over the page. Head: a tab per choosable field
-  (Video, Audio, Subtitles; s2 high, s-1 sides, s-2 corners, the open one on the tint, the others 61.8 %) and a round s2 **Close**.
-  Rows at least s2, padding s-1 s0 with the text s0 + 2·s-1 in, s-1 corners: the name at B / 600 (blue when current, with the s-1
-  check s0 from the left), an s-1 detail line in the head's muted ink (Video: the codec, bit depth and range marks and the episode
-  range or removal date; Audio: the audio run, role mark and extra words; Subtitles: the role mark and extra words), the trailing size
-  (Video) or format chip (Subtitles) s-1 at the right. The list scrolls past s5, with an s0 slot above and below it that
-  shows an s0 chevron (61.8 %) while that edge has more rows (edge cues, approved by the user 2026-11-09; both slots go when every
-  row fits; `EdgeCues`); a foot line s-1 at 61.8 % under an s-6 rule
-  (*Select the file to play.* / *Select a language or the commentary track.* / *SDH includes sound cues. Forced translates selected
-  dialogue.*). Only `.clist` scrolls: the outer chooser has no height cap or scroll, keeping the head and foot in place.
+- **The chooser** (`.vlist.chooser`, one at a time): paper, s-2 under the controls from the column's left, **s6·√φ (410.9 px)
+  wide** (at most the column; was s7, shrunk by the user 2026-11-09), s0 corners, s-2 padding, an s-6 hairline (`--hair`), shadow
+  0 s-1 s1 black 61.8 %, over the page. Head (s-2 above the rows): a tab per choosable field (Video, Audio, Subtitles; s2 high, s-3
+  apart, s-1 sides and corners, the open one on the tint, the others 61.8 %) and a round s2 **Close**. **Rows are one line** (the
+  user 2026-11-09, A: "rows read like the control"), s1 + 2·s-2 (42.9 px) high, padding s-2 s-1 with the text s-1 + s0 + s-2 in, s-1
+  corners: the value exactly as the control draws it (blue when current, with the s-1 check s-1 from the left), then the details at
+  s-1 in the head's muted ink at the row's right edge, at most s4 wide and cut with "…" (Video rows add the episode range or
+  removal date). No foot line (dropped 2026-11-09).
+- **The rail** (the user 2026-11-09, B, replacing the edge-cue slots): the list scrolls past s5 with no native scroll bar; while the
+  rows do not fit, an s0 column at the list's right edge (the rows give it s0 of right padding) in the muted ink holds an s-1 chevron
+  at each end, shown while that end has more rows, and between them an s-5 track (`--hair`) s-3 from the chevrons with an s-3 thumb
+  (s-1 corners) whose place and length are the visible part's (`ScrollRail`). It is a reading aid, not a control: the wheel, touch
+  and the keys scroll the list. Only `.clist` scrolls: the outer chooser has no height cap or scroll, keeping the head in place.
 - **Behaviour:** a click opens the chooser on that control's tab with the focus on the current row; a tab (or Left / Right on a row)
   closes this field's list and opens that field's; picking a row sets the stock select as before (Play, audio and subtitles follow
   upstream's code), updates the control and closes the chooser; Escape, a click outside or Close leave without a change, Escape and Close
@@ -40,7 +47,8 @@ Phone, tablet and TV keep the strip below until their own gate.
   sources load, the previous sources keep the controls and their space in place, inactive; changing episode closes the old
   chooser. The new episode's controls replace them when its sources arrive. No controls remain for an episode without a file
   or after an empty/failed sources response.
-- Code: `design/TrackField.tsx` (`QuietField`, `ChooserFrame`, `walkList`), `components/FileChooser.tsx`, `components/TrackDropdown.tsx`,
+- Code: `design/TrackField.tsx` (`QuietField`, `ChooserFrame`, `ScrollRail`, `walkList`), `design/MediaMarks.tsx` (`QuietTrack`,
+  `DolbyLockup`), `components/FileChooser.tsx`, `components/TrackDropdown.tsx`,
   `design/TitlePage.tsx`, `design/SeriesEpisodes.tsx`, `design/titleTop.scss`; the strip mounts in `DesignEnvironment`
   (`components/NativeEntryDetails.tsx`) so it knows the device.
 

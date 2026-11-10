@@ -2,14 +2,15 @@ import type { Api } from '@jellyfin/sdk/lib/api';
 import type { MediaSourceInfo } from '@jellyfin/sdk/lib/generated-client/models/media-source-info';
 import type { MediaStream } from '@jellyfin/sdk/lib/generated-client/models/media-stream';
 import { useQuery } from '@tanstack/react-query';
-import React, { type FC, type ReactNode, useCallback, useEffect, useState } from 'react';
+import React, { type FC, type ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { getLanguageNames } from '../api/modApi';
 import { TRACK_ROLE_NAME, trackExtraWords, trackModifier, trackRole, type TrackRole } from '../constants/tracks';
 import { findSource, streamMarks, subtitleFormat } from '../constants/versions';
 import { type StripHosts } from './FileChooser';
-import { AudioTrackMarks } from '../design/MediaMarks';
+import { AudioTrackMarks, audioQuiet, QuietTrack } from '../design/MediaMarks';
+import { DesignContext } from '../design/Root';
 import { TrackField, ChooseRow } from '../design/TrackField';
 
 // The media marks' own styles.
@@ -115,6 +116,15 @@ export const TrackText: FC<{ stream: MediaStream; names: Record<string, string> 
     const language = names?.[code] ?? (stream.Language || 'Unknown');
     const format = stream.Type === 'Subtitle' ? subtitleFormat(stream) : null;
     const role = trackRole(stream);
+    const quiet = useContext(DesignContext) === 'computer';
+    if (quiet) {
+        // A computer: the language, the Dolby lockup and the channels; the format, role and extra words are the details.
+        const parsed = streamMarks(stream);
+        const audio = stream.Type === 'Audio' ? audioQuiet(parsed) : { lockup: null, format };
+        return <QuietTrack name={<TrackLanguage language={language} modifier={trackModifier(stream)} />} lockup={audio.lockup}
+            channels={stream.Type === 'Audio' ? parsed.audioChannels : null}
+            details={[audio.format, role && (role === 'comm' ? 'Commentary' : role), trackExtraWords(stream)]} />;
+    }
     return <>
         <TrackLanguage language={language} modifier={trackModifier(stream)} />
         {stream.Type === 'Audio' ? <AudioTrackMarks parsed={streamMarks(stream)} /> : <span className='marks'>
@@ -135,10 +145,12 @@ interface TrackDropdownProps {
 /** The list mutates the same upstream select; only the source seg/vlist/vrow draw it. */
 const TrackDropdown: FC<TrackDropdownProps & { stacked: boolean }> = ({ name, entries, value, enabled, onChoose, stacked }) => {
     const current = entries.find(entry => entry.value === value) ?? entries[0];
+    // A computer's rows carry the extra words in their details (`TrackText`).
+    const quiet = useContext(DesignContext) === 'computer';
     if (!current) return null;
     return <TrackField kind={name === 'Audio' ? 'a' : 's'} name={name} value={current.content} quietValue={current.quiet} title={current.title} extra={current.extra} enabled={enabled && entries.length > 1} stacked={stacked}>
         {entries.map(entry => <ChooseRow key={entry.value} trackValue={entry.value} selected={entry === current} title={entry.title} onChoose={() => onChoose(entry.value)}>
-            {entry.content}{entry.extra && <span className='trackextra'>{entry.extra}</span>}
+            {entry.content}{entry.extra && !quiet && <span className='trackextra'>{entry.extra}</span>}
         </ChooseRow>)}
     </TrackField>;
 };

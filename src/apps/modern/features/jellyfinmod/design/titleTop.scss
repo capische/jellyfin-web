@@ -375,7 +375,7 @@
         flex: none;
         align-items: center;
         gap: var(--jfmod-s-2);
-        position: static;
+        position: relative;
         width: auto;
         min-width: 0;
         min-height: var(--jfmod-s2);
@@ -438,92 +438,60 @@
 
     .gpk .seg.v .val .r { font-weight: 600; }
 
-    .gpk .val .marks {
-        display: flex;
-        flex-wrap: nowrap;
-        align-items: center;
-        gap: var(--jfmod-s-3);
-        max-height: none;
-        overflow: visible;
-        font-size: var(--jfmod-s-1);
-    }
-
-    .gpk .val .marks::before { display: none; }
-
-    .gpk .val .marks .mk {
-        margin: 0;
-        font-size: 1em;
-        letter-spacing: 0;
-    }
-
-    .gpk .val .qx,
-    .gpk .val .size2 {
-        margin: 0;
-        padding: 0;
-        font-size: var(--jfmod-s-1);
-        font-weight: 600;
-        letter-spacing: 0;
-        color: var(--jfmod-head-muted);
-        opacity: 1;
-    }
-
-    /* With a choice of files the closed value is the resolution and its range; the codec, bit depth and size are the chooser's
-       (one file shows them all, its size last). The range is outlined: s-3 padding, s-6 line, s-5 corners. */
-    .gpk .seg.v.focusable .val .mk.codec,
-    .gpk .seg.v.focusable .val .mk.depth,
-    .gpk .seg.v.focusable .val .size2 { display: none; }
-
-    .gpk .seg.v .val .mk.hdr:not(.depth) {
-        order: -1;
-        padding: var(--jfmod-s-3);
-        border: var(--jfmod-s-6) solid currentColor;
-        border-radius: var(--jfmod-s-5);
-        line-height: 1;
-    }
-
-    .gpk .val .atm,
-    .gpk .seg.a .val .atm {
-        flex-wrap: nowrap;
-        height: auto;
-        margin: 0;
-        overflow: visible;
-        font-size: var(--jfmod-s-1);
-        letter-spacing: var(--jfmod-s-7);
-        color: var(--jfmod-head-muted);
-    }
-
-    .gpk .seg.a .val .atm::before { display: none; }
-
-    .gpk .val .atm svg,
-    .gpk .vrow .atm svg { margin-right: var(--jfmod-s-3); }
-
-    .gpk .val .atm .n,
-    .gpk .vrow .atm .n { margin-left: var(--jfmod-s-2); }
-
-    /* A subtitle's format is the chooser's; the closed value is its language and role. */
-    .gpk .seg.s .val .marks { display: none; }
-
-    /* The commentary bubble: an s0 glyph, its own 16:14, no frame (other role words keep their outline). */
-    .gpk .rflag.glyph {
-        height: var(--jfmod-s0);
-        padding: 0;
-        border: 0;
-        font-size: 1em;
-    }
-
-    .gpk .rflag.glyph svg {
+    /* One line, details on demand (the user 2026-11-09): the name, the Dolby two-row lockup at 16 px (the user's named exception to
+       the scale) and the channels at s-1 / 600, in the chooser's rows as in the controls. */
+    .gpk .dolby {
+        flex: none;
         width: auto;
-        height: var(--jfmod-s0);
+        height: 16px;
+        overflow: visible;
         fill: currentColor;
     }
 
-    /* The subtitle format chip, the same in the field and the list. */
-    .gpk .marks .mk.tag {
-        height: var(--jfmod-s0);
-        padding: 0 var(--jfmod-s-3);
-        border-radius: var(--jfmod-s-4);
-        font-size: var(--jfmod-s-1);
+    .gpk .dolby text {
+        font-family: inherit;
+        font-size: 12px;
+        letter-spacing: 0;
     }
+
+    .gpk .dolby .b { font-weight: 700; }
+
+    .gpk .chn {
+        font-size: var(--jfmod-s-1);
+        font-weight: 600;
+    }
+
+    /* The closed control's details: a paper tip s-2 above it on hover (after 0.382 s) and on keyboard focus, never while its
+       chooser is open; s-2 s0 padding, s-1 corners, an s-6 hairline, B type. */
+    .gpk .seg .val .qd {
+        position: absolute;
+        z-index: 8;
+        bottom: calc(100% + var(--jfmod-s-2));
+        left: 0;
+        width: max-content;
+        max-width: var(--jfmod-s7);
+        padding: var(--jfmod-s-2) var(--jfmod-s0);
+        border: var(--jfmod-s-6) solid var(--hair);
+        border-radius: var(--jfmod-s-1);
+        background: var(--paper);
+        color: var(--text);
+        box-shadow: 0 var(--jfmod-s-1) var(--jfmod-s1) rgba(0, 0, 0, 0.618);
+        font-size: var(--jfmod-s0);
+        font-weight: 400;
+        line-height: 1.618;
+        white-space: nowrap;
+        pointer-events: none;
+        visibility: hidden;
+    }
+
+    .gpk .seg:hover .val .qd {
+        visibility: visible;
+        transition: visibility 0s 0.382s;
+    }
+
+    .gpk .seg:focus-visible .val .qd { visibility: visible; }
+
+    .gpk .seg[aria-expanded='true'] .val .qd { visibility: hidden; }
 
     /* A 1280 px window or narrower gives Video its own line (the mockup's 1024 window). */
     @media (max-width: 1280px) {
@@ -534,16 +502,16 @@
         }
     }
 
-    /* The one chooser: paper s-2 under the controls, s7 wide (at most the column), s0 corners, s-2 padding, an s-6 hairline,
-       shadow 0 s-1 s1 at 61.8 %; tabs s2 high with s-1 sides and s-2 corners, the open one on the tint; a round s2 Close; rows at
-       least s2, padding s-1 s0, the name at B / 600 over an s-1 detail line in the head's muted ink, the trailing size or format
-       s-1 at the right; the s-1 check s0 from the left; the list scrolls past s5; a s-1 foot line under an s-6 rule. */
+    /* The one chooser (the user 2026-11-09): paper s-2 under the controls, s6·√φ wide (at most the column), s0 corners, s-2
+       padding, an s-6 hairline, shadow 0 s-1 s1 at 61.8 %; tabs s2 high, s-3 apart, s-1 sides and s-2 corners, the open one on the
+       tint; a round s2 Close; one-line rows s1 + 2·s-2 high (the 40 px target), padding s-2 s-1 with the s-1 check s0 in, the value
+       as the control draws it and the details s-1 at the right edge, at most s4 wide; the list scrolls past s5 beside its rail. */
     .gpk > .vlist.chooser {
         position: absolute;
         z-index: 7;
         top: calc(100% + var(--jfmod-s-2));
         left: 0;
-        width: var(--jfmod-s7);
+        width: calc(var(--jfmod-s6) * 1.2720196495);
         max-width: 100%;
         max-height: none;
         margin: 0;
@@ -555,22 +523,22 @@
         color: var(--text);
         box-shadow: 0 var(--jfmod-s-1) var(--jfmod-s1) rgba(0, 0, 0, 0.618);
         font-size: var(--jfmod-s0);
-        line-height: 1.618;
+        line-height: 1;
         white-space: normal;
     }
 
     .gpk .vlist.chooser .chead {
         display: flex;
         align-items: center;
-        gap: var(--jfmod-s-2);
-        padding: var(--jfmod-s-2) var(--jfmod-s-1) var(--jfmod-s-1);
+        gap: var(--jfmod-s-3);
+        padding: 0 0 var(--jfmod-s-2);
     }
 
     .gpk .vlist.chooser .ctabs {
         display: flex;
         flex: 1;
         align-items: center;
-        gap: var(--jfmod-s-2);
+        gap: var(--jfmod-s-3);
     }
 
     .gpk .vlist.chooser .ctab,
@@ -578,7 +546,7 @@
         height: var(--jfmod-s2);
         padding: 0 var(--jfmod-s-1);
         border: 0;
-        border-radius: var(--jfmod-s-2);
+        border-radius: var(--jfmod-s-1);
         background: transparent;
         color: inherit;
         font: inherit;
@@ -615,107 +583,99 @@
         outline-offset: calc(-1 * var(--jfmod-s-5));
     }
 
+    .gpk .vlist.chooser .cbox { position: relative; }
+
     .gpk .vlist.chooser .clist {
         max-height: var(--jfmod-s5);
-        padding: var(--jfmod-s-3);
         overflow-y: auto;
-        scrollbar-width: thin;
+        scrollbar-width: none;
     }
 
-    /* Edge cues (the user 2026-11-09): an s0 slot above and below a list that scrolls, an s0 chevron in the muted ink centred in
-       it while that edge has more rows; the slot stays (hidden) at an end so the rows do not move. */
-    .gpk .vlist.chooser .ccue {
+    .gpk .vlist.chooser .clist::-webkit-scrollbar { display: none; }
+
+    .gpk .vlist.chooser .cbox.scrolls .clist { padding-right: var(--jfmod-s0); }
+
+    /* The rail (the user 2026-11-09, B): an s0 column at the list's right edge in the muted ink, an s-1 chevron at each end while
+       that end has more rows, an s-5 track s-3 from them and an s-3 thumb with s-1 corners for the visible part. */
+    .gpk .vlist.chooser .crail {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
         display: flex;
+        flex-direction: column;
         align-items: center;
-        justify-content: center;
-        height: var(--jfmod-s0);
-        opacity: 0.618;
-    }
-
-    .gpk .vlist.chooser .ccue.off { visibility: hidden; }
-
-    .gpk .vlist.chooser .ccue svg {
         width: var(--jfmod-s0);
-        height: var(--jfmod-s0);
+        color: var(--jfmod-head-muted);
+        pointer-events: none;
     }
 
-    .gpk .vlist.chooser .ccue svg.up { transform: rotate(180deg); }
+    .gpk .vlist.chooser .crail svg {
+        flex: none;
+        width: var(--jfmod-s-1);
+        height: var(--jfmod-s-1);
+    }
+
+    .gpk .vlist.chooser .crail svg.up { transform: rotate(180deg); }
+
+    .gpk .vlist.chooser .crail svg.off { visibility: hidden; }
+
+    .gpk .vlist.chooser .ctrack {
+        position: relative;
+        flex: 1;
+        width: var(--jfmod-s-5);
+        margin: var(--jfmod-s-3) 0;
+        border-radius: var(--jfmod-s-5);
+        background: var(--hair);
+    }
+
+    .gpk .vlist.chooser .cthumb {
+        position: absolute;
+        left: 50%;
+        width: var(--jfmod-s-3);
+        margin-left: calc(var(--jfmod-s-3) / -2);
+        border-radius: var(--jfmod-s-1);
+        background: currentColor;
+    }
 
     .gpk .vlist.chooser .vrow {
-        display: grid;
-        grid-template-columns: auto auto minmax(0, 1fr) auto;
+        display: flex;
         align-items: center;
-        min-height: var(--jfmod-s2);
-        padding: var(--jfmod-s-1) var(--jfmod-s0) var(--jfmod-s-1) calc(var(--jfmod-s0) + 2 * var(--jfmod-s-1));
+        gap: var(--jfmod-s-2);
+        min-height: calc(var(--jfmod-s1) + 2 * var(--jfmod-s-2));
+        padding: var(--jfmod-s-2) var(--jfmod-s-1) var(--jfmod-s-2) calc(var(--jfmod-s-1) + var(--jfmod-s0) + var(--jfmod-s-2));
         border-radius: var(--jfmod-s-1);
-        line-height: 1.618;
+        line-height: 1;
         white-space: nowrap;
     }
 
     .gpk .vlist.chooser .vrow > * { margin: 0; }
 
     .gpk .vlist.chooser .vrow .r {
-        grid-row: 1;
-        grid-column: 1 / 4;
-        justify-self: start;
-        font-size: var(--jfmod-s0);
-        font-weight: 600;
-    }
-
-    .gpk .vlist.chooser .vrow .marks,
-    .gpk .vlist.chooser .vrow .atm,
-    .gpk .vlist.chooser .vrow .rflag,
-    .gpk .vlist.chooser .vrow .trackextra {
-        grid-row: 2;
-        margin-right: var(--jfmod-s-1);
-        font-size: var(--jfmod-s-1);
-        line-height: 1.618;
-        color: var(--jfmod-head-muted);
-        opacity: 1;
-    }
-
-    .gpk .vlist.chooser .vrow .marks,
-    .gpk .vlist.chooser .vrow .atm { grid-column: 1; }
-
-    .gpk .vlist.chooser .vrow .rflag { grid-column: 2; }
-
-    .gpk .vlist.chooser .vrow .trackextra {
-        grid-column: 3;
+        flex: 0 1 auto;
+        min-width: 0;
         overflow: hidden;
+        font-size: var(--jfmod-s0);
+        font-weight: 400;
         text-overflow: ellipsis;
     }
 
-    .gpk .vlist.chooser .vrow .marks {
-        display: flex;
-        align-items: center;
-        gap: var(--jfmod-s-3);
-    }
+    .gpk .vlist.chooser[data-list='v'] .vrow .r { font-weight: 600; }
 
-    .gpk .vlist.chooser .vrow .marks .mk {
-        margin: 0;
-        font-size: 1em;
-        letter-spacing: 0;
-    }
-
-    .gpk .vlist.chooser .vrow .sz2,
-    .gpk .vlist.chooser[data-list='s'] .vrow .marks {
-        grid-row: 1 / 3;
-        grid-column: 4;
-        margin: 0;
+    .gpk .vlist.chooser .vrow .qd {
+        flex: 0 1 auto;
+        min-width: 0;
+        max-width: var(--jfmod-s4);
+        margin-left: auto;
         padding-left: var(--jfmod-s-1);
+        overflow: hidden;
         font-size: var(--jfmod-s-1);
-        font-weight: 600;
-        letter-spacing: 0;
+        text-overflow: ellipsis;
         color: var(--jfmod-head-muted);
-        opacity: 1;
     }
-
-    .gpk .vlist.chooser[data-list='s'] .vrow .rflag { grid-column: 1; }
-
-    .gpk .vlist.chooser[data-list='s'] .vrow .trackextra { grid-column: 2 / 4; }
 
     .gpk .vlist.chooser .vrow.sel::before {
-        left: var(--jfmod-s0);
+        left: var(--jfmod-s-1);
         width: var(--jfmod-s-1);
         height: var(--jfmod-s-1);
         margin-top: calc(var(--jfmod-s-1) / -2);
@@ -723,14 +683,6 @@
 
     .gpk .vlist.chooser .vrow.foc,
     .gpk .vlist.chooser .vrow:focus { box-shadow: inset 0 0 0 var(--jfmod-s-4) var(--primary); }
-
-    .gpk .vlist.chooser .cfoot {
-        margin: var(--jfmod-s-2) var(--jfmod-s-1) 0;
-        padding: var(--jfmod-s-1) 0 var(--jfmod-s-2);
-        border-top: var(--jfmod-s-6) solid var(--hair);
-        font-size: var(--jfmod-s-1);
-        opacity: 0.618;
-    }
 
     .jfmod-titleReading {
         max-width: var(--jfmod-s8);
