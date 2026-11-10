@@ -51,6 +51,17 @@ const verticalStop = (list: HTMLElement, row: HTMLElement, key: string, back: HT
     return next ?? (key === 'ArrowUp' && row === rows[0] ? back : undefined);
 };
 
+/** Reveal a chooser row in its own list without scrolling the page or the clipped artwork behind it. */
+const focusInChooser = (element: HTMLElement, chooser: HTMLElement) => {
+    element.focus({ preventScroll: true });
+    const scroller = chooser.querySelector<HTMLElement>('.clist');
+    if (!scroller?.contains(element)) return;
+    const row = element.getBoundingClientRect();
+    const box = scroller.getBoundingClientRect();
+    if (row.top < box.top) scroller.scrollTop -= box.top - row.top;
+    else if (row.bottom > box.bottom) scroller.scrollTop += row.bottom - box.bottom;
+};
+
 /** The open list's arrow keys: rows up and down, a pending entry's X sideways, the chooser's tabs sideways from a row. */
 const walkList = (event: React.KeyboardEvent<HTMLElement>, chooser: Chooser, trigger: HTMLElement | null) => {
     const key = getKeyName(event.nativeEvent);
@@ -64,8 +75,12 @@ const walkList = (event: React.KeyboardEvent<HTMLElement>, chooser: Chooser, tri
     if (!next) return;
     event.preventDefault();
     event.stopPropagation();
-    focusManager.focus(next);
-    next.scrollIntoView({ block: 'nearest' });
+    if (chooser) {
+        focusInChooser(next, event.currentTarget);
+    } else {
+        focusManager.focus(next);
+        next.scrollIntoView({ block: 'nearest' });
+    }
 };
 
 /** The computer's one chooser around a field's rows: a tab per choosable field and Close, the rows, a foot line. */
@@ -157,8 +172,11 @@ export const TrackField: FC<{ kind: TrackKind; name: string; value: ReactNode; e
     useLayoutEffect(() => {
         if (!open || !list.current) return;
         const selected = list.current.querySelector<HTMLElement>('[aria-selected=true]') ?? list.current.querySelector<HTMLElement>('.focusable');
-        if (selected) focusManager.focus(selected);
-    }, [open]);
+        if (selected) {
+            if (quiet) focusInChooser(selected, list.current);
+            else focusManager.focus(selected);
+        }
+    }, [open, quiet]);
     useLayoutEffect(() => {
         if (!open || !focused.current || document.activeElement !== document.body) return;
         const was = focused.current;
