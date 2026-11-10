@@ -34,7 +34,10 @@ Phone, tablet and TV keep the strip below until their own gate.
   data and selection logic (`FileChooser`, `TrackDropdown`).
 - **The series page** (computer only) shows the selected episode's three controls the same way, read from the episode's media
   sources (`EpisodeTrackFields` in `TitlePage.tsx`); a choice there is passed to Play (`mediaSourceId`, `audioStreamIndex`,
-  `subtitleStreamIndex`, `useSeriesEpisodes`) and forgotten when another episode is selected.
+  `subtitleStreamIndex`, `useSeriesEpisodes`) and forgotten when another episode is selected. While another episode's media
+  sources load, the previous sources keep the controls and their space in place, inactive; changing episode closes the old
+  chooser. The new episode's controls replace them when its sources arrive. No controls remain for an episode without a file
+  or after an empty/failed sources response.
 - Code: `design/TrackField.tsx` (`QuietField`, `ChooserFrame`, `walkList`), `components/FileChooser.tsx`, `components/TrackDropdown.tsx`,
   `design/TitlePage.tsx`, `design/SeriesEpisodes.tsx`, `design/titleTop.scss`; the strip mounts in `DesignEnvironment`
   (`components/NativeEntryDetails.tsx`) so it knows the device.

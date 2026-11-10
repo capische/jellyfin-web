@@ -178,11 +178,14 @@ const EpisodeTrackFields: FC<{ series: SeriesModel }> = ({ series }) => {
     const episode = series.selected;
     const itemId = episode?.hasFile ? episode.item?.Id ?? '' : '';
     const userId = user?.Id ?? '';
-    const sources = useQuery({
+    const { data: sources, isPlaceholderData } = useQuery({
         queryKey: ['JellyfinMod', api?.basePath, userId, 'MediaSources', itemId],
         queryFn: ({ signal }) => getMediaSources(api!, userId, itemId, { signal }),
+        // Keep the strip in place while another episode's sources load, within the same server and user only.
+        placeholderData: (previous, previousQuery) => previousQuery?.queryKey[1] === api?.basePath
+            && previousQuery?.queryKey[2] === userId ? previous : undefined,
         enabled: !!api && !!userId && !!itemId, staleTime: 2000, retry: false
-    }).data;
+    });
     const names = useQuery({
         queryKey: ['JellyfinMod', api?.basePath, 'LanguageNames'],
         queryFn: ({ signal }) => getLanguageNames(api!, { signal }),
@@ -190,7 +193,9 @@ const EpisodeTrackFields: FC<{ series: SeriesModel }> = ({ series }) => {
     }).data;
     if (!episode || !itemId || !sources?.length) return null;
     const chosen = series.tracks?.key === episode.key ? series.tracks : { key: episode.key };
-    const set = (next: Omit<typeof chosen, 'key'>) => series.setTracks({ ...chosen, ...next, key: episode.key });
+    const set = (next: Omit<typeof chosen, 'key'>) => {
+        if (!isPlaceholderData) series.setTracks({ ...chosen, ...next, key: episode.key });
+    };
     const source = findSource(sources, chosen.source) ?? sources[0];
     const streams = source.MediaStreams ?? [];
     const audios = streams.filter(stream => stream.Type === 'Audio');
@@ -204,7 +209,9 @@ const EpisodeTrackFields: FC<{ series: SeriesModel }> = ({ series }) => {
     };
     const current = audios.find(stream => stream.Index === audio);
     const subtitleNow = subtitles.find(stream => stream.Index === subtitle);
-    return <div className='gpk'>
+    // A new episode closes the old chooser; its retained controls cannot change the new episode while loading.
+    return <div key={itemId} className='gpk' aria-busy={isPlaceholderData}
+        ref={node => node?.toggleAttribute('inert', isPlaceholderData)}>
         <TrackField kind='v' name='Video' value={<TrackValue closed option={option(source, sources.indexOf(source))} />} enabled={sources.length > 1}
             stacked={false}>
             {sources.map((candidate, index) => <ChooseRow key={candidate.Id} sourceId={candidate.Id ?? undefined} selected={candidate === source}
