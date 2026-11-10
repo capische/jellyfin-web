@@ -431,6 +431,27 @@
         line-height: 1;
     }
 
+    /* The phone copy's mark follows the resolution in line, s-3 after it, s-1 high (the user 2026-11-10: hung over the name's end,
+       it ran into the chevron). */
+    .gpk .val .r,
+    .gpk .vrow .r {
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .gpk .val .pm,
+    .gpk .vrow .pm {
+        position: static;
+        flex: none;
+        margin-left: var(--jfmod-s-3);
+    }
+
+    .gpk .val .pm svg,
+    .gpk .vrow .pm svg {
+        width: var(--jfmod-s-1);
+        height: var(--jfmod-s-1);
+    }
+
     .gpk .val .r {
         margin: 0;
         font-weight: 400;
@@ -461,37 +482,8 @@
         font-weight: 600;
     }
 
-    /* The closed control's details: a paper tip s-2 above it on hover (after 0.382 s) and on keyboard focus, never while its
-       chooser is open; s-2 s0 padding, s-1 corners, an s-6 hairline, B type. */
-    .gpk .seg .val .qd {
-        position: absolute;
-        z-index: 8;
-        bottom: calc(100% + var(--jfmod-s-2));
-        left: 0;
-        width: max-content;
-        max-width: var(--jfmod-s7);
-        padding: var(--jfmod-s-2) var(--jfmod-s0);
-        border: var(--jfmod-s-6) solid var(--hair);
-        border-radius: var(--jfmod-s-1);
-        background: var(--paper);
-        color: var(--text);
-        box-shadow: 0 var(--jfmod-s-1) var(--jfmod-s1) rgba(0, 0, 0, 0.618);
-        font-size: var(--jfmod-s0);
-        font-weight: 400;
-        line-height: 1.618;
-        white-space: nowrap;
-        pointer-events: none;
-        visibility: hidden;
-    }
-
-    .gpk .seg:hover .val .qd {
-        visibility: visible;
-        transition: visibility 0s 0.382s;
-    }
-
-    .gpk .seg:focus-visible .val .qd { visibility: visible; }
-
-    .gpk .seg[aria-expanded='true'] .val .qd { visibility: hidden; }
+    /* The closed control shows no details (the user 2026-11-10: no tip, the chooser has them). */
+    .gpk .seg .val .qd { display: none; }
 
     /* A 1280 px window or narrower gives Video its own line (the mockup's 1024 window). */
     @media (max-width: 1280px) {
@@ -502,16 +494,16 @@
         }
     }
 
-    /* The one chooser (the user 2026-11-09): paper s-2 under the controls, s6·√φ wide (at most the column), s0 corners, s-2
+    /* The one chooser (the user 2026-11-09, s7 wide again 2026-11-10): paper s-2 under the controls, s7 wide (at most the column), s0 corners, s-2
        padding, an s-6 hairline, shadow 0 s-1 s1 at 61.8 %; tabs s2 high, s-3 apart, s-1 sides and s-2 corners, the open one on the
        tint; a round s2 Close; one-line rows s1 + 2·s-2 high (the 40 px target), padding s-2 s-1 with the s-1 check s0 in, the value
-       as the control draws it and the details s-1 at the right edge, at most s4 wide; the list scrolls past s5 beside its rail. */
+       as the control draws it and the details s-1 at the right edge, at most s5 wide; the list scrolls past s5 beside its rail. */
     .gpk > .vlist.chooser {
         position: absolute;
         z-index: 7;
         top: calc(100% + var(--jfmod-s-2));
         left: 0;
-        width: calc(var(--jfmod-s6) * 1.2720196495);
+        width: var(--jfmod-s7);
         max-width: 100%;
         max-height: none;
         margin: 0;
@@ -665,7 +657,7 @@
     .gpk .vlist.chooser .vrow .qd {
         flex: 0 1 auto;
         min-width: 0;
-        max-width: var(--jfmod-s4);
+        max-width: var(--jfmod-s5);
         margin-left: auto;
         padding-left: var(--jfmod-s-1);
         overflow: hidden;

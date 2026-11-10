@@ -12,23 +12,23 @@ Phone, tablet and TV keep the strip below until their own gate.
 - **One line, details on demand** (the user 2026-11-09, workspace `reviews/netflix-tracks/scroll-and-lines.html`, top section): the
   value is the name (Video's resolution in 600, Audio's language, Subtitles' language, or **Subtitles Off**; **No Audio** / **No
   Subtitles** without such tracks), then the Dolby two-row lockup ([media-marks.md](media-marks.md)) and, for Audio, the channels at
-  s-1 / 600 (`QuietTrack`). The rest are the details: Video the codec, other ranges, bit depth and size; Audio the format word
-  (`DD+`, `TrueHD`, `DTS-HD MA`, `AAC`), the role and the extra words; Subtitles the format, role and extra words, joined by ` · `.
-  On the closed control they are a paper tip s-2 **above** it (the user: "Hover on top"; the chooser opens below), on hover after
-  0.382 s and on keyboard focus, never while its chooser is open: s-2 s0 padding, s-1 corners, an s-6 hairline, B type, at most s7
-  wide. The control has no native title.
-- **One file:** Video is plain: no chevron, no focus stop, no Video tab, the same value and tip. Audio or Subtitles with a single entry
+  s-1 / 600 (`QuietTrack`). The rest are the details: Video the codec, other ranges, bit depth and size; Audio the format word the lockup does not
+  already say (`TrueHD`, `DD+` or `TrueHD` under Atmos, `DTS-HD MA`, `AAC`; not `DD` under AUDIO or `DD+` under DIGITAL+, the user
+  2026-11-10), the role and the extra words; Subtitles the format, role and extra words, joined by ` · `.
+  The closed control shows none of them and has no tip or native title (the user 2026-11-10: "Dropdown got info - that's
+  enough"; a paper tip above the control was built 2026-11-09 and removed).
+- **One file:** Video is plain: no chevron, no focus stop, no Video tab, the same value. Audio or Subtitles with a single entry
   are plain the same way. (The one-file list's pending entry stays under the controls.) No list shows the administrator's Delete
   note any more (the user 2026-11-09: it made no sense there); stock Delete's confirmation still carries it.
 - **A 1280 px window or narrower** gives Video its own line (`.gpk::after`, the mockup's 1024 window); Audio then starts the second
   line on the column's edge.
-- **The chooser** (`.vlist.chooser`, one at a time): paper, s-2 under the controls from the column's left, **s6·√φ (410.9 px)
-  wide** (at most the column; was s7, shrunk by the user 2026-11-09), s0 corners, s-2 padding, an s-6 hairline (`--hair`), shadow
+- **The chooser** (`.vlist.chooser`, one at a time): paper, s-2 under the controls from the column's left, **s7 wide** (at most
+  the column; s6·√φ tried 2026-11-09, back to s7 by the user 2026-11-10), s0 corners, s-2 padding, an s-6 hairline (`--hair`), shadow
   0 s-1 s1 black 61.8 %, over the page. Head (s-2 above the rows): a tab per choosable field (Video, Audio, Subtitles; s2 high, s-3
   apart, s-1 sides and corners, the open one on the tint, the others 61.8 %) and a round s2 **Close**. **Rows are one line** (the
   user 2026-11-09, A: "rows read like the control"), s1 + 2·s-2 (42.9 px) high, padding s-2 s-1 with the text s-1 + s0 + s-2 in, s-1
   corners: the value exactly as the control draws it (blue when current, with the s-1 check s-1 from the left), then the details at
-  s-1 in the head's muted ink at the row's right edge, at most s4 wide and cut with "…" (Video rows add the episode range or
+  s-1 in the head's muted ink at the row's right edge, at most s5 wide and cut with "…" (Video rows add the episode range or
   removal date). No foot line (dropped 2026-11-09).
 - **The rail** (the user 2026-11-09, B, replacing the edge-cue slots): the list scrolls past s5 with no native scroll bar; while the
   rows do not fit, an s0 column at the list's right edge (the rows give it s0 of right padding) in the muted ink holds an s-1 chevron
