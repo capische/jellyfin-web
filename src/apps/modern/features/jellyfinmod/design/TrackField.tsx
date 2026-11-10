@@ -79,16 +79,60 @@ const walkList = (event: React.KeyboardEvent<HTMLElement>, chooser: Chooser, tri
     }
 };
 
+type TabPlace = { left: number; width: number }[] | null;
+
+/**
+ * Each tab under its own control (the user 2026-11-10): while the controls share one line, a tab takes its control's left edge and
+ * width and the chooser widens to the controls plus Close, its edge moved out by its inset so the tabs line up; otherwise (Video on
+ * its own line, a 1280 px window) the tabs stay a row.
+ */
+const useTabsUnderControls = (head: React.RefObject<HTMLDivElement>, tabs: ChooserTab[]): TabPlace => {
+    const [place, setPlace] = useState<TabPlace>(null);
+    const measure = useCallback(() => {
+        const chooser = head.current?.closest<HTMLElement>('.vlist.chooser');
+        const strip = chooser?.parentElement;
+        const close = head.current?.querySelector<HTMLElement>('.cclose');
+        if (!chooser || !strip || !close) return;
+        const boxes = tabs.map(tab => strip.querySelector<HTMLElement>(`.seg[data-jfmod-track-field="${tab.name}"]`)?.getBoundingClientRect());
+        const first = boxes[0];
+        const oneLine = !!first && boxes.every(box => box && Math.abs(box.top - first.top) < 1);
+        chooser.classList.toggle('jfmod-tabsUnder', oneLine);
+        if (!oneLine) {
+            chooser.style.removeProperty('width');
+            setPlace(null);
+            return;
+        }
+        const origin = strip.getBoundingClientRect().left;
+        const style = getComputedStyle(chooser);
+        const inset = parseFloat(style.paddingLeft) + parseFloat(style.borderLeftWidth);
+        const gap = parseFloat(getComputedStyle(head.current as HTMLElement).columnGap) || 0;
+        const right = Math.max(...boxes.map(box => (box as DOMRect).right)) - origin;
+        chooser.style.width = right + gap + close.getBoundingClientRect().width + 2 * inset + 'px';
+        setPlace(boxes.map(box => ({ left: (box as DOMRect).left - origin, width: (box as DOMRect).width })));
+    }, [head, tabs]);
+    useLayoutEffect(measure, [measure]);
+    useEffect(() => {
+        window.addEventListener('resize', measure);
+        return () => window.removeEventListener('resize', measure);
+    }, [measure]);
+    return place;
+};
+
 /** The computer's one chooser around a field's rows: a tab per choosable field and Close, then the rows (no foot line, the user 2026-11-09). */
-const ChooserFrame: FC<{ kind: TrackKind; name: string; tabs: ChooserTab[]; onTab: (name: string) => void; onClose: () => void; children?: ReactNode }> = ({ kind, name, tabs, onTab, onClose, children }) => <>
-    <div className='chead'>
-        <div className='ctabs' role='group' aria-label='Choose what to change'>{tabs.map(tab => <button key={tab.kind} type='button'
-            className={'ctab' + (tab.kind === kind ? ' on' : '')} aria-pressed={tab.kind === kind}
-            onClick={() => { if (tab.kind !== kind) onTab(tab.name); }}>{tab.name}</button>)}</div>
-        <button type='button' className='cclose' aria-label='Close' onClick={onClose}><Icon name='close' /></button>
-    </div>
-    <ScrollRail name={name}>{children}</ScrollRail>
-</>;
+const ChooserFrame: FC<{ kind: TrackKind; name: string; tabs: ChooserTab[]; onTab: (name: string) => void; onClose: () => void; children?: ReactNode }> = ({ kind, name, tabs, onTab, onClose, children }) => {
+    const head = useRef<HTMLDivElement>(null);
+    const place = useTabsUnderControls(head, tabs);
+    return <>
+        <div ref={head} className='chead'>
+            <div className='ctabs' role='group' aria-label='Choose what to change'>{tabs.map((tab, index) => <button key={tab.kind} type='button'
+                className={'ctab' + (tab.kind === kind ? ' on' : '')} aria-pressed={tab.kind === kind}
+                style={place?.[index] && { left: place[index].left, width: place[index].width }}
+                onClick={() => { if (tab.kind !== kind) onTab(tab.name); }}>{tab.name}</button>)}</div>
+            <button type='button' className='cclose' aria-label='Close' onClick={onClose}><Icon name='close' /></button>
+        </div>
+        <ScrollRail name={name}>{children}</ScrollRail>
+    </>;
+};
 
 /**
  * The list and its rail (the user 2026-11-09, B): while the rows do not fit, an s0 rail at the list's right edge with a chevron at

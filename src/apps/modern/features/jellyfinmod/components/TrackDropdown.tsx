@@ -120,9 +120,9 @@ export const TrackText: FC<{ stream: MediaStream; names: Record<string, string> 
     if (quiet) {
         // A computer: the language, the Dolby lockup and the channels; the format, role and extra words are the details.
         const parsed = streamMarks(stream);
-        const audio = stream.Type === 'Audio' ? audioQuiet(parsed) : { lockup: null, format };
+        const audio = stream.Type === 'Audio' ? audioQuiet(parsed) : { lockup: null, format: null };
         return <QuietTrack name={<TrackLanguage language={language} modifier={trackModifier(stream)} />} lockup={audio.lockup}
-            channels={stream.Type === 'Audio' ? parsed.audioChannels : null}
+            channels={stream.Type === 'Audio' ? parsed.audioChannels : null} chip={format}
             details={[audio.format, role && (role === 'comm' ? 'Commentary' : role), trackExtraWords(stream)]} />;
     }
     return <>
