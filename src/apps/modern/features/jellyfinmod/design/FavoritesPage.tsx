@@ -6,6 +6,7 @@ import Page from 'components/Page';
 import ItemsContainer from 'elements/emby-itemscontainer/ItemsContainer';
 import Scroller from 'elements/emby-scroller/Scroller';
 import { useApi } from 'hooks/useApi';
+import { ServerConnections } from 'lib/jellyfin-apiclient';
 import globalize from 'lib/globalize';
 import { setCardData } from 'components/cardbuilder/cardBuilder';
 import { ItemAction } from 'constants/itemAction';
@@ -19,14 +20,15 @@ import LibraryCast from '../components/LibraryCast';
 
 /** Favorites keeps the legacy section queries, including every extra media kind the mockup does not show. */
 export const FavoritesPage: FC = () => {
-    const { api, user, __legacyApiClient__ } = useApi();
+    const { api, user, serverId } = useApi();
+    const apiClient = serverId ? ServerConnections.getApiClient(serverId) : undefined;
     const [params] = useSearchParams();
     const ref = useRef<HTMLDivElement>(null);
     useTvGridFocus(ref);
     const sections = getSections();
     const results = useQueries({ queries: sections.map(section => ({
         queryKey: ['User', user?.Id, 'Items', 'Favorites', section.types, params.get('topParentId')],
-        queryFn: () => getFetchDataFn(section).call({ apiClient: __legacyApiClient__ }) as Promise<{ Items: ItemDto[] }>,
+        queryFn: () => getFetchDataFn(section).call({ apiClient }) as Promise<{ Items: ItemDto[] }>,
         enabled: !!api && !!user?.Id,
         placeholderData: (previous: { Items: ItemDto[] } | undefined) => previous
     })) });
@@ -48,10 +50,10 @@ export const FavoritesPage: FC = () => {
             const items = results[index].data?.Items ?? [];
             if (!items.length) return null;
             const options: CardOptions = { ...section, action: section.action as ItemAction | undefined, shape: section.types === 'Episode' ? CardShape.Backdrop : section.shape,
-                serverId: __legacyApiClient__?.serverId(), queryKey: ['User', user?.Id, 'Items'] };
+                serverId, queryKey: ['User', user?.Id, 'Items'] };
             setCardData(items, options);
             return <div className='sect plain' key={section.types}><h2 className='rowt'>
-                <a href={getRouteUrl(section, __legacyApiClient__?.serverId())}>{globalize.translate(section.name)}</a></h2>
+                <a href={getRouteUrl(section, serverId)}>{globalize.translate(section.name)}</a></h2>
             <Scroller className='ds-rowframe' isCenterFocusEnabled isAllowNativeSmoothScrollEnabled>
                 <ItemsContainer isPlain className='rowx scrollSlider focuscontainer-x' queryKey={options.queryKey} reloadItems={results[index].refetch}>
                     {items.map(item => <Cell key={item.Id} row={{ kind: 'native', nativeItem: item }} options={options} />)}

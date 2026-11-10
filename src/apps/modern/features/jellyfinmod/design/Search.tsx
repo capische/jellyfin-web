@@ -16,14 +16,14 @@ import { useTvGridFocus } from '../hooks/useTvGridFocus';
 
 /** The mockup has movie/show results; other enabled search kinds keep their existing queries and routes. */
 export const SearchRows: FC<{ sections: SearchSection[]; loading?: boolean; empty?: boolean; query: string }> = ({ sections, loading, empty, query }) => {
-    const { __legacyApiClient__ } = useApi();
+    const { serverId } = useApi();
     if (loading && !sections.length) {
         return <div className='libgrid' style={{ paddingRight: '3.3%' }}><div className='grid searchgrid' aria-busy='true'>
             {Array.from({ length: 10 }, (_, index) => <CellSkeleton key={index} library />)}
         </div></div>;
     }
     return <>{sections.map(section => {
-        const options = { shape: CardShape.Portrait, ...section.cardOptions, serverId: __legacyApiClient__?.serverId() };
+        const options = { shape: CardShape.Portrait, ...section.cardOptions, serverId };
         setCardData(section.items, options);
         return <Section key={section.title} title={globalize.translate(section.title)}>
             {section.items.map(item => <Cell key={item.Id} row={{ kind: 'native', nativeItem: item as ItemDto }} options={options} />)}

@@ -12,7 +12,7 @@ import TraktIndicator from '../components/TraktIndicator';
 import { TRAKT_ITEM_TYPES } from '../constants/trakt';
 import { moveShuffle } from './shuffleMenu';
 import { titlePage, clearTitlePage } from './titlePage';
-import { getItemBackdropImageUrl } from 'utils/jellyfin-apiclient/backdropImage';
+import { getItemBackdropImageUrl } from 'lib/jellyfin-apiclient/utils/backdropImage';
 
 import './placeholderPage.scss';
 

@@ -87,7 +87,7 @@ const seriesToLookUp = (items: ItemDto[]) => [...new Set(items
     .map(item => item.SeriesId!))].sort((left, right) => left.localeCompare(right));
 
 const HomeHero: FC = () => {
-    const { api, user, __legacyApiClient__ } = useApi();
+    const { api, user, serverId } = useApi();
     // The hero is what the user is in the middle of — the first playable card of Continue watching (D284) — from
     // the same feeds the row shows: a section the user hid from Home does not come back as the hero.
     const sections: HomeSectionType[] = getAllSectionsToShow(userSettings);
@@ -194,14 +194,14 @@ const HomeHero: FC = () => {
         playbackManager.play({
             ids: [item.Id],
             startPositionTicks: current?.inProgress ? item.UserData?.PlaybackPositionTicks ?? 0 : undefined,
-            serverId: __legacyApiClient__?.serverId()
+            serverId
         }).catch((error: unknown) => {
             console.error('[JellyfinMod] Home hero could not start playback', error);
             // A hero button that does nothing is worse than one that explains itself. The usual cause is a
             // series whose episodes are not on disk.
             setPlayError('Nothing to play yet. Open More Info to see what is available.');
         });
-    }, [__legacyApiClient__, current?.inProgress, item]);
+    }, [serverId, current?.inProgress, item]);
 
     if (!item?.Id || !current || !api) return null;
     const image = current.backdrop;

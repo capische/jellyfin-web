@@ -6,7 +6,8 @@ import ItemsContainer from 'elements/emby-itemscontainer/ItemsContainer';
 import { setCardData } from 'components/cardbuilder/cardBuilder';
 import { ItemAction } from 'constants/itemAction';
 import { useApi } from 'hooks/useApi';
-import { useToggleFavoriteMutation, useTogglePlayedMutation } from 'hooks/useFetchItems';
+import { useToggleFavoriteMutation } from 'apps/modern/features/libraries/hooks/api/useToggleFavorite';
+import { useTogglePlayedMutation } from 'apps/modern/features/libraries/hooks/api/useTogglePlayed';
 import { getDataAttributes } from 'utils/items';
 import type { ItemDto } from 'types/base/models/item-dto';
 import datetime from 'scripts/datetime';
@@ -43,7 +44,7 @@ const heroHeight = () => {
 /** ds.js Home hero and actbar, supplied by HomeHero's existing choice/play logic. */
 const HeroBody: FC<Props> = ({ item, backdrop, overview, details, onPlay, error }) => {
     const device = useContext(DesignContext);
-    const { api, user, __legacyApiClient__ } = useApi();
+    const { api, user, serverId } = useApi();
     const queryClient = useQueryClient();
     const played = useTogglePlayedMutation();
     const runPlayed = usePlayedAction();
@@ -55,7 +56,6 @@ const HeroBody: FC<Props> = ({ item, backdrop, overview, details, onPlay, error 
         window.addEventListener('resize', resize);
         return () => window.removeEventListener('resize', resize);
     }, []);
-    const serverId = __legacyApiClient__?.serverId();
     setCardData([item as ItemDto], { serverId });
     const toggle = async (kind: 'played' | 'favorite') => {
         if (!item.Id) return;
