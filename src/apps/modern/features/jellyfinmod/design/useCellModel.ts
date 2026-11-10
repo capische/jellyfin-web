@@ -63,7 +63,7 @@ export const useCellModel = (row: BrowseRow, options: CardOptions, alwaysShowCou
     const [savedFavorite, setSavedFavorite] = useState<{ item: ItemDto; value: boolean }>();
     // A held outgoing card acknowledges the save; a new server DTO takes ownership again. Before the save answers, the click's
     // own state shows (useShownUserData), as on the title page.
-    const shown = useShownUserData(savedFlag(savedPlayed, item, !!item?.UserData?.Played),
+    const shown = useShownUserData(item?.Id, savedFlag(savedPlayed, item, !!item?.UserData?.Played),
         savedFlag(savedFavorite, item, !!item?.UserData?.IsFavorite));
     const empty = useCardHasNoFile(item?.Id);
     const release = useCardRelease(item?.Id, item?.Type);
