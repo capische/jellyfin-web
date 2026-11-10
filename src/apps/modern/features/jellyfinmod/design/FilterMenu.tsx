@@ -1,5 +1,7 @@
 import React, { type FC } from 'react';
-import { useGetQueryFilters, useGetQueryFiltersLegacy, useGetStudios } from 'hooks/useFetchItems';
+import { useGetQueryFilters } from 'apps/modern/features/libraries/hooks/api/useQueryFilters';
+import { useGetQueryFiltersLegacy } from 'apps/modern/features/libraries/hooks/api/useQueryFiltersLegacy';
+import { useGetStudios } from 'apps/modern/features/libraries/hooks/api/useStudios';
 import type { BaseItemKind } from '@jellyfin/sdk/lib/generated-client/models/base-item-kind';
 import type { LibraryViewSettings, ParentId } from 'types/library';
 import { LibraryTab } from 'types/libraryTab';

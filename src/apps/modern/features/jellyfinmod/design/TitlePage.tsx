@@ -8,7 +8,7 @@ import { AppFeature } from 'constants/appFeature';
 import { hasRatedLink } from '../utils/ratingLinks';
 import focusManager from 'components/focusManager';
 import inputManager from 'scripts/inputManager';
-import { useTogglePlayedMutation } from 'hooks/useFetchItems';
+import { useTogglePlayedMutation } from 'apps/modern/features/libraries/hooks/api/useTogglePlayed';
 import { EventType } from 'constants/eventType';
 import Events from 'utils/events';
 import { Head } from './Head';

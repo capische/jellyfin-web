@@ -115,8 +115,9 @@ const dropUnmatched = (text: string) => {
     const open: number[] = [];
     for (let index = 0; index < text.length; index++) {
         const char = text[index];
-        if ('([{'.includes(char)) open.push(index);
-        else if (CLOSERS.has(char)) {
+        if ('([{'.includes(char)) {
+            open.push(index);
+        } else if (CLOSERS.has(char)) {
             if (open.length && text[open[open.length - 1]] === CLOSERS.get(char)) {
                 open.pop();
             } else {

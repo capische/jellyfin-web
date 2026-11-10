@@ -365,7 +365,7 @@ const useQueueLayout = (): QueueLayout => {
 
 /** `/catalog/queue`: a monitor, not a torrent client (UX §10). */
 const QueuePage: FC = () => {
-    const { api, user, __legacyApiClient__ } = useApi();
+    const { api, user, serverId } = useApi();
     const isAdmin = !!user?.Policy?.IsAdministrator;
     const layout = useQueueLayout();
     const capability = useQueueCapability();
@@ -392,7 +392,7 @@ const QueuePage: FC = () => {
             text='The download queue is not available to you. An administrator can make it visible to users.' />;
     } else if (queue.data && api) {
         content = <QueueContent api={api} list={queue.data} layout={layout} isAdmin={isAdmin}
-            serverId={__legacyApiClient__?.serverId()} views={views} viewsReady={viewsReady} refetch={refresh}
+            serverId={serverId} views={views} viewsReady={viewsReady} refetch={refresh}
             refreshFailed={queue.isError} updatedAt={queue.dataUpdatedAt} />;
     } else if (queue.isError) {
         content = <p className='jfmod-queueStatus' role='status'>The queue could not be loaded. Trying again every few seconds.</p>;

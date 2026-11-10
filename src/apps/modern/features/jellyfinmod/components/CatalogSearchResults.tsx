@@ -9,6 +9,7 @@ import { useSearchItems } from 'apps/legacy/features/search/api/useSearchItems';
 import layoutManager from 'components/layoutManager';
 import toast from 'components/toast/toast';
 import { useUserViews } from 'hooks/api/useUserViews';
+import { ServerConnections } from 'lib/jellyfin-apiclient';
 import { useApi } from 'hooks/useApi';
 import type { ItemDto } from 'types/base/models/item-dto';
 import { queryClient } from 'utils/query/queryClient';
@@ -186,8 +187,7 @@ const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
     const { libraryPageSize } = useUserSettings();
     const resultsRef = useRef<HTMLDivElement>(null);
     const endRef = useRef<HTMLDivElement>(null);
-    const { api, user, __legacyApiClient__ } = useApi();
-    const serverId = __legacyApiClient__?.serverId();
+    const { api, user, serverId } = useApi();
     const health = usePluginHealth();
     const canBrowse = usePluginCapabilities(api, true).includes(DISCOVER_TITLE_CAPABILITY);
     const stock = useSearchItems(parentId, collectionType, query.trim());
@@ -414,7 +414,8 @@ const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
                 onAdd: button => { add(metadata, button).catch(console.error); },
                 onDownload: button => { download(metadata, button).catch(console.error); } } };
     };
-    const imageOf = (item: ItemDto) => (item.Id && item.ImageTags?.Primary ? __legacyApiClient__?.getScaledImageUrl(item.Id,
+    const apiClient = serverId ? ServerConnections.getApiClient(serverId) : undefined;
+    const imageOf = (item: ItemDto) => (item.Id && item.ImageTags?.Primary ? apiClient?.getScaledImageUrl(item.Id,
         { type: 'Primary', maxWidth: 400, tag: item.ImageTags.Primary }) : undefined);
     const library = libraryRows.map(row => libraryCard(row, { serverId, nativeLeads, imageOf })).filter((item): item is SearchCardItem => !!item);
     const candidates = rankCandidates(library, browseFailed ? [] : tmdbResults.map(tmdbCard), added, queryInput);

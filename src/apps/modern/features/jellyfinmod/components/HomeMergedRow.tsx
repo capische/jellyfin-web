@@ -57,8 +57,8 @@ const portraitOptions = {
 };
 
 const RowShell: FC<{ title: string; rows: BrowseRow[]; wide?: boolean; loading?: boolean; motionReady?: boolean }> = ({ title, rows, wide, loading, motionReady }) => {
-    const { api, user, __legacyApiClient__ } = useApi();
-    const options = { ...(wide ? rowOptions : portraitOptions), serverId: __legacyApiClient__?.serverId(),
+    const { api, user, serverId } = useApi();
+    const options = { ...(wide ? rowOptions : portraitOptions), serverId,
         queryKey: ['JellyfinMod', api?.basePath, user?.Id] };
     setCardData(rows.flatMap(row => row.kind === 'native' ? [row.nativeItem] : []), options);
     if (!rows.length && !loading && motionReady === undefined) return null;

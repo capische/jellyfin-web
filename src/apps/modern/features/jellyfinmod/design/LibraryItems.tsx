@@ -14,7 +14,7 @@ import LibraryCast from '../components/LibraryCast';
 
 export const LibraryItems: FC = () => {
     const { id, content, viewSettings, setViewSettings, browseResult, itemsResult } = useLibrary();
-    const { api, user, __legacyApiClient__ } = useApi();
+    const { api, user, serverId } = useApi();
     const [width, setWidth] = useState(window.innerWidth);
     useLayoutEffect(() => {
         const resize = () => setWidth(window.innerWidth);
@@ -34,7 +34,7 @@ export const LibraryItems: FC = () => {
     const options = { shape: preferThumb || preferLogo ? CardShape.Backdrop : CardShape.Portrait,
         preferThumb, preferLogo, preferBanner: imageType === ImageType.Banner, preferDisc: imageType === ImageType.Disc, imageType,
         showTitle: true, showYear: true,
-        context: content?.collectionType ?? undefined, serverId: __legacyApiClient__?.serverId(),
+        context: content?.collectionType ?? undefined, serverId,
         queryKey: combined ? ['JellyfinMod', api?.basePath, user?.Id, 'Browse'] : ['User', user?.Id, 'Items'] };
     setCardData(rows.flatMap(row => row.kind === 'native' ? [row.nativeItem] : []), options);
     // A computer window narrowed to a phone's width keeps the phone's two posters a row.

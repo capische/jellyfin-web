@@ -5,7 +5,7 @@ const path = require('path');
 /**
  * Keeps the JellyfinMod entry from silently drifting away from the stock one (P7.S2).
  *
- * `src/jellyfinmod.jsx` mirrors `src/index.jsx`'s start-up sequence and `ModApp.tsx` mirrors `RootApp.tsx`'s
+ * `src/jellyfinmod.jsx` mirrors `src/index.tsx`'s start-up sequence and `ModApp.tsx` mirrors `RootApp.tsx`'s
  * provider stack, rather than both entries importing a shared module. That choice keeps those two upstream files
  * unedited, which is what keeps an upstream merge small (PHASE7 §3.1, boot option 1) — but it means an upstream
  * change to either one has to be mirrored by hand, and a mirroring that nobody remembers is a bug that only shows
@@ -23,10 +23,10 @@ const PLUGIN_NAME = 'JellyfinModBootGuard';
 /** Upstream files the mod entry mirrors, and the hash of the version it was last mirrored against. */
 const MIRRORED = [
     {
-        file: 'src/index.jsx',
+        file: 'src/index.tsx',
         mirroredBy: 'src/jellyfinmod.jsx',
         what: 'the start-up sequence',
-        sha256: 'd923637359819c6354f962f888d4c761c20b28c5a81fdbff606bcc81b4297982'
+        sha256: '801d4bc6c75c4e7a8e573a5cbe47766bc71210f7fbcb4159ca98ed535149e00e'
     },
     {
         file: 'src/RootApp.tsx',
