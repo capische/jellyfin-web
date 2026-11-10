@@ -91,9 +91,37 @@ const ChooserFrame: FC<{ kind: TrackKind; name: string; tabs: ChooserTab[]; onTa
             onClick={() => { if (tab.kind !== kind) onTab(tab.name); }}>{tab.name}</button>)}</div>
         <button type='button' className='cclose' aria-label='Close' onClick={onClose}><Icon name='close' /></button>
     </div>
-    <div className='clist' role='listbox' aria-label={name}>{children}</div>
+    <EdgeCues name={name}>{children}</EdgeCues>
     <p className='cfoot'>{KIND_FOOT[kind]}</p>
 </>;
+
+/**
+ * The list with a chevron slot above and below (the user 2026-11-09, Codex's edge cues): a slot shows its chevron only while that
+ * edge has more rows past it, and both slots go when every row fits.
+ */
+const EdgeCues: FC<{ name: string; children?: ReactNode }> = ({ name, children }) => {
+    const list = useRef<HTMLDivElement>(null);
+    const [edges, setEdges] = useState({ up: false, down: false, fits: true });
+    const measure = useCallback(() => {
+        const node = list.current;
+        if (!node) return;
+        const more = node.scrollHeight - node.clientHeight;
+        setEdges({ up: more > 1 && node.scrollTop > 1, down: more > 1 && node.scrollTop < more - 1, fits: more <= 1 });
+    }, []);
+    // The rows change with the tab and the selection; measure after each render of them, and when the window resizes.
+    useLayoutEffect(measure, [children, measure]);
+    useEffect(() => {
+        window.addEventListener('resize', measure);
+        return () => window.removeEventListener('resize', measure);
+    }, [measure]);
+    return <>
+        {!edges.fits && <span className={'ccue' + (edges.up ? '' : ' off')} role='img' aria-label={edges.up ? `More ${name.toLowerCase()} above` : undefined}
+            aria-hidden={!edges.up}><Icon name='down' className='up' /></span>}
+        <div ref={list} className='clist' role='listbox' aria-label={name} onScroll={measure}>{children}</div>
+        {!edges.fits && <span className={'ccue' + (edges.down ? '' : ' off')} role='img' aria-label={edges.down ? `More ${name.toLowerCase()} below` : undefined}
+            aria-hidden={!edges.down}><Icon name='down' /></span>}
+    </>;
+};
 
 /** A computer's quiet control (ds.t19): the kind's icon, the value, a chevron when there is a choice; plain and no focus stop without. */
 interface QuietFieldProps {
