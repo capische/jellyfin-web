@@ -343,9 +343,10 @@ export const SecretField: FC<SecretFieldProps> = ({ id, label, required, configu
     const clear = useCallback(() => onChange({ action: 'clear', value: null }), [onChange]);
     const replacing = editing || change.action === 'replace' || !configured;
     const typedNow = change.action === 'replace' && !!change.value;
-    // Enter in the input saves it, as the Save beside it does.
+    // Enter in the input saves it, as the Save beside it does. Only the input's own Enter: the field also holds Test, whose
+    // Enter must test the typed value, not save it.
     const saveOnEnter = useCallback((event: React.KeyboardEvent) => {
-        if (save && event.key === 'Enter' && typedNow && !save.busy) {
+        if (save && event.key === 'Enter' && event.target instanceof HTMLInputElement && typedNow && !save.busy) {
             event.preventDefault();
             save.run();
         }
