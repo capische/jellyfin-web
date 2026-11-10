@@ -2,7 +2,7 @@ import type { MediaSourceInfo } from '@jellyfin/sdk/lib/generated-client/models/
 import React, { type FC, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { TrackField, ChooseRow } from '../design/TrackField';
-import { DesignMediaMarks } from '../design/MediaMarks';
+import { DesignMediaMarks, QuietTrack, videoQuiet } from '../design/MediaMarks';
 import { Icon } from '../design/Icon';
 import { DesignContext } from '../design/Root';
 
@@ -246,14 +246,25 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, removeDa
     useDevicePreference(view, versions.length > 1 ? preferred : null, chosen);
     const [open, setOpen] = useState(false);
     // A computer shows one file plainly, with nothing to open (ds.t19); phone, tablet and TV keep its list (pending entry).
-    const plain = useContext(DesignContext) === 'computer' && versions.length < 2;
+    const computer = useContext(DesignContext) === 'computer';
+    const plain = computer && versions.length < 2;
     const selected = selectedVersion(versions, current);
     // The size moved to the caption (`VIDEO · 13.2 GB`, the user 2026-11-07); each row keeps its own.
-    const summary = (version: VersionDto, closed = false) => <>
-        <span className='r'>{describeVersion(version).resolution}{version.phoneCopy && <span className='pm' title={PHONE_COPY_LABEL}><Icon name='phone' /></span>}</span>
-        <span className='marks'><DesignMediaMarks parsed={fileMarks(version, findSource(sources, version.mediaSourceId)).video} /></span>
-        {!closed && <span className='sz2'>{describeVersion(version).size}</span>}
-    </>;
+    const later = (version: VersionDto) => [version.episodeRange, removeDate(version) && 'removes ' + removeDate(version)].filter(Boolean).join(' · ');
+    const summary = (version: VersionDto, closed = false) => {
+        const name = <span className='r'>{describeVersion(version).resolution}{version.phoneCopy && <span className='pm' title={PHONE_COPY_LABEL}><Icon name='phone' /></span>}</span>;
+        const parsed = fileMarks(version, findSource(sources, version.mediaSourceId)).video;
+        if (computer) {
+            // One line: the resolution and Dolby Vision; the codec, ranges, size (and a row's episodes and removal) are the details.
+            const video = videoQuiet(parsed);
+            return <QuietTrack name={name} lockup={video.lockup} details={[...video.details, describeVersion(version).size, closed ? null : later(version)]} />;
+        }
+        return <>
+            {name}
+            <span className='marks'><DesignMediaMarks parsed={parsed} /></span>
+            {!closed && <span className='sz2'>{describeVersion(version).size}</span>}
+        </>;
+    };
     const choose = (version: VersionDto) => {
         chosen.current = true;
         selectVersion(view, version);
@@ -266,7 +277,7 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, removeDa
             {bestFirst(versions).map(version => <ChooseRow key={version.mediaSourceId} sourceId={version.mediaSourceId} selected={version === selected}
                 onChoose={() => choose(version)} title={[version.episodeRange, removeDate(version)].filter(Boolean).join(' · ')}>
                 {summary(version)}
-                {(version.episodeRange || removeDate(version)) && <span className='trackextra'>{[version.episodeRange, removeDate(version) && 'removes ' + removeDate(version)].filter(Boolean).join(' · ')}</span>}
+                {!computer && later(version) && <span className='trackextra'>{later(version)}</span>}
             </ChooseRow>)}
             {pending}
         </TrackField>, strip.video)}

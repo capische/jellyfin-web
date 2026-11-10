@@ -1,9 +1,13 @@
 # Media marks
 
-**Computer track controls (ds.t19): approved by the user 2026-11-08, built, not accepted, computer first look.** A bit-depth mark
-carries `.depth` beside `.hdr` (`DesignMediaMarks`), so the computer's closed Video control can show the range alone, outlined
-(s-3 padding, s-6 line in `currentColor`, s-5 corners), and keep the codec and bit depth for the chooser's detail line. Every other
-use draws the marks as below. See [track-dropdown.md](track-dropdown.md).
+**Computer track controls (ds.t19): approved by the user 2026-11-08, Dolby lockups 2026-11-09, built, not accepted, computer
+first look.** The computer's track controls and chooser rows draw no chips, glyph runs or outlined ranges: only a **Dolby two-row
+lockup** (`DolbyLockup` in `MediaMarks.tsx`): the double-D block, then **DOLBY** (700) over the product word (400) in the text's
+own colour, **16 px** high (the user's named exception to the scale, after 29.125 px "MASSIVE" and 18 px). Which one: Video
+**VISION** for Dolby Vision; Audio **ATMOS** over DD+ or TrueHD with Atmos, **DIGITAL+** for DD+, **AUDIO** for DD or TrueHD; none
+for anything else (DTS, AAC). Every other fact is a word in the details (`videoQuiet`, `audioQuiet`, `QuietTrack`). Artwork:
+workspace `reviews/netflix-tracks/scroll-and-lines.html`. Every other use draws the marks as below. See
+[track-dropdown.md](track-dropdown.md).
 
 **Golden list marks (ds.t12): approved by the user 2026-11-07, built, not accepted.** In the computer title head's open lists the
 marks match the closed field: video marks s-1, s-3 apart, no tracking; the Atmos run s-1 with s-7 tracking (glyph 0.82em, s-3

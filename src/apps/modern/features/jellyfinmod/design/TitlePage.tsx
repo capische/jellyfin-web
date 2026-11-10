@@ -22,7 +22,7 @@ import { TitleRow as Section } from './TitleRow';
 import { TrackField, ChooseRow } from './TrackField';
 import { useStacked } from './useStacked';
 import { readTitle, runTitleCommand, type TitleCard, type TitleCommand, type InlinePart, type TitleTrack } from './titleModel';
-import { DesignMediaMarks } from './MediaMarks';
+import { DesignMediaMarks, QuietTrack, videoQuiet } from './MediaMarks';
 import { findSource, linesOfSize, streamMarks } from '../constants/versions';
 import { getLanguageNames, getMediaSources } from '../api/modApi';
 import { TrackLanguage, TrackText } from '../components/TrackDropdown';
@@ -163,11 +163,19 @@ const primaryAction = (command?: TitleCommand) => {
 
 const posterActionIcon = (primary: TitleCommand | undefined, mark: TitleCard['mark']) => primary?.icon === 'cloud' || mark?.kind === 'not-downloaded' ? <Cloud /> : <Icon name={primary?.icon ?? 'play'} />;
 
-const TrackValue: FC<{ option?: TitleTrack['options'][number]; closed?: boolean }> = ({ option, closed }) => <>
-    <span className='r'>{option?.text}</span>
-    {option?.video && <span className='marks'><DesignMediaMarks parsed={streamMarks(option.video)} /></span>}
-    {!!option?.size && <span className={closed ? 'size2' : 'sz2'}>{formatBytes(option.size)}</span>}
-</>;
+const TrackValue: FC<{ option?: TitleTrack['options'][number]; closed?: boolean }> = ({ option, closed }) => {
+    const device = useContext(DesignContext);
+    if (device === 'computer') {
+        const video = option?.video ? videoQuiet(streamMarks(option.video)) : { lockup: null, details: [] };
+        return <QuietTrack name={<span className='r'>{option?.text}</span>} lockup={video.lockup}
+            details={[...video.details, option?.size ? formatBytes(option.size) : null]} />;
+    }
+    return <>
+        <span className='r'>{option?.text}</span>
+        {option?.video && <span className='marks'><DesignMediaMarks parsed={streamMarks(option.video)} /></span>}
+        {!!option?.size && <span className={closed ? 'size2' : 'sz2'}>{formatBytes(option.size)}</span>}
+    </>;
+};
 
 /**
  * The selected episode's Video, Audio and Subtitles on a computer's series page (ds.t19): the title page's quiet controls and

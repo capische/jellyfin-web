@@ -50,3 +50,46 @@ export const DesignMediaMarks: FC<{ parsed: MarkSource }> = ({ parsed }) => {
         {hdr.includes('DV') && <Format name='Vision' />}{audio.includes('Atmos') && <Format name='Atmos' />}{audioMark}
     </>;
 };
+
+/** The Dolby two-row lockups of the computer's track controls and chooser (ds.t19, the user 2026-11-09): which one a track shows. */
+export type DolbyKind = 'vision' | 'atmos' | 'audio' | 'digitalplus';
+const DOLBY: Record<DolbyKind, { word: string; width: number; label: string }> = {
+    vision: { word: 'VISION', width: 77, label: 'Dolby Vision' },
+    atmos: { word: 'ATMOS', width: 78, label: 'Dolby Atmos' },
+    audio: { word: 'AUDIO', width: 77, label: 'Dolby Audio' },
+    digitalplus: { word: 'DIGITAL+', width: 90, label: 'Dolby Digital Plus' }
+};
+
+/** The double-D block, then DOLBY over the product word, in the text's own colour (workspace `reviews/netflix-tracks/scroll-and-lines.html`). */
+export const DolbyLockup: FC<{ kind: DolbyKind }> = ({ kind }) => <svg className='dolby' viewBox={`0 0 ${DOLBY[kind].width} 20`} role='img' aria-label={DOLBY[kind].label}>
+    <path fillRule='evenodd' d='M0 0H28V20H0ZM3 3V17H6C10 17 12.5 13.9 12.5 10S10 3 6 3ZM25 3H22C18 3 15.5 6.1 15.5 10S18 17 22 17H25Z' />
+    <text className='b' x='32.72' y='8.8'>DOLBY</text><text className='p' x='32.72' y='20'>{DOLBY[kind].word}</text>
+</svg>;
+
+/** A video's lockup (Dolby Vision) and its details in reading order: codec, the other ranges and the bit depth. */
+export const videoQuiet = (parsed: MarkSource): { lockup: DolbyKind | null; details: string[] } => {
+    const hdr = (parsed.hdr ?? '').split(' ').filter(Boolean);
+    const codec = parsed.codec ? CODECS[parsed.codec] ?? parsed.codec : null;
+    return { lockup: hdr.includes('DV') ? 'vision' : null, details: [codec, ...hdr.filter(value => value !== 'DV')].filter((value): value is string => !!value) };
+};
+
+/** An audio stream's lockup (Atmos over DD+ or TrueHD; Digital+ for DD+; Audio for DD or TrueHD) and its format word for the details. */
+export const audioQuiet = (parsed: MarkSource): { lockup: DolbyKind | null; format: string | null } => {
+    const audio = parsed.audio ?? '';
+    let lockup: DolbyKind | null = null;
+    if (/^(DD|TrueHD)/.test(audio)) {
+        if (audio.includes('Atmos')) lockup = 'atmos';
+        else lockup = audio.startsWith('DD+') ? 'digitalplus' : 'audio';
+    }
+    return { lockup, format: audio.split(' ').filter(word => word && word !== 'Atmos').join(' ') || null };
+};
+
+/**
+ * A computer's track value (ds.t19, the user 2026-11-09: "one line, details on demand"): the name, the Dolby lockup and the
+ * channels on one line; the details are small print that the closed control shows as a paper tip on hover and a chooser row at
+ * its right edge.
+ */
+export const QuietTrack: FC<{ name: ReactNode; lockup?: DolbyKind | null; channels?: string | null; details: (string | null | undefined)[] }> = ({ name, lockup, channels, details }) => {
+    const words = details.filter(Boolean).join(' · ');
+    return <>{name}{lockup && <DolbyLockup kind={lockup} />}{channels && <span className='chn'>{channels}</span>}{words && <span className='qd'>{words}</span>}</>;
+};
