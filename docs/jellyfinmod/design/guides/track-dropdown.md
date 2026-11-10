@@ -24,11 +24,16 @@ Phone, tablet and TV keep the strip below until their own gate.
   line on the column's edge.
 - **The chooser** (`.vlist.chooser`, one at a time): paper, s-2 under the controls from the column's left, **s7 wide** (at most
   the column; s6·√φ tried 2026-11-09, back to s7 by the user 2026-11-10), s0 corners, s-2 padding, an s-6 hairline (`--hair`), shadow
-  0 s-1 s1 black 61.8 %, over the page. Head (s-2 above the rows): a tab per choosable field (Video, Audio, Subtitles; s2 high, s-3
-  apart, s-1 sides and corners, the open one on the tint, the others 61.8 %) and a round s2 **Close**. **Rows are one line** (the
+  0 s-1 s1 black 61.8 %, over the page. Head (s-2 above the rows): a tab per choosable field (Video, Audio, Subtitles; s2 high, s-1 sides
+  and corners, the open one on the tint, the others 61.8 %) and a round s2 **Close**. **Each tab sits under its own control** (the
+  user 2026-11-10): while the three controls share a line, a tab takes its control's left edge and width, Close follows s-3 after the
+  last, the chooser grows to fit them and its edge moves out by its s-2 padding and s-6 hairline (`useTabsUnderControls`,
+  `.jfmod-tabsUnder`); with Video on its own line (a 1280 px window) the tabs stay a row s-3 apart. **Rows are one line** (the
   user 2026-11-09, A: "rows read like the control"), s1 + 2·s-2 (42.9 px) high, padding s-2 s-1 with the text s-1 + s0 + s-2 in, s-1
   corners: the value exactly as the control draws it (blue when current, with the s-1 check s-1 from the left), then the details at
-  s-1 in the head's muted ink at the row's right edge, at most s5 wide and cut with "…" (Video rows add the episode range or
+  s-1 in the head's muted ink at the row's right edge, growing left into all the room the value leaves and cut with "…" only past
+  it (the user 2026-11-10); a subtitle's format leads them as its chip (s0 high, s-3 sides, s-4 corners, as before ds.t19). The
+  name keeps its full line height so descenders are not clipped (Video rows add the episode range or
   removal date). No foot line (dropped 2026-11-09).
 - **The rail** (the user 2026-11-09, B, replacing the edge-cue slots): the list scrolls past s5 with no native scroll bar; while the
   rows do not fit, an s0 column at the list's right edge (the rows give it s0 of right padding) in the muted ink holds an s-1 chevron

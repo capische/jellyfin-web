@@ -497,7 +497,7 @@
     /* The one chooser (the user 2026-11-09, s7 wide again 2026-11-10): paper s-2 under the controls, s7 wide (at most the column), s0 corners, s-2
        padding, an s-6 hairline, shadow 0 s-1 s1 at 61.8 %; tabs s2 high, s-3 apart, s-1 sides and s-2 corners, the open one on the
        tint; a round s2 Close; one-line rows s1 + 2·s-2 high (the 40 px target), padding s-2 s-1 with the s-1 check s0 in, the value
-       as the control draws it and the details s-1 at the right edge, at most s5 wide; the list scrolls past s5 beside its rail. */
+       as the control draws it and the details s-1 at the right edge, taking all the room left of them; the list scrolls past s5 beside its rail. */
     .gpk > .vlist.chooser {
         position: absolute;
         z-index: 7;
@@ -575,6 +575,26 @@
         outline-offset: calc(-1 * var(--jfmod-s-5));
     }
 
+    /* Tabs under their controls (the user 2026-11-10; `useTabsUnderControls` sets each tab's left and width and the chooser's
+       width): the chooser's edge moves out by its s-2 padding and s-6 hairline so each tab sits exactly under its control, its text
+       on the control's icon. */
+    .gpk > .vlist.chooser.jfmod-tabsUnder {
+        left: calc(-1 * (var(--jfmod-s-2) + var(--jfmod-s-6)));
+        max-width: none;
+    }
+
+    .gpk .vlist.chooser.jfmod-tabsUnder .ctabs {
+        position: relative;
+        align-self: stretch;
+        height: var(--jfmod-s2);
+    }
+
+    .gpk .vlist.chooser.jfmod-tabsUnder .ctab {
+        position: absolute;
+        top: 0;
+        text-align: left;
+    }
+
     .gpk .vlist.chooser .cbox { position: relative; }
 
     .gpk .vlist.chooser .clist {
@@ -644,26 +664,44 @@
     .gpk .vlist.chooser .vrow > * { margin: 0; }
 
     .gpk .vlist.chooser .vrow .r {
-        flex: 0 1 auto;
+        flex: none;
         min-width: 0;
         overflow: hidden;
         font-size: var(--jfmod-s0);
         font-weight: 400;
+        line-height: 1.618;
         text-overflow: ellipsis;
     }
 
     .gpk .vlist.chooser[data-list='v'] .vrow .r { font-weight: 600; }
 
     .gpk .vlist.chooser .vrow .qd {
+        display: flex;
         flex: 0 1 auto;
+        align-items: center;
+        gap: var(--jfmod-s-2);
         min-width: 0;
-        max-width: var(--jfmod-s5);
         margin-left: auto;
         padding-left: var(--jfmod-s-1);
-        overflow: hidden;
         font-size: var(--jfmod-s-1);
-        text-overflow: ellipsis;
         color: var(--jfmod-head-muted);
+    }
+
+    .gpk .vlist.chooser .vrow .qw {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* A subtitle's format chip (the user 2026-11-10, as before ds.t19's one line): s0 high, s-3 sides, s-4 corners, s-1 type. */
+    .gpk .vlist.chooser .vrow .qd .mk.tag {
+        flex: none;
+        height: var(--jfmod-s0);
+        margin: 0;
+        padding: 0 var(--jfmod-s-3);
+        border-radius: var(--jfmod-s-4);
+        font-size: var(--jfmod-s-1);
+        letter-spacing: 0;
     }
 
     .gpk .vlist.chooser .vrow.sel::before {
