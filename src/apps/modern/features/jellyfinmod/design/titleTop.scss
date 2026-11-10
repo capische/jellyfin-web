@@ -548,8 +548,10 @@
         left: 0;
         width: var(--jfmod-s7);
         max-width: 100%;
+        max-height: none;
         margin: 0;
         padding: var(--jfmod-s-2);
+        overflow: visible;
         border: var(--jfmod-s-6) solid var(--hair);
         border-radius: var(--jfmod-s0);
         background: var(--paper);

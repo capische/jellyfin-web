@@ -25,11 +25,13 @@ Phone, tablet and TV keep the strip below until their own gate.
   range or removal date; Audio: the audio run, role mark and extra words; Subtitles: the role mark and extra words), the trailing size
   (Video) or format chip (Subtitles) s-1 at the right. The list scrolls past s5; a foot line s-1 at 61.8 % under an s-6 rule
   (*Select the file to play.* / *Select a language or the commentary track.* / *SDH includes sound cues. Forced translates selected
-  dialogue.*).
+  dialogue.*). Only `.clist` scrolls: the outer chooser has no height cap or scroll, keeping the head and foot in place.
 - **Behaviour:** a click opens the chooser on that control's tab with the focus on the current row; a tab (or Left / Right on a row)
   closes this field's list and opens that field's; picking a row sets the stock select as before (Play, audio and subtitles follow
   upstream's code), updates the control and closes the chooser; Escape, a click outside or Close leave without a change, Escape and Close
-  returning the focus to the control. Each field keeps its own rows, data and selection logic (`FileChooser`, `TrackDropdown`).
+  returning the focus to the control. Opening and walking rows reveal them inside `.clist` only, without scrolling the page or
+  the clipped title artwork; list scrolling leaves the navigation bar's page-scroll state alone. Each field keeps its own rows,
+  data and selection logic (`FileChooser`, `TrackDropdown`).
 - **The series page** (computer only) shows the selected episode's three controls the same way, read from the episode's media
   sources (`EpisodeTrackFields` in `TitlePage.tsx`); a choice there is passed to Play (`mediaSourceId`, `audioStreamIndex`,
   `subtitleStreamIndex`, `useSeriesEpisodes`) and forgotten when another episode is selected.
