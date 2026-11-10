@@ -387,10 +387,9 @@
         white-space: nowrap;
     }
 
-    .gpk .seg.v {
-        order: 1;
-        margin-left: calc(-1 * var(--jfmod-s-1));
-    }
+    /* Each control's box starts on the pills' left edge (the user 2026-11-09: a box pulled out by s-1 to line its icon up stuck
+       out past the pills on hover and while open). */
+    .gpk .seg.v { order: 1; }
 
     .gpk .seg.a { order: 3; }
 
@@ -533,8 +532,6 @@
             flex-basis: 100%;
             order: 2;
         }
-
-        .gpk .seg.a { margin-left: calc(-1 * var(--jfmod-s-1)); }
     }
 
     /* The one chooser: paper s-2 under the controls, s7 wide (at most the column), s0 corners, s-2 padding, an s-6 hairline,

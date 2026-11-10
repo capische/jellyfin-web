@@ -7,8 +7,8 @@ Phone, tablet and TV keep the strip below until their own gate.
 
 - **Closed:** three quiet controls s0 under the action pill, s-2 apart, no captions and no glass: each the kind's s0 icon (Material
   `display`, `audio`, `subs`, muted ink), the value at B, an s-1 chevron at 61.8 %; s2 high, padding s-2 s-1, s-1 corners, the tint
-  on hover and while open (the chevron turned), an s-5 primary outline s-3 out for the keyboard. Video's text sits on the column's
-  edge (`margin-left −s-1`). Values: Video the resolution in 600 and its range mark outlined (s-3 padding, s-6 line, s-5 corners;
+  on hover and while open (the chevron turned), an s-5 primary outline s-3 out for the keyboard. Video's box starts on the pills'
+  left edge, its icon s-1 in (the user 2026-11-09). Values: Video the resolution in 600 and its range mark outlined (s-3 padding, s-6 line, s-5 corners;
   the codec, bit depth and size are the chooser's); Audio the language and the audio run ([media-marks.md](media-marks.md)) in muted
   ink; Subtitles the language and its role mark, or **Subtitles Off**; a file without such tracks **No Audio** / **No Subtitles**.
 - **One file:** Video is plain: the resolution, the range, codec and bit depth, then the size at s-1/600 muted; no chevron, no focus
