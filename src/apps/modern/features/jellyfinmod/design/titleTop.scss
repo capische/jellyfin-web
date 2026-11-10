@@ -625,6 +625,25 @@
         scrollbar-width: thin;
     }
 
+    /* Edge cues (the user 2026-11-09): an s0 slot above and below a list that scrolls, an s0 chevron in the muted ink centred in
+       it while that edge has more rows; the slot stays (hidden) at an end so the rows do not move. */
+    .gpk .vlist.chooser .ccue {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: var(--jfmod-s0);
+        opacity: 0.618;
+    }
+
+    .gpk .vlist.chooser .ccue.off { visibility: hidden; }
+
+    .gpk .vlist.chooser .ccue svg {
+        width: var(--jfmod-s0);
+        height: var(--jfmod-s0);
+    }
+
+    .gpk .vlist.chooser .ccue svg.up { transform: rotate(180deg); }
+
     .gpk .vlist.chooser .vrow {
         display: grid;
         grid-template-columns: auto auto minmax(0, 1fr) auto;

@@ -23,7 +23,9 @@ Phone, tablet and TV keep the strip below until their own gate.
   Rows at least s2, padding s-1 s0 with the text s0 + 2·s-1 in, s-1 corners: the name at B / 600 (blue when current, with the s-1
   check s0 from the left), an s-1 detail line in the head's muted ink (Video: the codec, bit depth and range marks and the episode
   range or removal date; Audio: the audio run, role mark and extra words; Subtitles: the role mark and extra words), the trailing size
-  (Video) or format chip (Subtitles) s-1 at the right. The list scrolls past s5; a foot line s-1 at 61.8 % under an s-6 rule
+  (Video) or format chip (Subtitles) s-1 at the right. The list scrolls past s5, with an s0 slot above and below it that
+  shows an s0 chevron (61.8 %) while that edge has more rows (edge cues, approved by the user 2026-11-09; both slots go when every
+  row fits; `EdgeCues`); a foot line s-1 at 61.8 % under an s-6 rule
   (*Select the file to play.* / *Select a language or the commentary track.* / *SDH includes sound cues. Forced translates selected
   dialogue.*). Only `.clist` scrolls: the outer chooser has no height cap or scroll, keeping the head and foot in place.
 - **Behaviour:** a click opens the chooser on that control's tab with the focus on the current row; a tab (or Left / Right on a row)
