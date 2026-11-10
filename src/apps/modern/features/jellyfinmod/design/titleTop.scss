@@ -576,12 +576,9 @@
     }
 
     /* Tabs under their controls (the user 2026-11-10; `useTabsUnderControls` sets each tab's left and width and the chooser's
-       width): the chooser's edge moves out by its s-2 padding and s-6 hairline so each tab sits exactly under its control, its text
-       on the control's icon. */
-    .gpk > .vlist.chooser.jfmod-tabsUnder {
-        left: calc(-1 * (var(--jfmod-s-2) + var(--jfmod-s-6)));
-        max-width: none;
-    }
+       width, and its left at the first tab's control less its s-2 padding and s-6 hairline): each tab sits exactly under its control,
+       its text on the control's icon. */
+    .gpk > .vlist.chooser.jfmod-tabsUnder { max-width: none; }
 
     .gpk .vlist.chooser.jfmod-tabsUnder .ctabs {
         position: relative;

@@ -27,7 +27,8 @@ Phone, tablet and TV keep the strip below until their own gate.
   0 s-1 s1 black 61.8 %, over the page. Head (s-2 above the rows): a tab per choosable field (Video, Audio, Subtitles; s2 high, s-1 sides
   and corners, the open one on the tint, the others 61.8 %) and a round s2 **Close**. **Each tab sits under its own control** (the
   user 2026-11-10): while the three controls share a line, a tab takes its control's left edge and width, Close follows s-3 after the
-  last, the chooser grows to fit them and its edge moves out by its s-2 padding and s-6 hairline (`useTabsUnderControls`,
+  last, the chooser runs from the first tab's control (a plain Video has no tab, so none under it) to Close, its edge moved out by its s-2
+  padding and s-6 hairline (`useTabsUnderControls`,
   `.jfmod-tabsUnder`); with Video on its own line (a 1280 px window) the tabs stay a row s-3 apart. **Rows are one line** (the
   user 2026-11-09, A: "rows read like the control"), s1 + 2·s-2 (42.9 px) high, padding s-2 s-1 with the text s-1 + s0 + s-2 in, s-1
   corners: the value exactly as the control draws it (blue when current, with the s-1 check s-1 from the left), then the details at
