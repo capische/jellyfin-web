@@ -73,7 +73,7 @@ export const videoQuiet = (parsed: MarkSource): { lockup: DolbyKind | null; deta
     return { lockup: hdr.includes('DV') ? 'vision' : null, details: [codec, ...hdr.filter(value => value !== 'DV')].filter((value): value is string => !!value) };
 };
 
-/** An audio stream's lockup (Atmos over DD+ or TrueHD; Digital+ for DD+; Audio for DD or TrueHD) and its format word for the details. */
+/** An audio stream's lockup (Atmos over DD+ or TrueHD; Digital+ for DD+; Audio for DD or TrueHD) and the format word the details still need. */
 export const audioQuiet = (parsed: MarkSource): { lockup: DolbyKind | null; format: string | null } => {
     const audio = parsed.audio ?? '';
     let lockup: DolbyKind | null = null;
@@ -81,7 +81,10 @@ export const audioQuiet = (parsed: MarkSource): { lockup: DolbyKind | null; form
         if (audio.includes('Atmos')) lockup = 'atmos';
         else lockup = audio.startsWith('DD+') ? 'digitalplus' : 'audio';
     }
-    return { lockup, format: audio.split(' ').filter(word => word && word !== 'Atmos').join(' ') || null };
+    const format = audio.split(' ').filter(word => word && word !== 'Atmos').join(' ') || null;
+    // The lockup already says plain DD (AUDIO) and DD+ (DIGITAL+), so the details do not repeat it (the user 2026-11-10); TrueHD
+    // and the format under Atmos stay, since the lockup does not tell them apart.
+    return { lockup, format: (lockup === 'audio' && format === 'DD') || lockup === 'digitalplus' ? null : format };
 };
 
 /**
