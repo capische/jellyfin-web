@@ -39,6 +39,10 @@ own B, with no arrow pill (touch swipes the strip; the TV's D-pad walks it, Ente
 s0 apart, tablet and TV s6 s1 apart; a season's first card has s1 more. On the TV the selection keeps the 0.135em ring and the
 focused card takes the 0.236em one; the pill takes an s-3 primary ring on focus.
 A card selected while partly off the strip slides to its left edge, whole (the user, 2026-11-10).
+**Description and Tags on phone and tablet (the user, 2026-11-10, built, not accepted, gate 1 on beta):** a description longer than
+3 lines is cut at 3 and Tags at 1, with an ellipsis and a lowercase **more** (white 700, the text's own size, s-2 after it) at
+the end of the last line; opened, the full text ends in **less**. A text that fits gets neither; computer and TV show it whole
+(`Clamp` in TitlePage.tsx, `.jfmod-clamp` in titleTop.scss).
 Rows on every title page (computer): titles s1 at line 1, s2 above and s0 below, on the gutter; posters s5, people s4, stills
 s6, s1 apart. Order: **Cast** (actors only), **Guest Stars** (a series page's: the selected episode's, titled with its
 `S1:E1 · Title`), the rest, **More Like This** last. **Download's cloud is s1** (the round actions' glyph size; Play's triangle

@@ -773,3 +773,47 @@
         opacity: 0.7;
     }
 }
+
+/* Phone and tablet: a long description cut at 3 lines and Tags at 1, "more" at the end of the last line (floated into it after the
+   ellipsis), "less" after the full text (the user, 2026-11-10). The text's own type; the word in white 700, s-2 after the text. */
+.jfds .jfmod-titleTop .jfmod-clamp {
+    display: flex;
+
+    > .jfmod-clampText {
+        display: -webkit-box;
+        overflow: hidden;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: var(--jfmod-lines);
+    }
+
+    > .jfmod-clampText > p { display: inline; }
+
+    > .jfmod-clampText::before {
+        content: '';
+        float: right;
+        width: 0;
+        height: calc(100% - 1lh);
+    }
+
+    .jfmod-more {
+        float: right;
+        clear: both;
+        margin-left: var(--jfmod-s-2);
+        padding: 0;
+        border: 0;
+        background: none;
+        color: #fff;
+        font: inherit;
+        font-weight: 700;
+        line-height: inherit;
+        cursor: pointer;
+    }
+
+    &.open > .jfmod-clampText {
+        display: block;
+        -webkit-line-clamp: unset;
+    }
+
+    &.open > .jfmod-clampText::before { display: none; }
+    &.open .jfmod-more { float: none; }
+}
