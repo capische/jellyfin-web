@@ -31,6 +31,9 @@ export const readEnvironment = () => {
 
 export const DesignContext = createContext<Device | false>(false);
 
+/** ds.t19's quiet track controls and one chooser: computer, phone and tablet (the user, 2026-11-11); the TV keeps its strip. */
+export const quietTracks = (device: Device | false) => !!device && device !== 'tv';
+
 // A click also moves focus, and a dialog focuses a control when a click opens it; the mockup's rings are for keys and the TV.
 if (typeof document !== 'undefined') {
     document.addEventListener('pointerdown', () => document.documentElement.classList.add('ds-pointer'), true);

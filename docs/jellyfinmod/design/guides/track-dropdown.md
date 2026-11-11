@@ -1,9 +1,10 @@
 # Track strip and dropdown (the custom dropdown)
 
 **Quiet controls and one chooser on the computer (ds.t19): approved by the user 2026-11-08, built, not accepted, computer first
-look.** The user, of workspace `reviews/netflix-tracks/codex.html`: "I love this one. Less chrome. Same control." Computer title
-head only (`.jfds.dev-computer:not(.layout-tv)`, the ds.t19 block of `design/titleTop.scss`), tokens `sN` = `--jfmod-s<n>` (B = 18 px).
-Phone, tablet and TV keep the strip below until their own gate.
+look.** The user, of workspace `reviews/netflix-tracks/codex.html`: "I love this one. Less chrome. Same control." **Phone and tablet
+too (the user 2026-11-11, built, not accepted, gate 1 on beta):** title top on computer, phone and tablet (`.jfds:not(.layout-tv)
+.jfmod-titleTop`, the ds.t19 block of `design/titleTop.scss`, `quietTracks` in `Root.tsx`), each at its own B (computer 18 px); tokens
+`sN` = `--jfmod-s<n>`. The TV keeps the strip below. On a phone the controls sit under the head (Video on its own line).
 
 - **Closed:** three quiet controls s0 under the action pill, s-2 apart, no captions and no glass: each the kind's s0 icon (Material
   `display`, `audio`, `subs`, muted ink), the value at B, an s-1 chevron at 61.8 %; s2 high, padding s-2 s-1, s-1 corners, the tint
@@ -14,7 +15,9 @@ Phone, tablet and TV keep the strip below until their own gate.
   Subtitles** without such tracks), then the Dolby two-row lockup ([media-marks.md](media-marks.md)) and, for Audio, the channels at
   s-1 / 600 (`QuietTrack`). The rest are the details: Video the codec, other ranges, bit depth and size; Audio the format word the lockup does not
   already say (`TrueHD`, under AUDIO or ATMOS, since it says lossless; `DTS-HD MA`, `AAC`; not `DD` under AUDIO, `DD+` under
-  DIGITAL+ or `DD+` under ATMOS, the user 2026-11-10), the role and the extra words; Subtitles the format, role and extra words, joined by ` · `.
+  DIGITAL+ or `DD+` under ATMOS, the user 2026-11-10) and the extra words; Subtitles the format chip, the role and the extra words, joined by ` · `.
+  The role (SDH, FORCED, AD …) is its outlined mark after the chip, the chip's size with a hairline of the ink, not a word (the
+  user 2026-11-11: "use SDH pill … Not a text"; Commentary its bubble glyph).
   The closed control shows none of them and has no tip or native title (the user 2026-11-10: "Dropdown got info - that's
   enough"; a paper tip above the control was built 2026-11-09 and removed).
 - **One file:** Video is plain: no chevron, no focus stop, no Video tab, the same value. Audio or Subtitles with a single entry
@@ -29,7 +32,8 @@ Phone, tablet and TV keep the strip below until their own gate.
   user 2026-11-10): while the three controls share a line, a tab takes its control's left edge and width, Close follows s-3 after the
   last, the chooser runs from the first tab's control (a plain Video has no tab, so none under it) to Close, its edge moved out by its s-2
   padding and s-6 hairline (`useTabsUnderControls`,
-  `.jfmod-tabsUnder`); with Video on its own line (a 1280 px window) the tabs stay a row s-3 apart. **Rows are one line** (the
+  `.jfmod-tabsUnder`), as long as the chooser stays inside the controls' strip; with Video on its own line (a 1280 px window), or
+  when it would not fit (a phone's Audio and Subtitles reach its edge), the tabs stay a row s-3 apart and the chooser is s7 at most the column. **Rows are one line** (the
   user 2026-11-09, A: "rows read like the control"), s1 + 2·s-2 (42.9 px) high, padding s-2 s-1 with the text s-1 + s0 + s-2 in, s-1
   corners: the value exactly as the control draws it (blue when current, with the s-1 check s-1 from the left), then the details at
   s-1 in the head's muted ink at the row's right edge, growing left into all the room the value leaves and cut with "…" only past
@@ -48,7 +52,7 @@ Phone, tablet and TV keep the strip below until their own gate.
   returning the focus to the control. Opening and walking rows reveal them inside `.clist` only, without scrolling the page or
   the clipped title artwork; list scrolling leaves the navigation bar's page-scroll state alone. Each field keeps its own rows,
   data and selection logic (`FileChooser`, `TrackDropdown`).
-- **The series page** (computer only) shows the selected episode's three controls the same way, read from the episode's media
+- **The series page** (computer, phone and tablet; the TV draws its strip) shows the selected episode's three controls the same way, read from the episode's media
   sources (`EpisodeTrackFields` in `TitlePage.tsx`), its file by default the one Play would start (`deviceMediaSource`), and an
   Audio or Subtitles choice names that file too; a choice there is passed to Play (`mediaSourceId`, `audioStreamIndex`,
   `subtitleStreamIndex`, `useSeriesEpisodes`) and forgotten when another episode is selected. While another episode's media

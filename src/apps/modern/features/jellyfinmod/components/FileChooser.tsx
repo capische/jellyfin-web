@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { TrackField, ChooseRow } from '../design/TrackField';
 import { DesignMediaMarks, QuietTrack, videoQuiet } from '../design/MediaMarks';
 import { Icon } from '../design/Icon';
-import { DesignContext } from '../design/Root';
+import { DesignContext, quietTracks } from '../design/Root';
 
 import { bestFirst, describeVersion, fileMarks, findSource, sameItemId } from '../constants/versions';
 import type { VersionDto } from '../types/versions';
@@ -245,8 +245,8 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, removeDa
     useViewerChoice(view, chosen);
     useDevicePreference(view, versions.length > 1 ? preferred : null, chosen);
     const [open, setOpen] = useState(false);
-    // A computer shows one file plainly, with nothing to open (ds.t19); phone, tablet and TV keep its list (pending entry).
-    const computer = useContext(DesignContext) === 'computer';
+    // The quiet controls show one file plainly, with nothing to open (ds.t19); the TV keeps its list (pending entry).
+    const computer = quietTracks(useContext(DesignContext));
     const plain = computer && versions.length < 2;
     const selected = selectedVersion(versions, current);
     // The size moved to the caption (`VIDEO · 13.2 GB`, the user 2026-11-07); each row keeps its own.

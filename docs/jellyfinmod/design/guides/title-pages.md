@@ -44,8 +44,8 @@ A card selected while partly off the strip slides to its left edge, whole (the u
 the end of the last line; opened, the full text ends in **less**. A text that fits gets neither; computer and TV show it whole
 (`Clamp` in TitlePage.tsx, `.jfmod-clamp` in titleTop.scss).
 **The selected episode's tracks on phone, tablet and TV (the user, 2026-11-10, built, not accepted, gate 1 on beta):** under the
-pill, the movie page's track strip for the selected episode (track-dropdown.md): stacked Video / Audio / Subtitles fields on phone
-and tablet, one row on the TV; they follow the selection and Play sends the choices, as on a computer.
+pill, the selected episode's track controls as a movie's (track-dropdown.md): the quiet controls and chooser on phone and tablet
+(the user, 2026-11-11), the strip on the TV; they follow the selection and Play sends the choices, as on a computer.
 Rows on every title page (computer): titles s1 at line 1, s2 above and s0 below, on the gutter; posters s5, people s4, stills
 s6, s1 apart. Order: **Cast** (actors only), **Guest Stars** (a series page's: the selected episode's, titled with its
 `S1:E1 · Title`), the rest, **More Like This** last. **Download's cloud is s1** (the round actions' glyph size; Play's triangle
