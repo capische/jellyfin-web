@@ -153,7 +153,8 @@ export const Bar: FC<{ onDrawer?: React.MouseEventHandler<HTMLElement> }> = ({ o
         layout.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
         const scroll = (event: Event) => {
             const target = event.target;
-            if (target instanceof Element && target.closest('.pmenu, .rowx, .MuiPopover-root, .vlist')) return;
+            // A row or strip scrolled sideways (its scrollTop stays 0) says nothing about the page, so only what can scroll down counts.
+            if (target instanceof Element && (target.scrollHeight <= target.clientHeight || target.closest('.pmenu, .rowx, .MuiPopover-root, .vlist'))) return;
             setScrolled((target instanceof Element ? target.scrollTop : window.scrollY) > 0);
         };
         document.addEventListener('scroll', scroll, true);
