@@ -12,6 +12,9 @@ import { useCellModel } from './useCellModel';
 import { DesignContext } from './Root';
 
 const activate = (event: KeyboardEvent<HTMLElement>) => {
+    // Only the focused control itself: Enter on a link inside the card (an episode's series name) keeps the link's own action
+    // (Codex review of ds.t14, P2).
+    if (event.target !== event.currentTarget) return;
     if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault();
         event.stopPropagation();

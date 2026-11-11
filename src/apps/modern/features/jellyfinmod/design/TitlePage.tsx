@@ -91,6 +91,24 @@ const Clamp: FC<{ lines: number; className?: string; children: React.ReactElemen
         observer.observe(node);
         return () => observer.disconnect();
     }, [clamps, open, children]);
+    // An open text folds again when its width or its words change (a rotated tablet, new metadata), so it is measured afresh and
+    // a text that now fits loses "less" too (Codex review of ds.t14, P3).
+    useLayoutEffect(() => {
+        const node = text.current;
+        if (!open || !node) return;
+        const width = node.clientWidth;
+        const fold = () => setOpen(false);
+        const resize = new ResizeObserver(() => {
+            if (node.clientWidth !== width) fold();
+        });
+        const words = new MutationObserver(fold);
+        resize.observe(node);
+        words.observe(node, { childList: true, subtree: true, characterData: true });
+        return () => {
+            resize.disconnect();
+            words.disconnect();
+        };
+    }, [open]);
     if (!clamps) return children;
     const toggle = <button type='button' className='jfmod-more focusable' aria-expanded={open} onClick={() => setOpen(!open)}>{open ? 'less' : 'more'}</button>;
     return <div className={'jfmod-clamp' + (open ? ' open' : '') + (className ? ' ' + className : '')} style={{ '--jfmod-lines': lines } as React.CSSProperties}>
@@ -210,6 +228,7 @@ const TrackValue: FC<{ option?: TitleTrack['options'][number]; closed?: boolean 
  */
 const EpisodeTrackFields: FC<{ series: SeriesModel }> = ({ series }) => {
     const { api, user } = useApi();
+    const device = useContext(DesignContext);
     const episode = series.selected;
     const itemId = episode?.hasFile ? episode.item?.Id ?? '' : '';
     const userId = user?.Id ?? '';
@@ -226,6 +245,10 @@ const EpisodeTrackFields: FC<{ series: SeriesModel }> = ({ series }) => {
         queryFn: ({ signal }) => getLanguageNames(api!, { signal }),
         enabled: !!api, staleTime: Infinity, retry: false
     }).data;
+    // The TV's strip stacks by its width as a movie's does (Codex review of ds.t19, P2); the quiet controls never stack. Measured
+    // again for each episode, since the strip is drawn anew for it once its files are read.
+    const stackRef = useRef<HTMLDivElement | null>(null);
+    const stacked = useStacked(stackRef, [device, itemId].join(), !!sources?.length);
     if (!episode || !itemId || !sources?.length) return null;
     const chosen = series.tracks?.key === episode.key ? series.tracks : { key: episode.key };
     // A track choice names its file too, so Play starts the file whose streams were shown.
@@ -248,20 +271,23 @@ const EpisodeTrackFields: FC<{ series: SeriesModel }> = ({ series }) => {
     const current = audios.find(stream => stream.Index === audio);
     const subtitleNow = subtitles.find(stream => stream.Index === subtitle);
     // A new episode closes the old chooser; its retained controls cannot change the new episode while loading.
-    return <div key={itemId} className='gpk' aria-busy={isPlaceholderData}
-        ref={node => node?.toggleAttribute('inert', isPlaceholderData)}>
+    return <div key={itemId} className={'gpk' + (stacked ? ' stacked' : '')} aria-busy={isPlaceholderData}
+        ref={node => {
+            stackRef.current = node;
+            node?.toggleAttribute('inert', isPlaceholderData);
+        }}>
         <TrackField kind='v' name='Video' value={<TrackValue closed option={option(source, sources.indexOf(source))} />} enabled={sources.length > 1}
-            stacked={false}>
+            stacked={stacked}>
             {sources.map((candidate, index) => <ChooseRow key={candidate.Id} sourceId={candidate.Id ?? undefined} selected={candidate === source}
                 onChoose={() => set({ source: candidate.Id ?? undefined, audio: undefined, subtitle: undefined })}><TrackValue option={option(candidate, index)} /></ChooseRow>)}
         </TrackField>
-        <TrackField kind='a' name='Audio' enabled={audios.length > 1} stacked={false} title={current?.DisplayTitle ?? undefined}
+        <TrackField kind='a' name='Audio' enabled={audios.length > 1} stacked={stacked} title={current?.DisplayTitle ?? undefined}
             value={current ? <TrackText stream={current} names={names} /> : <TrackLanguage language='None' />}
             quietValue={current ? undefined : <TrackLanguage language='No Audio' />}>
             {audios.map(stream => <ChooseRow key={stream.Index} trackValue={String(stream.Index)} selected={stream === current} title={stream.DisplayTitle ?? undefined}
                 onChoose={() => set({ source: source.Id ?? undefined, audio: stream.Index })}><TrackText stream={stream} names={names} /></ChooseRow>)}
         </TrackField>
-        <TrackField kind='s' name='Subtitles' enabled={subtitles.length > 0} stacked={false} title={subtitleNow?.DisplayTitle ?? undefined}
+        <TrackField kind='s' name='Subtitles' enabled={subtitles.length > 0} stacked={stacked} title={subtitleNow?.DisplayTitle ?? undefined}
             value={subtitleNow ? <TrackText stream={subtitleNow} names={names} /> : <TrackLanguage language='Off' />}
             quietValue={subtitleNow ? undefined : <TrackLanguage language={subtitles.length ? 'Subtitles Off' : 'No Subtitles'} />}>
             <ChooseRow trackValue='-1' selected={!subtitleNow} onChoose={() => set({ source: source.Id ?? undefined, subtitle: -1 })}><TrackLanguage language='Off' /></ChooseRow>
