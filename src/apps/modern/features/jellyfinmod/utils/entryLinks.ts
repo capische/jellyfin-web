@@ -10,6 +10,14 @@ export const getTmdbPath = (mediaType: 'movie' | 'series', tmdbId: number, serve
     '/details?tmdbType=' + mediaType + '&tmdbId=' + tmdbId + (season !== undefined ? '&season=' + season : '')
     + (episode !== undefined ? '&episode=' + episode : '') + (serverId ? '&serverId=' + encodeURIComponent(serverId) : '');
 
+/** A series page with one of its episodes selected (`episodeId`), as an episode on Home opens it (the user, 2026-11-10). */
+export const seriesEpisodePath = (episode: { Id?: string | null; SeriesId?: string | null }, serverId?: string | null) =>
+    '#/details?id=' + encodeURIComponent(episode.SeriesId ?? '') + '&episodeId=' + encodeURIComponent(episode.Id ?? '')
+    + (serverId ? '&serverId=' + encodeURIComponent(serverId) : '');
+
+/** The episode a series page was opened on (`seriesEpisodePath`), if any. */
+export const selectedEpisodeParam = () => new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('episodeId') ?? undefined;
+
 /** TMDB provides image paths, never arbitrary remote image URLs. */
 export const getTmdbImage = (path?: string | null, size: 'w154' | 'w185' | 'w300' | 'w342' | 'w500' | 'w1280' = 'w500') =>
     path && /^\/[a-zA-Z0-9_./-]+$/.test(path) ? 'https://image.tmdb.org/t/p/' + size + path : undefined;

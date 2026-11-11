@@ -14,7 +14,7 @@ import { RELEASES_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisit
 import { openReleasePicker } from '../integration/releasePicker';
 import { restoreFocusTo } from '../integration/stockHeaderButton';
 import { sameItemId } from '../constants/versions';
-import { getTmdbImage } from '../utils/entryLinks';
+import { getTmdbImage, selectedEpisodeParam } from '../utils/entryLinks';
 import { type EntryEpisode, FileState } from '../types/entry';
 import { BrowseCell } from './BrowsePage';
 import { Icon, Cloud } from './Icon';
@@ -117,8 +117,9 @@ export const useSeriesEpisodes = (series?: BaseItemDto) => {
     const canAcquire = !!user?.Policy?.IsAdministrator && capabilities.includes(RELEASES_CAPABILITY) && !!detail.data;
     const episodes = useMemo(() => (natives.data && api ? mergeEpisodes(api.basePath, natives.data, detail.data?.episodes) : []),
         [api, natives.data, detail.data?.episodes]);
-    const [chosen, setChosen] = useState<string>();
-    useEffect(() => setChosen(undefined), [seriesId]);
+    // Opened from an episode on Home, that episode starts selected (`seriesEpisodePath`).
+    const [chosen, setChosen] = useState<string | undefined>(selectedEpisodeParam);
+    useEffect(() => setChosen(selectedEpisodeParam()), [seriesId]);
     let selectedIndex = episodes.findIndex(episode => episode.key === chosen);
     if (selectedIndex < 0) selectedIndex = firstUnwatched(episodes);
     const selected = episodes[selectedIndex] as SeriesEpisode | undefined;
