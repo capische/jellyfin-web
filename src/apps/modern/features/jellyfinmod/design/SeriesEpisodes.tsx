@@ -296,6 +296,16 @@ export const EpisodeStrip: FC<{ series: SeriesModel }> = ({ series }) => {
         node.scrollTo({ left: card.offsetLeft - parseFloat(getComputedStyle(node).paddingLeft), behavior: 'smooth' });
         setSeason(number);
     };
+    // A card selected while partly off the strip slides to its left edge, whole (the user, 2026-11-10).
+    const choose = (index: number) => {
+        series.select(episodes[index].key);
+        const node = strip.current;
+        const card = node?.children[index] as HTMLElement | undefined;
+        if (!node || !card) return;
+        const pad = parseFloat(getComputedStyle(node).paddingLeft);
+        const hidden = card.offsetLeft < node.scrollLeft + pad || card.offsetLeft + card.offsetWidth > node.scrollLeft + node.clientWidth - pad;
+        if (hidden) node.scrollTo({ left: card.offsetLeft - pad, behavior: 'smooth' });
+    };
     const close = useCallback(() => setOpen(false), []);
     if (!episodes.length) return null;
     const shown = season ?? episodes[0].season;
@@ -316,7 +326,7 @@ export const EpisodeStrip: FC<{ series: SeriesModel }> = ({ series }) => {
         </Menu>}
         <div ref={strip} className='erail' onScroll={sync}>
             {episodes.map((episode, index) => <EpisodeCard key={episode.key} episode={episode} selected={index === selectedIndex}
-                boundary={index > 0 && episodes[index - 1].season !== episode.season} onSelect={() => series.select(episode.key)}
+                boundary={index > 0 && episodes[index - 1].season !== episode.season} onSelect={() => choose(index)}
                 onDownload={series.canAcquire && !episode.hasFile && !episode.airs && episode.entryEpisode && !inFlight(episode) ?
                     opener => series.download(episode, opener) : undefined} download={downloads.get(episode.key)} />)}
         </div>
