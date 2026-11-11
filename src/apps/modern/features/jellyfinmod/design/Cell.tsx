@@ -81,9 +81,9 @@ export const CellDisc: FC<{ model: CellModel }> = ({ model }) => {
 };
 
 const CellCaption: FC<{ model: CellModel }> = ({ model }) => {
-    const { name, second, rating, item, entry } = model;
+    const { name, second, rating, item, entry, seriesHref } = model;
     return <div className='capt'>
-        <div className='ln t'>{name}</div><div className='ln'>{second}{rating && <span className={'jfmod-cardRating' + (rating.stale ? ' jfmod-cardRating-stale' : '')}> · <RatingIcon rating={rating} />{cardRatingValue(rating)}</span>}</div>
+        {seriesHref ? <a className='ln t itemAction' data-action={ItemAction.None} href={seriesHref}>{name}</a> : <div className='ln t'>{name}</div>}<div className='ln'>{second}{rating && <span className={'jfmod-cardRating' + (rating.stale ? ' jfmod-cardRating-stale' : '')}> · <RatingIcon rating={rating} />{cardRatingValue(rating)}</span>}</div>
         <div className='ln d' data-jfmod-cast={item?.Id ?? entry?.id} />
     </div>;
 };
