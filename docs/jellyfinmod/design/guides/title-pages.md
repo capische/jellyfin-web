@@ -38,6 +38,7 @@ switch (`episodePage`); a click elsewhere on the card still only selects it.
 own B, with no arrow pill (touch swipes the strip; the TV's D-pad walks it, Enter selects). Pill row s1 above; phone stills s5
 s0 apart, tablet and TV s6 s1 apart; a season's first card has s1 more. On the TV the selection keeps the 0.135em ring and the
 focused card takes the 0.236em one; the pill takes an s-3 primary ring on focus.
+A card selected while partly off the strip slides to its left edge, whole (the user, 2026-11-10).
 Rows on every title page (computer): titles s1 at line 1, s2 above and s0 below, on the gutter; posters s5, people s4, stills
 s6, s1 apart. Order: **Cast** (actors only), **Guest Stars** (a series page's: the selected episode's, titled with its
 `S1:E1 · Title`), the rest, **More Like This** last. **Download's cloud is s1** (the round actions' glyph size; Play's triangle
