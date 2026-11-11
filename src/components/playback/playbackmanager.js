@@ -1821,6 +1821,15 @@ export class PlaybackManager {
 
                 sendProgressUpdate(player, 'timeupdate');
             }, function (e) {
+                if (e?.playbackCancelled) {
+                    // A newer start replaced this restart before it began: that start owns the player's state now.
+                    if (playerData.streamInfo !== streamInfo) return;
+                    // Stopped while it waited: finish the stop that was ignored while the stream was changing, without an error.
+                    playerData.isChangingStream = false;
+                    onPlaybackStopped.call(player, e);
+                    return;
+                }
+
                 playerData.isChangingStream = false;
 
                 onPlaybackError.call(player, e, {
