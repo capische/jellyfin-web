@@ -6,7 +6,7 @@ too (the user 2026-11-11, built, not accepted, gate 1 on beta):** title top on c
 .jfmod-titleTop`, the ds.t19 block of `design/titleTop.scss`, `quietTracks` in `Root.tsx`), each at its own B (computer 18 px); tokens
 `sN` = `--jfmod-s<n>`. The TV keeps the strip below. On a phone the closed controls sit under the head on one line, right under the
 pill (the user 2026-11-11: "It is too big", "smaller dolby icons and fit all of them"): B·φ^-½ (13.68 px), s-4 apart, s-3 sides,
-the Dolby lockup 10 px (a named exception), each still 40 px high; the chooser keeps the phone's B and its 40 px rows.
+the Dolby lockup 10 px (a named exception, its words at their own 12 units so they fill the box), each still 40 px high, and a movie's strip never stacks either (the user 2026-11-11); the chooser keeps the phone's B and its 40 px rows.
 
 - **Closed:** three quiet controls s0 under the action pill, s-2 apart, no captions and no glass: each the kind's s0 icon (Material
   `display`, `audio`, `subs`, muted ink), the value at B, an s-1 chevron at 61.8 %; s2 high, padding s-2 s-1, s-1 corners, the tint
@@ -14,8 +14,9 @@ the Dolby lockup 10 px (a named exception), each still 40 px high; the chooser k
   left edge, its icon s-1 in (the user 2026-11-09).
 - **One line, details on demand** (the user 2026-11-09, workspace `reviews/netflix-tracks/scroll-and-lines.html`, top section): the
   value is the name (Video's resolution in 600, Audio's language, Subtitles' language, or **Subtitles Off**; **No Audio** / **No
-  Subtitles** without such tracks), then the Dolby two-row lockup ([media-marks.md](media-marks.md)) and, for Audio, the channels at
-  s-1 / 600 (`QuietTrack`). The rest are the details: Video the codec, other ranges, bit depth and size; Audio the format word the lockup does not
+  Subtitles** without such tracks; a phone drops the field's name there, **Off** / **None**, the icon naming it, so its three
+  controls keep one line, the user 2026-11-11), then the Dolby two-row lockup ([media-marks.md](media-marks.md)) and, for Audio, the channels at
+  s-1 / 600, s-3 after the lockup (the user 2026-11-11) (`QuietTrack`). The rest are the details: Video the codec, other ranges, bit depth and size; Audio the format word the lockup does not
   already say (`TrueHD`, under AUDIO or ATMOS, since it says lossless; `DTS-HD MA`, `AAC`; not `DD` under AUDIO, `DD+` under
   DIGITAL+ or `DD+` under ATMOS, the user 2026-11-10) and the extra words; Subtitles the format chip, the role and the extra words, joined by ` · `.
   The role (SDH, FORCED, AD …) is its outlined mark after the chip, the chip's size with a hairline of the ink, not a word (the

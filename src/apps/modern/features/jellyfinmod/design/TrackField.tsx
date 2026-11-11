@@ -215,9 +215,11 @@ QuietField.displayName = 'QuietField';
  */
 export const TrackField: FC<{ kind: TrackKind; name: string; value: ReactNode; enabled?: boolean; stacked: boolean;
     children?: ReactNode; onOpen?: () => void; onClose?: () => void; closeOnChoose?: boolean; title?: string; extra?: string;
-    /** The closed value on a computer, where no caption names the field (`Subtitles Off`); `value` otherwise. */
+    /** The closed value on a computer and tablet, where no caption names the field (`Subtitles Off`); `value` otherwise, and on a
+     * phone, whose one line of three controls has no room for the name (the icon names it: `Off`). */
     quietValue?: ReactNode }> = ({ kind, name, value, enabled = true, stacked, children, onOpen, onClose, closeOnChoose = true, title, extra, quietValue }) => {
-    const quiet = quietTracks(useContext(DesignContext));
+    const device = useContext(DesignContext);
+    const quiet = quietTracks(device);
     const [open, setOpen] = useState(false);
     const [tabs, setTabs] = useState<ChooserTab[]>([]);
     const [focus, setFocus] = useState(false);
@@ -325,7 +327,7 @@ export const TrackField: FC<{ kind: TrackKind; name: string; value: ReactNode; e
     const control = enabled ? { tabIndex: 0, 'aria-haspopup': 'listbox' as const, 'aria-expanded': open } : {};
     if (quiet) {
         return <><QuietField ref={trigger} kind={kind} name={name} enabled={enabled} open={open} onToggle={toggle}
-            onKeyDown={keys}>{quietValue ?? value}</QuietField>{sheet}</>;
+            onKeyDown={keys}>{device === 'phone' ? value : quietValue ?? value}</QuietField>{sheet}</>;
     }
 
     return <><div ref={trigger} role={role} {...control}

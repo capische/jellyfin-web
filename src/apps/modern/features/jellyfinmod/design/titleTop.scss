@@ -523,6 +523,9 @@
         font-weight: 600;
     }
 
+    /* The channels sit s-3 after the lockup, one step closer than the name's s-2 (the user 2026-11-11). */
+    .gpk .dolby + .chn { margin-left: calc(var(--jfmod-s-3) - var(--jfmod-s-2)); }
+
     /* The closed control shows no details (the user 2026-11-10: no tip, the chooser has them). */
     .gpk .seg .val .qd { display: none; }
 
@@ -788,8 +791,8 @@
         padding: var(--jfmod-s-2) var(--jfmod-s-3);
     }
 
+    /* The lockup at 10 px keeps its own 12-unit words, so they fill its box and 5.1 follows the ink. */
     > .seg .dolby { height: 10px; }
-    > .seg .dolby text { font-size: 7.5px; }
 }
 
 .jfds.dev-computer:not(.layout-tv)[data-theme='light'] .jfmod-titleTop .jfmod-titleHead {
