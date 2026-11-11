@@ -34,6 +34,10 @@ from the series page; the season total under the pill (`0 of 1 episode · 0% · 
 (the user, 2026-11-07). On a computer, hovering a card of an aired episode with no file and nothing on its way shows the poster
 card's glass disc with the cloud: it opens the same Get a Release dialog as Download with that episode preselected in its scope
 switch (`episodePage`); a click elsewhere on the card still only selects it.
+**Phone, tablet and TV (the user, 2026-11-10, built, not accepted, gate 1 on beta):** the same pill and strip at each layout's
+own B, with no arrow pill (touch swipes the strip; the TV's D-pad walks it, Enter selects). Pill row s1 above; phone stills s5
+s0 apart, tablet and TV s6 s1 apart; a season's first card has s1 more. On the TV the selection keeps the 0.135em ring and the
+focused card takes the 0.236em one; the pill takes an s-3 primary ring on focus.
 Rows on every title page (computer): titles s1 at line 1, s2 above and s0 below, on the gutter; posters s5, people s4, stills
 s6, s1 apart. Order: **Cast** (actors only), **Guest Stars** (a series page's: the selected episode's, titled with its
 `S1:E1 · Title`), the rest, **More Like This** last. **Download's cloud is s1** (the round actions' glyph size; Play's triangle

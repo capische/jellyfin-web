@@ -472,6 +472,16 @@
         right: var(--jfmod-gut);
         font-size: var(--jfmod-s0);
     }
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------
+   The series page's episode strip on every layout (the user, 2026-11-10: phone, tablet and TV draw the computer's, ds.t14),
+   each at its own base B: cells --jfmod-sgap apart (padded half), stills --jfmod-still. Computer, tablet and TV s1 and s6;
+   phone s0 and s5. The slider arrows are the computer's: touch swipes the strip and the TV's D-pad walks it.
+   --------------------------------------------------------------------------------------------------------------------- */
+.jfmod-titleTop .titlefoot {
+    --jfmod-sgap: var(--jfmod-s1);
+    --jfmod-still: var(--jfmod-s6);
 
     /* The season pill (small: body type, at the 40 px floor) and the slider's arrows on one line. */
     .estrip .etop {
@@ -529,8 +539,8 @@
         position: relative;
         display: flex;
         overflow-x: auto;
-        margin: 0 calc(-1 * var(--jfmod-gut)) calc(var(--jfmod-s1) / -2);
-        padding: 0 calc(var(--jfmod-gut) - var(--jfmod-s1) / 2);
+        margin: 0 calc(-1 * var(--jfmod-gut)) calc(var(--jfmod-sgap) / -2);
+        padding: 0 calc(var(--jfmod-gut) - var(--jfmod-sgap) / 2);
         scrollbar-width: none;
         overscroll-behavior-x: contain;
     }
@@ -539,8 +549,12 @@
 
     .erail .cell {
         flex: none;
+        width: calc(var(--jfmod-still) + var(--jfmod-sgap));
+        font-size: var(--jfmod-s0);
         cursor: pointer;
     }
+
+    .erail .tile { padding: calc(var(--jfmod-sgap) / 2); }
     .erail .cell.sfirst { margin-left: var(--jfmod-s2); }
 
     /* Selected: the keyboard ring's width and a primary title; hover keeps the card's thinner ring. */
@@ -578,6 +592,29 @@
         text-transform: uppercase;
         white-space: nowrap;
     }
+}
+
+&.dev-phone .jfmod-titleTop .titlefoot {
+    --jfmod-sgap: var(--jfmod-s0);
+    --jfmod-still: var(--jfmod-s5);
+}
+
+&:not(.dev-computer) .jfmod-titleTop .titlefoot,
+&.layout-tv .jfmod-titleTop .titlefoot {
+    .estrip .etop { padding-top: var(--jfmod-s1); }
+    .estrip .arrows { display: none; }
+    .erail .cell.sfirst { margin-left: var(--jfmod-s1); }
+}
+
+/* The TV: the selection keeps the card's thinner ring, so the D-pad's focus (the keyboard ring) stands out from it. */
+&.layout-tv .jfmod-titleTop .titlefoot {
+    .spill:focus {
+        box-shadow: 0 0 0 var(--jfmod-s-3) var(--primary);
+        outline: none;
+    }
+
+    .erail .cell.sel .post { box-shadow: 0 0 0 0.135em var(--primary); }
+    .erail .cell:focus .post { box-shadow: 0 0 0 0.236em var(--primary); }
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------
