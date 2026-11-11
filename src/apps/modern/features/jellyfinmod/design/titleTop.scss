@@ -766,6 +766,32 @@
     .gpk .vlist.chooser .vrow:focus { box-shadow: inset 0 0 0 var(--jfmod-s-4) var(--primary); }
 }
 
+/* The phone's closed controls on one line (the user, 2026-11-11: "It is too big", "smaller dolby icons and fit all of them"):
+   right under the pill, at B·φ^-½ (13.68 px), s-4 apart with s-3 sides; the Dolby lockup 10 px high (a named exception, as its
+   16 px is), each control still 40 px high (the touch target). The chooser keeps the phone's B and its 40 px rows. */
+.jfds.dev-phone .jfmod-titleTop .gpk {
+    gap: 0 var(--jfmod-s-4);
+    margin-top: 0;
+
+    &::after { display: none; }
+
+    > .seg {
+        --jfmod-base: calc(17.4px * 0.7861513778 * var(--jfmod-scale, 1));
+        --jfmod-s-5: calc(var(--jfmod-base) * 0.0901699437);
+        --jfmod-s-3: calc(var(--jfmod-base) * 0.2360679775);
+        --jfmod-s-2: calc(var(--jfmod-base) * 0.3819660113);
+        --jfmod-s-1: calc(var(--jfmod-base) * 0.6180339887);
+        --jfmod-s0: var(--jfmod-base);
+
+        gap: var(--jfmod-s-3);
+        min-height: 40px;
+        padding: var(--jfmod-s-2) var(--jfmod-s-3);
+    }
+
+    > .seg .dolby { height: 10px; }
+    > .seg .dolby text { font-size: 7.5px; }
+}
+
 .jfds.dev-computer:not(.layout-tv)[data-theme='light'] .jfmod-titleTop .jfmod-titleHead {
     --jfmod-head-muted: var(--text);
 
