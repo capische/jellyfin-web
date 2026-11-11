@@ -10,7 +10,7 @@ type TrackKind = 'v' | 'a' | 's';
 interface ChooserTab { name: string; kind: string }
 
 const KIND_ICON: Record<TrackKind, IconName> = { v: 'display', a: 'audio', s: 'subs' };
-/** The strip's other choosable fields, in Video, Audio, Subtitles order: the computer chooser's tabs. */
+/** The strip's choosable fields, in Video, Audio, Subtitles order: the chooser's tabs, which are the controls themselves. */
 const chooserTabs = (trigger: HTMLElement | null): ChooserTab[] => Array.from(trigger?.parentElement?.querySelectorAll<HTMLElement>('.seg.focusable[data-jfmod-kind]') ?? [])
     .map(field => ({ name: field.dataset.jfmodTrackField ?? '', kind: field.dataset.jfmodKind ?? '' }))
     .sort((a, b) => 'vas'.indexOf(a.kind) - 'vas'.indexOf(b.kind));
@@ -24,8 +24,8 @@ const sideStop = (row: HTMLElement, key: string) => {
     return stops[stops.indexOf(document.activeElement as HTMLElement) + (key === 'ArrowLeft' ? -1 : 1)] ?? (row.matches('.vrow') ? row : undefined);
 };
 
-/** The open list's arrow keys: Up and Down walk its rows (Up from the first returns to the field, or the chooser's tab); Left and
- * Right walk a pending entry's X, and in the computer's chooser they switch to the next tab. */
+/** The open list's arrow keys: Up and Down walk its rows (Up from the first returns to the field); Left and Right walk a pending
+ * entry's X, and in the chooser they open the next control's list, the controls row being its tabs. */
 type Chooser = { kind: string; tabs: ChooserTab[]; switchTo: (name: string) => void } | null;
 
 /** Left and Right on a row of the computer's chooser open the tab beside this one, as the mockup's keys do. */
@@ -39,7 +39,7 @@ const switchTab = (event: React.KeyboardEvent<HTMLElement>, key: string, chooser
     return true;
 };
 
-/** Up and Down walk the rows; Up from the first returns to the field, or to the chooser's open tab. */
+/** Up and Down walk the rows; Up from the first returns to the field (in the chooser, its control: the open tab). */
 const verticalStop = (list: HTMLElement, row: HTMLElement, key: string, back: HTMLElement | null) => {
     const rows = Array.from(list.querySelectorAll<HTMLElement>('.vrow, .pend'));
     const destination = rows[rows.indexOf(row) + (key === 'ArrowUp' ? -1 : 1)];
@@ -66,7 +66,7 @@ const walkList = (event: React.KeyboardEvent<HTMLElement>, chooser: Chooser, tri
     let next: HTMLElement | null | undefined;
     if (key === 'ArrowLeft' || key === 'ArrowRight') next = sideStop(row, key);
     if (key === 'ArrowUp' || key === 'ArrowDown') {
-        next = verticalStop(event.currentTarget, row, key, chooser ? event.currentTarget.querySelector<HTMLElement>('.ctab.on') : trigger);
+        next = verticalStop(event.currentTarget, row, key, trigger);
     }
     if (!next) return;
     event.preventDefault();
@@ -79,78 +79,31 @@ const walkList = (event: React.KeyboardEvent<HTMLElement>, chooser: Chooser, tri
     }
 };
 
-type TabPlace = { left: number; width: number }[] | null;
-
 /**
- * Each tab under its own control (the user 2026-11-10): while the controls share one line, a tab takes its control's left edge and
- * width and the chooser runs from the first tab's control to Close after the last, its edge moved out by its inset so the tabs line
- * up; otherwise (Video on its own line, a 1280 px window) the tabs stay a row.
+ * One row of controls (the user 2026-11-11, "remove word Subtitles - make it one row"): while the controls would wrap with the
+ * field's name in its value, the row takes `jfmod-tight` and the value drops it (`Subtitles Off` → `Off`). Measured again when the
+ * row or a control changes size.
  */
-const useTabsUnderControls = (head: React.RefObject<HTMLDivElement>, tabs: ChooserTab[]): TabPlace => {
-    const [place, setPlace] = useState<TabPlace>(null);
-    const measure = useCallback(() => {
-        const chooser = head.current?.closest<HTMLElement>('.vlist.chooser');
-        const strip = chooser?.parentElement;
-        const close = head.current?.querySelector<HTMLElement>('.cclose');
-        if (!chooser || !strip || !close) return;
-        const boxes = tabs.map(tab => strip.querySelector<HTMLElement>(`.seg[data-jfmod-track-field="${tab.name}"]`)?.getBoundingClientRect());
-        const first = boxes[0];
-        const oneLine = !!first && boxes.every(box => box && Math.abs(box.top - first.top) < 1);
-        // The chooser starts at the first tab's control (the user 2026-11-10: a plain Video has no tab, so no gap under it).
-        const area = strip.getBoundingClientRect();
-        const origin = oneLine ? Math.min(...boxes.map(box => (box as DOMRect).left)) : 0;
-        const style = getComputedStyle(chooser);
-        const inset = parseFloat(style.paddingLeft) + parseFloat(style.borderLeftWidth);
-        const gap = parseFloat(getComputedStyle(head.current as HTMLElement).columnGap) || 0;
-        const right = oneLine ? Math.max(...boxes.map(box => (box as DOMRect).right)) - origin : 0;
-        const width = right + gap + close.getBoundingClientRect().width + 2 * inset;
-        // Under the controls only while it stays inside the strip (a phone's Audio and Subtitles reach its edge): else a row of tabs.
-        const under = oneLine && origin - area.left - inset + width <= area.width + inset;
-        chooser.classList.toggle('jfmod-tabsUnder', under);
-        if (!under) {
-            chooser.style.removeProperty('width');
-            chooser.style.removeProperty('left');
-            setPlace(null);
-            return;
-        }
-        chooser.style.left = origin - area.left - inset + 'px';
-        chooser.style.width = width + 'px';
-        const next = boxes.map(box => ({ left: (box as DOMRect).left - origin, width: (box as DOMRect).width }));
-        setPlace(was => (was && was.length === next.length && was.every((tab, index) => tab.left === next[index].left
-            && tab.width === next[index].width) ? was : next));
-    }, [head, tabs]);
-    // Every render: a control's value can change width while the chooser is open (language names arriving); unchanged
-    // measurements keep the state, so this settles.
-    useLayoutEffect(measure);
-    useEffect(() => {
-        const chooser = head.current?.closest<HTMLElement>('.vlist.chooser');
-        window.addEventListener('resize', measure);
-        return () => {
-            window.removeEventListener('resize', measure);
-            // The sheet's node can outlive the frame (a live switch to another layout): leave it no computer geometry.
-            chooser?.classList.remove('jfmod-tabsUnder');
-            chooser?.style.removeProperty('left');
-            chooser?.style.removeProperty('width');
-        };
-    }, [head, measure]);
-    return place;
-};
-
-/** The computer's one chooser around a field's rows: a tab per choosable field and Close, then the rows (no foot line, the user 2026-11-09). */
-const ChooserFrame: FC<{ kind: TrackKind; name: string; tabs: ChooserTab[]; onTab: (name: string) => void; onClose: () => void; children?: ReactNode }> = ({ kind, name, tabs, onTab, onClose, children }) => {
-    const head = useRef<HTMLDivElement>(null);
-    const place = useTabsUnderControls(head, tabs);
-    return <>
-        <div ref={head} className='chead'>
-            <div className='ctabs' role='group' aria-label='Choose what to change'>{tabs.map((tab, index) => <button key={tab.kind} type='button'
-                className={'ctab' + (tab.kind === kind ? ' on' : '')} aria-pressed={tab.kind === kind}
-                style={place?.[index] && { left: place[index].left, width: place[index].width }}
-                onClick={() => { if (tab.kind !== kind) onTab(tab.name); }}>{tab.name}</button>)}</div>
-            <button type='button' className='cclose' aria-label='Close' onClick={onClose}><Icon name='close' /></button>
-        </div>
-        <ScrollRail name={name}>{children}</ScrollRail>
-    </>;
-};
+const useTightRow = (trigger: React.RefObject<HTMLElement>, active: boolean) => useLayoutEffect(() => {
+    const row = trigger.current?.parentElement;
+    if (!active || !row) return;
+    const segs = () => Array.from(row.querySelectorAll<HTMLElement>(':scope > .seg'));
+    const fit = () => {
+        row.classList.remove('jfmod-tight');
+        const boxes = segs().map(seg => seg.getBoundingClientRect());
+        row.classList.toggle('jfmod-tight', boxes.some(box => box.top >= boxes[0].bottom - 1));
+    };
+    fit();
+    // eslint-disable-next-line compat/compat -- Chromium 79 supports ResizeObserver; older engines keep the resize fallback.
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(fit);
+    for (const node of [row, ...segs()]) observer?.observe(node);
+    window.addEventListener('resize', fit);
+    return () => {
+        observer?.disconnect();
+        window.removeEventListener('resize', fit);
+        row.classList.remove('jfmod-tight');
+    };
+}, [trigger, active]);
 
 /**
  * The list and its rail (the user 2026-11-09, B): while the rows do not fit, an s0 rail at the list's right edge with a chevron at
@@ -210,22 +163,23 @@ QuietField.displayName = 'QuietField';
 
 /**
  * ds2.js stripAt/seg: open lists are paper, inline on narrow screens, anchored to their cell otherwise. On a computer (ds.t19, the
- * user 2026-11-08) the field is a quiet control (its kind's icon, the value, a chevron) and its list opens in one paper chooser
- * under the strip, with a tab per choosable field: a tab closes this list and opens that field's, so each field keeps its own rows.
+ * user 2026-11-08; phone and tablet 2026-11-11) the field is a quiet control (its kind's icon, the value, a chevron) and its list
+ * opens in one paper chooser under the strip with no head of its own (the user 2026-11-11): the controls row is its tabs, the open
+ * control on the tint, and another control closes this list and opens its own.
  */
 export const TrackField: FC<{ kind: TrackKind; name: string; value: ReactNode; enabled?: boolean; stacked: boolean;
     children?: ReactNode; onOpen?: () => void; onClose?: () => void; closeOnChoose?: boolean; title?: string; extra?: string;
-    /** The closed value on a computer and tablet, where no caption names the field (`Subtitles Off`); `value` otherwise, and on a
-     * phone, whose one line of three controls has no room for the name (the icon names it: `Off`). */
+    /** The closed quiet value, where no caption names the field (`Subtitles Off`); `value` (`Off`, the icon naming it) while the
+     * controls would not fit one row with it (`useTightRow`). */
     quietValue?: ReactNode }> = ({ kind, name, value, enabled = true, stacked, children, onOpen, onClose, closeOnChoose = true, title, extra, quietValue }) => {
-    const device = useContext(DesignContext);
-    const quiet = quietTracks(device);
+    const quiet = quietTracks(useContext(DesignContext));
     const [open, setOpen] = useState(false);
     const [tabs, setTabs] = useState<ChooserTab[]>([]);
     const [focus, setFocus] = useState(false);
     const trigger = useRef<HTMLDivElement>(null);
     const list = useRef<HTMLDivElement>(null);
     const focused = useRef<{ source?: string | null; track?: string | null; control?: string }>();
+    useTightRow(trigger, quiet && !!quietValue);
     const close = useCallback(() => {
         setOpen(false);
         onClose?.();
@@ -293,10 +247,6 @@ export const TrackField: FC<{ kind: TrackKind; name: string; value: ReactNode; e
         close();
         trigger.current?.parentElement?.querySelector<HTMLElement>(`.seg[data-jfmod-track-field="${other}"]`)?.click();
     };
-    const back = () => {
-        close();
-        trigger.current?.focus();
-    };
     const sheet = open && <div ref={list} className={'vlist focuscontainer-y' + (quiet ? ' chooser' : '')} data-list={kind}
         role={quiet ? undefined : 'listbox'} aria-label={quiet ? undefined : name} tabIndex={-1} onClick={choose}
         onFocusCapture={event => {
@@ -305,7 +255,7 @@ export const TrackField: FC<{ kind: TrackKind; name: string; value: ReactNode; e
             focused.current = { source: row?.dataset.jfmodMediaSourceId, track: row?.dataset.jfmodTrack,
                 control: target.hasAttribute('data-jfmod-pending-remove') ? 'data-jfmod-pending-remove' : undefined };
         }}
-        onKeyDown={event => walkList(event, quiet ? { kind, tabs, switchTo } : null, trigger.current)}>{quiet ? <ChooserFrame kind={kind} name={name} tabs={tabs} onTab={switchTo} onClose={back}>{children}</ChooserFrame> : children}</div>;
+        onKeyDown={event => walkList(event, quiet ? { kind, tabs, switchTo } : null, trigger.current)}>{quiet ? <ScrollRail name={name}>{children}</ScrollRail> : children}</div>;
     const toggle = () => {
         if (!enabled) return;
         if (open) {
@@ -327,7 +277,7 @@ export const TrackField: FC<{ kind: TrackKind; name: string; value: ReactNode; e
     const control = enabled ? { tabIndex: 0, 'aria-haspopup': 'listbox' as const, 'aria-expanded': open } : {};
     if (quiet) {
         return <><QuietField ref={trigger} kind={kind} name={name} enabled={enabled} open={open} onToggle={toggle}
-            onKeyDown={keys}>{device === 'phone' ? value : quietValue ?? value}</QuietField>{sheet}</>;
+            onKeyDown={keys}>{quietValue ? <><span className='jfmod-long'>{quietValue}</span><span className='jfmod-short'>{value}</span></> : value}</QuietField>{sheet}</>;
     }
 
     return <><div ref={trigger} role={role} {...control}

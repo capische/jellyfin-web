@@ -14,8 +14,9 @@ the Dolby lockup 10 px (a named exception, its words at their own 12 units so th
   left edge, its icon s-1 in (the user 2026-11-09).
 - **One line, details on demand** (the user 2026-11-09, workspace `reviews/netflix-tracks/scroll-and-lines.html`, top section): the
   value is the name (Video's resolution in 600, Audio's language, Subtitles' language, or **Subtitles Off**; **No Audio** / **No
-  Subtitles** without such tracks; a phone drops the field's name there, **Off** / **None**, the icon naming it, so its three
-  controls keep one line, the user 2026-11-11), then the Dolby two-row lockup ([media-marks.md](media-marks.md)) and, for Audio, the channels at
+  Subtitles** without such tracks; **one row** (the user 2026-11-11, "remove word Subtitles - make it one row"): while the three
+  controls would wrap with the field's name, the row takes `.jfmod-tight` (`useTightRow`) and the value drops it, **Off** /
+  **None**, the icon naming it; a row still too long wraps), then the Dolby two-row lockup ([media-marks.md](media-marks.md)) and, for Audio, the channels at
   s-1 / 600, s-3 after the lockup in the control and the list's rows alike (the user 2026-11-11; DIGITAL+'s box 86 units, its ink's width) (`QuietTrack`). The rest are the details: Video the codec, other ranges, bit depth and size; Audio the format word the lockup does not
   already say (`TrueHD`, under AUDIO or ATMOS, since it says lossless; `DTS-HD MA`, `AAC`; not `DD` under AUDIO, `DD+` under
   DIGITAL+ or `DD+` under ATMOS, the user 2026-11-10) and the extra words; Subtitles the format chip, the role and the extra words, joined by ` · `.
@@ -23,20 +24,14 @@ the Dolby lockup 10 px (a named exception, its words at their own 12 units so th
   user 2026-11-11: "use SDH pill … Not a text"; Commentary its bubble glyph).
   The closed control shows none of them and has no tip or native title (the user 2026-11-10: "Dropdown got info - that's
   enough"; a paper tip above the control was built 2026-11-09 and removed).
-- **One file:** Video is plain: no chevron, no focus stop, no Video tab, the same value. Audio or Subtitles with a single entry
+- **One file:** Video is plain: no chevron, no focus stop, the same value. Audio or Subtitles with a single entry
   are plain the same way. (The one-file list's pending entry stays under the controls.) No list shows the administrator's Delete
   note any more (the user 2026-11-09: it made no sense there); stock Delete's confirmation still carries it.
-- **A 1280 px window or narrower** gives Video its own line (`.gpk::after`, the mockup's 1024 window); Audio then starts the second
-  line on the column's edge.
 - **The chooser** (`.vlist.chooser`, one at a time): paper, s-2 under the controls from the column's left, **s7 wide** (at most
   the column; s6·√φ tried 2026-11-09, back to s7 by the user 2026-11-10), s0 corners, s-2 padding, an s-6 hairline (`--hair`), shadow
-  0 s-1 s1 black 61.8 %, over the page. Head (s-2 above the rows): a tab per choosable field (Video, Audio, Subtitles; s2 high, s-1 sides
-  and corners, the open one on the tint, the others 61.8 %) and a round s2 **Close**. **Each tab sits under its own control** (the
-  user 2026-11-10): while the three controls share a line, a tab takes its control's left edge and width, Close follows s-3 after the
-  last, the chooser runs from the first tab's control (a plain Video has no tab, so none under it) to Close, its edge moved out by its s-2
-  padding and s-6 hairline (`useTabsUnderControls`,
-  `.jfmod-tabsUnder`), as long as the chooser stays inside the controls' strip; with Video on its own line (a 1280 px window), or
-  when it would not fit (a phone's Audio and Subtitles reach its edge), the tabs stay a row s-3 apart and the chooser is s7 at most the column. **Rows are one line** (the
+  0 s-1 s1 black 61.8 %, over the page; a phone's column is narrower than s7, so its chooser is the column's width. **No head**
+  (the user 2026-11-11, from the live mock: "Video Audio and Subtitles are tabs"): the controls row is the chooser's tabs, the open
+  control on the tint; the tabs-in-the-head and Close of 2026-11-09/10 (`useTabsUnderControls`) are gone. **Rows are one line** (the
   user 2026-11-09, A: "rows read like the control"), s1 + 2·s-2 (42.9 px) high, padding s-2 s-1 with the text s-1 + s0 + s-2 in, s-1
   corners: the value exactly as the control draws it (blue when current, with the s-1 check s-1 from the left), then the details at
   s-1 in the head's muted ink at the row's right edge, growing left into all the room the value leaves and cut with "…" only past
@@ -47,12 +42,13 @@ the Dolby lockup 10 px (a named exception, its words at their own 12 units so th
   rows do not fit, an s0 column at the list's right edge (the rows give it s0 of right padding) in the muted ink holds an s-1 chevron
   at each end, shown while that end has more rows, and between them an s-5 track (`--hair`) s-3 from the chevrons with an s-3 thumb
   (s-1 corners) whose place and length are the visible part's (`ScrollRail`). It is a reading aid, not a control: the wheel, touch
-  and the keys scroll the list. Only `.clist` scrolls: the outer chooser has no height cap or scroll, keeping the head in place.
-- **Behaviour:** a click opens the chooser on that control's tab with the focus on the current row; the focus leaving the control
-  and its chooser (Tab to another control) closes it, so two choosers are never open; a tab (or Left / Right on a row)
-  closes this field's list and opens that field's; picking a row sets the stock select as before (Play, audio and subtitles follow
-  upstream's code), updates the control and closes the chooser; Escape, a click outside or Close leave without a change, Escape and Close
-  returning the focus to the control. Opening and walking rows reveal them inside `.clist` only, without scrolling the page or
+  and the keys scroll the list. Only `.clist` scrolls: the outer chooser has no height cap or scroll, so nothing else moves.
+- **Behaviour:** a click opens the chooser under the controls with the focus on the current row; a click on another control
+  (or Left / Right on a row) closes this field's list and opens that field's; a click on the open control closes it; the focus
+  leaving the control and its chooser (Tab to another control) closes it, so two choosers are never open; Up from the first row
+  returns to the open control; picking a row sets the stock select as before (Play, audio and subtitles follow upstream's code),
+  updates the control and closes the chooser; Escape or a click outside leave without a change, Escape returning the focus to the
+  control. Opening and walking rows reveal them inside `.clist` only, without scrolling the page or
   the clipped title artwork; list scrolling leaves the navigation bar's page-scroll state alone. Each field keeps its own rows,
   data and selection logic (`FileChooser`, `TrackDropdown`).
 - **The series page** (computer, phone and tablet; the TV draws its strip) shows the selected episode's three controls the same way, read from the episode's media
@@ -83,7 +79,7 @@ gate 1 on beta.** Reference: workspace `reviews/dropdown-golden/` and its `NOTES
   caption's first word** (VIDEO / AUDIO / SUBTITLES; the file size, bitrate and subtitle extra step aside, the size staying in the
   Video list and the bitrate in the Audio tooltip), s-2 after the word, and the value line keeps the name and the chevron (the user,
   2026-11-07, approved from the live mockup). Marks that still do not fit drop whole (Video's as D242; Audio's 5.1, then DD+ Atmos).
-  The phone and the tablet (a window under 900 px) always stack; the TV keeps D199's width test (`stacks` in `FileChooser.tsx`).
+  Computer, phone and tablet draw the quiet controls and never stack (a movie's strip too, the user 2026-11-11); the TV keeps D199's width test (`stacks` in `FileChooser.tsx`).
 - **Captions** s-1 at an s0 pitch, s-7 tracking, 61.8 %, one line (`nowrap`, an ellipsis only as a fallback; the Philosopher's
   captions fit: 287 of 323 px, 257 of 293 px). **The Video caption carries the file size** (`VIDEO · 13.2 GB`, on every layout); the
   closed value is the resolution and its marks only, its chevron at the end like Audio's.
