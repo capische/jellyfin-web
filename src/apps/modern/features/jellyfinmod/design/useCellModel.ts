@@ -15,7 +15,7 @@ import type { ItemDto } from 'types/base/models/item-dto';
 import type { CardOptions } from 'types/cardOptions';
 import type { BrowseRow } from '../types/browse';
 import { FileState } from '../types/entry';
-import { getEntryPath, getTmdbImage } from '../utils/entryLinks';
+import { getEntryPath, getTmdbImage, seriesEpisodePath } from '../utils/entryLinks';
 import { useCardHasNoFile, useCardRelease } from '../integration/cardGetRelease';
 import { useEntryDownload } from '../components/FileStateMark';
 import { useQueueVisible } from '../hooks/useQueue';
@@ -49,6 +49,12 @@ const visibleRating = (rating: Rating | null | undefined) => rating && isKnownSc
 
 const savedFlag = (saved: { item: ItemDto; value: boolean } | undefined, item: ItemDto | undefined, fallback: boolean) =>
     saved && saved.item === item ? saved.value : fallback;
+
+/** An episode on Home (the user, 2026-11-10): one already started resumes there; any other opens its series page with it selected. */
+const homeEpisodeAction = (item: ItemDto | undefined, options: CardOptions) => {
+    if (options.context !== 'home' || item?.Type !== 'Episode' || !item.SeriesId) return undefined;
+    return !item.UserData?.Played && (item.UserData?.PlaybackPositionTicks ?? 0) > 0 ? ItemAction.Resume : ItemAction.None;
+};
 
 export const useCellModel = (row: BrowseRow, options: CardOptions, alwaysShowCountdown = false) => {
     const item: ItemDto | undefined = row.kind === 'native' ? row.nativeItem : undefined;
@@ -87,7 +93,8 @@ export const useCellModel = (row: BrowseRow, options: CardOptions, alwaysShowCou
     const { name, second } = captionOf(item, title, item?.ProductionYear ?? entry?.year ?? '');
     const progress = noFile ? undefined : item?.UserData?.PlayedPercentage;
     const count = item?.UserData?.UnplayedItemCount;
-    const action = resolveAction({ defaultAction: options.action ?? ItemAction.Link, isFolder: item?.IsFolder ?? false, isPhoto: item?.MediaType === 'Photo' });
+    const homeAction = homeEpisodeAction(item, options);
+    const action = homeAction ?? resolveAction({ defaultAction: options.action ?? ItemAction.Link, isFolder: item?.IsFolder ?? false, isPhoto: item?.MediaType === 'Photo' });
     const data = item ? getDataAttributes({ action, itemServerId: item.ServerId ?? options.serverId,
         itemId: item.Id, itemType: item.Type, itemMediaType: item.MediaType, itemIsFolder: item.IsFolder,
         collectionId: options.collectionId, playlistId: options.playlistId, itemPlaylistItemId: item.PlaylistItemId,
@@ -96,6 +103,7 @@ export const useCellModel = (row: BrowseRow, options: CardOptions, alwaysShowCou
         context: options.context, parentId: options.parentId, itemUserData: item.UserData }) : {};
     const open = () => {
         if (!item && entry && !pending) window.location.hash = '#' + getEntryPath(entry.id, options.serverId ?? undefined);
+        if (item && homeAction === ItemAction.None) window.location.hash = seriesEpisodePath(item, options.serverId);
     };
     const download = (event: MouseEvent<HTMLElement>) => {
         event.preventDefault();
