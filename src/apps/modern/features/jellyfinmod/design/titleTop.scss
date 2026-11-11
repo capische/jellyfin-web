@@ -1,3 +1,5 @@
+/* stylelint-disable no-descending-specificity -- ds.t19's controls are shared by computer, phone and tablet after the computer's head. */
+
 /* D288-D295, computer first look. Base 1em; values follow ds6.css's phi steps. */
 .jfds .jfmod-titleTop {
     .jfmod-titleHead .itemName { line-height: 1.236; }
@@ -359,6 +361,45 @@
         cursor: default;
     }
 
+    .jfmod-titleReading {
+        max-width: var(--jfmod-s8);
+        margin-top: var(--jfmod-s1);
+    }
+
+    .jfmod-tagline {
+        font-size: var(--jfmod-s0);
+        color: var(--text);
+    }
+
+    .jfmod-titleText .overview {
+        font-size: var(--jfmod-s0);
+        line-height: 1.618;
+        color: var(--jfmod-head-muted);
+    }
+
+    .jfmod-tagline + .overview { margin-top: var(--jfmod-s-2); }
+
+    .jfmod-titleFacts {
+        margin-top: var(--jfmod-s0);
+        color: var(--text);
+    }
+
+    .jfmod-titleFacts .tags,
+    .jfmod-titleFacts .links { font-size: var(--jfmod-s0); }
+
+    .jfmod-titleFacts .tags + .tags { margin-top: var(--jfmod-s-2); }
+
+    .jfmod-titleFacts .links { margin-top: var(--jfmod-s-1); }
+
+    .jfmod-titleFactLabel { margin-right: var(--jfmod-s-1); }
+}
+
+/* ds.t19's quiet track controls and their chooser on computer, phone and tablet (phone and tablet: the user, 2026-11-11, "It uses
+   old dropdowns, not new ones"); the TV keeps its strip. Each layout at its own base B; a phone draws them under its head. */
+.jfds:not(.dev-computer):not(.layout-tv) .jfmod-titleTop { --jfmod-head-muted: rgba(255, 255, 255, 0.764); }
+.jfds:not(.dev-computer):not(.layout-tv)[data-theme='light'] .jfmod-titleTop { --jfmod-head-muted: var(--text); }
+
+.jfds:not(.layout-tv) .jfmod-titleTop {
     /* ds.t19 (the user 2026-11-08, workspace reviews/netflix-tracks/codex.html: "Less chrome. Same control."): Video, Audio and
        Subtitles as three quiet controls s0 under the pill, s-2 apart: the kind's s0 icon, the value at B, an s-1 chevron, s2 high,
        padding s-2 s-1, s-1 corners, no glass until hovered or open. The first control's text sits on the column's edge. */
@@ -702,6 +743,18 @@
         letter-spacing: 0;
     }
 
+    /* A track's role mark beside it, outlined (the user 2026-11-11: SDH as a pill, not a word): the chip's size, a hairline of the ink. */
+    .gpk .vlist.chooser .vrow .qd .rflag {
+        flex: none;
+        box-sizing: border-box;
+        height: var(--jfmod-s0);
+        margin: 0;
+        padding: 0 var(--jfmod-s-3);
+        border-radius: var(--jfmod-s-4);
+        font-size: var(--jfmod-s-1);
+        letter-spacing: 0;
+    }
+
     .gpk .vlist.chooser .vrow.sel::before {
         left: var(--jfmod-s-1);
         width: var(--jfmod-s-1);
@@ -711,38 +764,6 @@
 
     .gpk .vlist.chooser .vrow.foc,
     .gpk .vlist.chooser .vrow:focus { box-shadow: inset 0 0 0 var(--jfmod-s-4) var(--primary); }
-
-    .jfmod-titleReading {
-        max-width: var(--jfmod-s8);
-        margin-top: var(--jfmod-s1);
-    }
-
-    .jfmod-tagline {
-        font-size: var(--jfmod-s0);
-        color: var(--text);
-    }
-
-    .jfmod-titleText .overview {
-        font-size: var(--jfmod-s0);
-        line-height: 1.618;
-        color: var(--jfmod-head-muted);
-    }
-
-    .jfmod-tagline + .overview { margin-top: var(--jfmod-s-2); }
-
-    .jfmod-titleFacts {
-        margin-top: var(--jfmod-s0);
-        color: var(--text);
-    }
-
-    .jfmod-titleFacts .tags,
-    .jfmod-titleFacts .links { font-size: var(--jfmod-s0); }
-
-    .jfmod-titleFacts .tags + .tags { margin-top: var(--jfmod-s-2); }
-
-    .jfmod-titleFacts .links { margin-top: var(--jfmod-s-1); }
-
-    .jfmod-titleFactLabel { margin-right: var(--jfmod-s-1); }
 }
 
 .jfds.dev-computer:not(.layout-tv)[data-theme='light'] .jfmod-titleTop .jfmod-titleHead {
@@ -752,8 +773,8 @@
 }
 
 /* A click that opened a list leaves no ring on its selected row (the keyboard's ring above). */
-.ds-pointer .jfds.dev-computer:not(.layout-tv) .jfmod-titleTop .jfmod-titleHead .gpk .vlist.chooser .vrow.foc,
-.ds-pointer .jfds.dev-computer:not(.layout-tv) .jfmod-titleTop .jfmod-titleHead .gpk .vlist.chooser .vrow:focus { box-shadow: none; }
+.ds-pointer .jfds:not(.layout-tv) .jfmod-titleTop .gpk .vlist.chooser .vrow.foc,
+.ds-pointer .jfds:not(.layout-tv) .jfmod-titleTop .gpk .vlist.chooser .vrow:focus { box-shadow: none; }
 
 /* A pointer click that opened a source leaves the pill's own glass, not a lit pill (ratings.md, one highlight). */
 .ds-pointer .jfds.dev-computer:not(.layout-tv) .jfmod-titleTop .jfmod-titleHead .rgwrap:not(.on) .rgroup.foc { background: var(--card-glass-bg); }

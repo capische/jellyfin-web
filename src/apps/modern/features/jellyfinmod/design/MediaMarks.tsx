@@ -94,8 +94,10 @@ export const audioQuiet = (parsed: MarkSource): { lockup: DolbyKind | null; form
  */
 export const QuietTrack: FC<{ name: ReactNode; lockup?: DolbyKind | null; channels?: string | null; details: (string | null | undefined)[];
     /** A subtitle's format as its chip, before the words (the user 2026-11-10: "use pills for SRT as it was before"). */
-    chip?: string | null }> = ({ name, lockup, channels, details, chip }) => {
+    chip?: string | null;
+    /** The track's role as its outlined mark after the chip, not a word (the user 2026-11-11: "use SDH pill ... Not a text"). */
+    mark?: ReactNode }> = ({ name, lockup, channels, details, chip, mark }) => {
     const words = details.filter(Boolean).join(' · ');
     return <>{name}{lockup && <DolbyLockup kind={lockup} />}{channels && <span className='chn'>{channels}</span>}
-        {(chip || words) && <span className='qd'>{chip && <Chip>{chip}</Chip>}{words && <span className='qw'>{words}</span>}</span>}</>;
+        {(chip || mark || words) && <span className='qd'>{chip && <Chip>{chip}</Chip>}{mark}{words && <span className='qw'>{words}</span>}</span>}</>;
 };

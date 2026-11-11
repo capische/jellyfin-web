@@ -4,7 +4,7 @@ import inputManager from 'scripts/inputManager';
 import { getKeyName } from 'scripts/keyboardNavigation';
 import { isBackKey } from '../shell/dpadModals';
 import { Icon, type IconName } from './Icon';
-import { DesignContext } from './Root';
+import { DesignContext, quietTracks } from './Root';
 
 type TrackKind = 'v' | 'a' | 's';
 interface ChooserTab { name: string; kind: string }
@@ -96,22 +96,25 @@ const useTabsUnderControls = (head: React.RefObject<HTMLDivElement>, tabs: Choos
         const boxes = tabs.map(tab => strip.querySelector<HTMLElement>(`.seg[data-jfmod-track-field="${tab.name}"]`)?.getBoundingClientRect());
         const first = boxes[0];
         const oneLine = !!first && boxes.every(box => box && Math.abs(box.top - first.top) < 1);
-        chooser.classList.toggle('jfmod-tabsUnder', oneLine);
-        if (!oneLine) {
+        // The chooser starts at the first tab's control (the user 2026-11-10: a plain Video has no tab, so no gap under it).
+        const area = strip.getBoundingClientRect();
+        const origin = oneLine ? Math.min(...boxes.map(box => (box as DOMRect).left)) : 0;
+        const style = getComputedStyle(chooser);
+        const inset = parseFloat(style.paddingLeft) + parseFloat(style.borderLeftWidth);
+        const gap = parseFloat(getComputedStyle(head.current as HTMLElement).columnGap) || 0;
+        const right = oneLine ? Math.max(...boxes.map(box => (box as DOMRect).right)) - origin : 0;
+        const width = right + gap + close.getBoundingClientRect().width + 2 * inset;
+        // Under the controls only while it stays inside the strip (a phone's Audio and Subtitles reach its edge): else a row of tabs.
+        const under = oneLine && origin - area.left - inset + width <= area.width + inset;
+        chooser.classList.toggle('jfmod-tabsUnder', under);
+        if (!under) {
             chooser.style.removeProperty('width');
             chooser.style.removeProperty('left');
             setPlace(null);
             return;
         }
-        // The chooser starts at the first tab's control (the user 2026-11-10: a plain Video has no tab, so no gap under it).
-        const strip0 = strip.getBoundingClientRect().left;
-        const origin = Math.min(...boxes.map(box => (box as DOMRect).left));
-        const style = getComputedStyle(chooser);
-        const inset = parseFloat(style.paddingLeft) + parseFloat(style.borderLeftWidth);
-        const gap = parseFloat(getComputedStyle(head.current as HTMLElement).columnGap) || 0;
-        const right = Math.max(...boxes.map(box => (box as DOMRect).right)) - origin;
-        chooser.style.left = origin - strip0 - inset + 'px';
-        chooser.style.width = right + gap + close.getBoundingClientRect().width + 2 * inset + 'px';
+        chooser.style.left = origin - area.left - inset + 'px';
+        chooser.style.width = width + 'px';
         const next = boxes.map(box => ({ left: (box as DOMRect).left - origin, width: (box as DOMRect).width }));
         setPlace(was => (was && was.length === next.length && was.every((tab, index) => tab.left === next[index].left
             && tab.width === next[index].width) ? was : next));
@@ -214,7 +217,7 @@ export const TrackField: FC<{ kind: TrackKind; name: string; value: ReactNode; e
     children?: ReactNode; onOpen?: () => void; onClose?: () => void; closeOnChoose?: boolean; title?: string; extra?: string;
     /** The closed value on a computer, where no caption names the field (`Subtitles Off`); `value` otherwise. */
     quietValue?: ReactNode }> = ({ kind, name, value, enabled = true, stacked, children, onOpen, onClose, closeOnChoose = true, title, extra, quietValue }) => {
-    const quiet = useContext(DesignContext) === 'computer';
+    const quiet = quietTracks(useContext(DesignContext));
     const [open, setOpen] = useState(false);
     const [tabs, setTabs] = useState<ChooserTab[]>([]);
     const [focus, setFocus] = useState(false);
