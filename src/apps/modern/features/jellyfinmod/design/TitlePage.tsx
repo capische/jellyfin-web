@@ -205,10 +205,13 @@ const TrackValue: FC<{ option?: TitleTrack['options'][number]; closed?: boolean 
 };
 
 /**
- * The selected episode's Video, Audio and Subtitles on a computer's series page (ds.t19): the title page's quiet controls and
- * chooser over the episode's own media sources; Play sends the choices (`useSeriesEpisodes`). Phone, tablet and TV show none.
+ * The selected episode's Video, Audio and Subtitles on a series page (ds.t19; phone, tablet and TV too, the user, 2026-11-10): the
+ * title page's controls and chooser over the episode's own media sources, stacked on phone and tablet as a movie's are; Play sends
+ * the choices (`useSeriesEpisodes`).
  */
 const EpisodeTrackFields: FC<{ series: SeriesModel }> = ({ series }) => {
+    const device = useContext(DesignContext);
+    const stacked = device === 'phone' || device === 'tablet';
     const { api, user } = useApi();
     const episode = series.selected;
     const itemId = episode?.hasFile ? episode.item?.Id ?? '' : '';
@@ -248,20 +251,20 @@ const EpisodeTrackFields: FC<{ series: SeriesModel }> = ({ series }) => {
     const current = audios.find(stream => stream.Index === audio);
     const subtitleNow = subtitles.find(stream => stream.Index === subtitle);
     // A new episode closes the old chooser; its retained controls cannot change the new episode while loading.
-    return <div key={itemId} className='gpk' aria-busy={isPlaceholderData}
+    return <div key={itemId} className={'gpk' + (stacked ? ' stacked' : '')} aria-busy={isPlaceholderData}
         ref={node => node?.toggleAttribute('inert', isPlaceholderData)}>
         <TrackField kind='v' name='Video' value={<TrackValue closed option={option(source, sources.indexOf(source))} />} enabled={sources.length > 1}
-            stacked={false}>
+            stacked={stacked}>
             {sources.map((candidate, index) => <ChooseRow key={candidate.Id} sourceId={candidate.Id ?? undefined} selected={candidate === source}
                 onChoose={() => set({ source: candidate.Id ?? undefined, audio: undefined, subtitle: undefined })}><TrackValue option={option(candidate, index)} /></ChooseRow>)}
         </TrackField>
-        <TrackField kind='a' name='Audio' enabled={audios.length > 1} stacked={false} title={current?.DisplayTitle ?? undefined}
+        <TrackField kind='a' name='Audio' enabled={audios.length > 1} stacked={stacked} title={current?.DisplayTitle ?? undefined}
             value={current ? <TrackText stream={current} names={names} /> : <TrackLanguage language='None' />}
             quietValue={current ? undefined : <TrackLanguage language='No Audio' />}>
             {audios.map(stream => <ChooseRow key={stream.Index} trackValue={String(stream.Index)} selected={stream === current} title={stream.DisplayTitle ?? undefined}
                 onChoose={() => set({ source: source.Id ?? undefined, audio: stream.Index })}><TrackText stream={stream} names={names} /></ChooseRow>)}
         </TrackField>
-        <TrackField kind='s' name='Subtitles' enabled={subtitles.length > 0} stacked={false} title={subtitleNow?.DisplayTitle ?? undefined}
+        <TrackField kind='s' name='Subtitles' enabled={subtitles.length > 0} stacked={stacked} title={subtitleNow?.DisplayTitle ?? undefined}
             value={subtitleNow ? <TrackText stream={subtitleNow} names={names} /> : <TrackLanguage language='Off' />}
             quietValue={subtitleNow ? undefined : <TrackLanguage language={subtitles.length ? 'Subtitles Off' : 'No Subtitles'} />}>
             <ChooseRow trackValue='-1' selected={!subtitleNow} onChoose={() => set({ source: source.Id ?? undefined, subtitle: -1 })}><TrackLanguage language='Off' /></ChooseRow>
@@ -497,7 +500,7 @@ const Content: FC<{ view: HTMLElement; type: string; art: string; item?: BaseIte
     return <div ref={ref} className={titleTop ? 'jfmod-titleTop' : undefined}>
         <Head titleTop={titleTop} title={model.title} poster={model.image} art={environment.art || (environment.type === 'Person' ? model.image : undefined)} lines={lines} pill={pill} wide={environment.type === 'Episode'} icon={environment.type === 'Person' ? 'person' : undefined}>
             <Slot view={view} name='notice' /><Slot view={view} name='tracks' />
-            {seriesMain && device === 'computer' && <EpisodeTrackFields series={series} />}
+            {seriesMain && <EpisodeTrackFields series={series} />}
             {model.tracks.length > 0 && <div ref={stackRef} className={'gpk' + (stacked ? ' stacked' : '')}>
                 {model.tracks.map(track => <TrackField key={track.name} kind={track.kind} name={track.name}
                     value={<TrackValue closed option={track.options.find(option => option.value === track.value) ?? track.options[0]} />}
