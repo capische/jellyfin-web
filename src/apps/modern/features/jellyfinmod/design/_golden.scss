@@ -453,12 +453,6 @@
         line-height: 1;
     }
 
-    .rowt .rowsub {
-        margin-left: var(--jfmod-s-1);
-        font-size: var(--jfmod-s0);
-        opacity: 0.764;
-    }
-
     .cell { font-size: var(--jfmod-s0); }
     .ds-rowframe { margin: 0 calc(var(--jfmod-s1) / -2) calc(var(--jfmod-s1) / -2); }
     .tile { padding: calc(var(--jfmod-s1) / 2); }
@@ -482,6 +476,13 @@
 .jfmod-titleTop .titlefoot {
     --jfmod-sgap: var(--jfmod-s1);
     --jfmod-still: var(--jfmod-s6);
+
+    /* A row title's subtitle (Guest Stars' `S1:E1 · Title`), on every layout. */
+    .rowt .rowsub {
+        margin-left: var(--jfmod-s-1);
+        font-size: var(--jfmod-s0);
+        opacity: 0.764;
+    }
 
     /* The season pill (small: body type, at the 40 px floor) and the slider's arrows on one line. */
     .estrip .etop {
