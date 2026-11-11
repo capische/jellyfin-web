@@ -5,6 +5,7 @@ import React, { type FC, useContext, useEffect, useLayoutEffect, useRef, useStat
 import { appHost } from 'components/apphost';
 import layoutManager from 'components/layoutManager';
 import { AppFeature } from 'constants/appFeature';
+import ResizeObserver from 'resize-observer-polyfill';
 import { hasRatedLink } from '../utils/ratingLinks';
 import focusManager from 'components/focusManager';
 import inputManager from 'scripts/inputManager';
@@ -69,6 +70,31 @@ const Inline: FC<{ parts: InlinePart[]; underline?: boolean }> = ({ parts, under
 const Labelled: FC<{ parts: InlinePart[]; label?: string }> = ({ parts, label }) => {
     const labelled = parts[0]?.text.endsWith(': ');
     return <>{(labelled || label) && <span className='jfmod-titleFactLabel'>{labelled ? parts[0].text.replace(/: $/, '') : label}</span>}<b><Inline parts={labelled ? parts.slice(1) : parts} /></b></>;
+};
+
+/**
+ * Phone and tablet cut a long text at `lines` lines with "more" at the end of the last one, and "less" after it in full (the user,
+ * 2026-11-10: the description at 3 lines, Tags at 1). A text that fits gets neither; a computer and the TV show it whole.
+ */
+const Clamp: FC<{ lines: number; className?: string; children: React.ReactElement }> = ({ lines, className, children }) => {
+    const device = useContext(DesignContext);
+    const clamps = device === 'phone' || device === 'tablet';
+    const text = useRef<HTMLDivElement>(null);
+    const [open, setOpen] = useState(false);
+    const [cut, setCut] = useState(false);
+    useLayoutEffect(() => {
+        const node = text.current;
+        if (!clamps || open || !node) return;
+        const measure = () => setCut(node.scrollHeight > node.clientHeight + 1);
+        measure();
+        const observer = new ResizeObserver(measure);
+        observer.observe(node);
+        return () => observer.disconnect();
+    }, [clamps, open, children]);
+    if (!clamps) return children;
+    const toggle = <button type='button' className='jfmod-more focusable' aria-expanded={open} onClick={() => setOpen(!open)}>{open ? 'less' : 'more'}</button>;
+    return <div className={'jfmod-clamp' + (open ? ' open' : '') + (className ? ' ' + className : '')} style={{ '--jfmod-lines': lines } as React.CSSProperties}>
+        <div ref={text} className='jfmod-clampText'>{!open && cut && toggle}{children}{open && toggle}</div></div>;
 };
 
 const commandClass = (command: TitleCommand) => command.play ? 'play' : 'dbtn';
@@ -485,11 +511,11 @@ const Content: FC<{ view: HTMLElement; type: string; art: string; item?: BaseIte
             <Slot view={view} name='download' />
             <div className='jfmod-titleReading'>
                 {model.originalTitle && <div className='tags'>{model.originalTitle}</div>}
-                <div className='jfmod-titleText'>{model.tagline && <p className='jfmod-tagline'>{model.tagline}</p>}{model.overview.length > 0 && <div className='overview'><p data-ds-overview=''><Inline parts={model.overview} /></p></div>}</div>
+                <div className='jfmod-titleText'>{model.tagline && <p className='jfmod-tagline'>{model.tagline}</p>}{model.overview.length > 0 && <div className='overview'><Clamp lines={3}><p data-ds-overview=''><Inline parts={model.overview} /></p></Clamp></div>}</div>
                 <div className='jfmod-titleFacts'>
                     {model.details.filter(parts => parts.length).map(parts => <div className='tags' data-ds-detail='' key={parts.map(part => part.text).join('')}><Labelled parts={parts} /></div>)}
                     {model.genres.length > 0 && <div className='tags'><Labelled parts={model.genres} label='Genres' /></div>}
-                    {model.tags.length > 0 && <div className='tags jfmod-titleTags'><Labelled parts={model.tags} label='Tags' /></div>}
+                    {model.tags.length > 0 && <div className='tags jfmod-titleTags'><Clamp lines={1}><Labelled parts={model.tags} label='Tags' /></Clamp></div>}
                     <TitleLinks view={view} type={environment.type} links={model.links} />
                 </div></div>
             <Slot view={view} name='augment' />
