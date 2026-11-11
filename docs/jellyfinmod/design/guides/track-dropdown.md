@@ -16,7 +16,7 @@ the Dolby lockup 10 px (a named exception, its words at their own 12 units so th
   value is the name (Video's resolution in 600, Audio's language, Subtitles' language, or **Subtitles Off**; **No Audio** / **No
   Subtitles** without such tracks; a phone drops the field's name there, **Off** / **None**, the icon naming it, so its three
   controls keep one line, the user 2026-11-11), then the Dolby two-row lockup ([media-marks.md](media-marks.md)) and, for Audio, the channels at
-  s-1 / 600, s-3 after the lockup (the user 2026-11-11) (`QuietTrack`). The rest are the details: Video the codec, other ranges, bit depth and size; Audio the format word the lockup does not
+  s-1 / 600, s-3 after the lockup in the control and the list's rows alike (the user 2026-11-11; DIGITAL+'s box 86 units, its ink's width) (`QuietTrack`). The rest are the details: Video the codec, other ranges, bit depth and size; Audio the format word the lockup does not
   already say (`TrueHD`, under AUDIO or ATMOS, since it says lossless; `DTS-HD MA`, `AAC`; not `DD` under AUDIO, `DD+` under
   DIGITAL+ or `DD+` under ATMOS, the user 2026-11-10) and the extra words; Subtitles the format chip, the role and the extra words, joined by ` · `.
   The role (SDH, FORCED, AD …) is its outlined mark after the chip, the chip's size with a hairline of the ink, not a word (the
