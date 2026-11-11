@@ -705,6 +705,9 @@
 
     .gpk .vlist.chooser .vrow > * { margin: 0; }
 
+    /* The list's rows keep the channels s-3 after the lockup too. */
+    .gpk .vlist.chooser .vrow .dolby + .chn { margin-left: calc(var(--jfmod-s-3) - var(--jfmod-s-2)); }
+
     .gpk .vlist.chooser .vrow .r {
         flex: none;
         min-width: 0;

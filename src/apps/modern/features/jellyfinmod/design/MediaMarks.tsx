@@ -57,7 +57,7 @@ const DOLBY: Record<DolbyKind, { word: string; width: number; label: string }> =
     vision: { word: 'VISION', width: 77, label: 'Dolby Vision' },
     atmos: { word: 'ATMOS', width: 78, label: 'Dolby Atmos' },
     audio: { word: 'AUDIO', width: 77, label: 'Dolby Audio' },
-    digitalplus: { word: 'DIGITAL+', width: 90, label: 'Dolby Digital Plus' }
+    digitalplus: { word: 'DIGITAL+', width: 86, label: 'Dolby Digital Plus' }
 };
 
 /** The double-D block, then DOLBY over the product word, in the text's own colour (workspace `reviews/netflix-tracks/scroll-and-lines.html`). */
