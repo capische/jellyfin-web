@@ -50,11 +50,19 @@ const visibleRating = (rating: Rating | null | undefined) => rating && isKnownSc
 const savedFlag = (saved: { item: ItemDto; value: boolean } | undefined, item: ItemDto | undefined, fallback: boolean) =>
     saved && saved.item === item ? saved.value : fallback;
 
-/** An episode on Home (the user, 2026-11-10): one already started resumes there; any other opens its series page with it selected. */
-const homeEpisodeAction = (item: ItemDto | undefined, options: CardOptions) => {
+/**
+ * An episode on Home, as Netflix does it (the user, 2026-11-10): in Continue Watching (the wide row) the card plays, resuming one
+ * already started, and its name opens the series page with it selected; elsewhere, or with no file, the card opens that page.
+ */
+const homeEpisodeAction = (item: ItemDto | undefined, options: CardOptions, noFile: boolean) => {
     if (options.context !== 'home' || item?.Type !== 'Episode' || !item.SeriesId) return undefined;
-    return !item.UserData?.Played && (item.UserData?.PlaybackPositionTicks ?? 0) > 0 ? ItemAction.Resume : ItemAction.None;
+    if (noFile || options.shape !== CardShape.Backdrop) return ItemAction.None;
+    return !item.UserData?.Played && (item.UserData?.PlaybackPositionTicks ?? 0) > 0 ? ItemAction.Resume : ItemAction.Play;
 };
+
+/** The name of a Home episode that plays opens its series page instead (`homeEpisodeAction`). */
+const homeSeriesHref = (item: ItemDto | undefined, action: ItemAction | undefined, serverId?: string | null) =>
+    (item && action && action !== ItemAction.None ? seriesEpisodePath(item, serverId) : undefined);
 
 export const useCellModel = (row: BrowseRow, options: CardOptions, alwaysShowCountdown = false) => {
     const item: ItemDto | undefined = row.kind === 'native' ? row.nativeItem : undefined;
@@ -93,7 +101,8 @@ export const useCellModel = (row: BrowseRow, options: CardOptions, alwaysShowCou
     const { name, second } = captionOf(item, title, item?.ProductionYear ?? entry?.year ?? '');
     const progress = noFile ? undefined : item?.UserData?.PlayedPercentage;
     const count = item?.UserData?.UnplayedItemCount;
-    const homeAction = homeEpisodeAction(item, options);
+    const homeAction = homeEpisodeAction(item, options, noFile);
+    const seriesHref = homeSeriesHref(item, homeAction, options.serverId);
     const action = homeAction ?? resolveAction({ defaultAction: options.action ?? ItemAction.Link, isFolder: item?.IsFolder ?? false, isPhoto: item?.MediaType === 'Photo' });
     const data = item ? getDataAttributes({ action, itemServerId: item.ServerId ?? options.serverId,
         itemId: item.Id, itemType: item.Type, itemMediaType: item.MediaType, itemIsFolder: item.IsFolder,
@@ -159,5 +168,5 @@ export const useCellModel = (row: BrowseRow, options: CardOptions, alwaysShowCou
         }
     };
     const rating = visibleRating(row.rating);
-    return { action, prepareRelease: release.prepare, countdown, searching, flightMenu, empty, item, entry, get, pending, noFile, queue, shape, source, failedSource, setFailedSource, title, name, second, progress, count, data, open, download, toggle, menu, rating, isPlayed: shown.played, isFavorite: shown.favorite };
+    return { action, seriesHref, prepareRelease: release.prepare, countdown, searching, flightMenu, empty, item, entry, get, pending, noFile, queue, shape, source, failedSource, setFailedSource, title, name, second, progress, count, data, open, download, toggle, menu, rating, isPlayed: shown.played, isFavorite: shown.favorite };
 };
