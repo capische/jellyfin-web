@@ -529,18 +529,17 @@
     /* The closed control shows no details (the user 2026-11-10: no tip, the chooser has them). */
     .gpk .seg .val .qd { display: none; }
 
-    /* A 1280 px window or narrower gives Video its own line (the mockup's 1024 window). */
-    @media (max-width: 1280px) {
-        .gpk::after {
-            content: '';
-            flex-basis: 100%;
-            order: 2;
-        }
-    }
+    /* One row (the user 2026-11-11): while the controls would wrap with a field's name in its value, the row drops it
+       (`useTightRow`: `Subtitles Off` reads `Off`, the icon naming it); a row still too long wraps. */
+    .gpk .seg .jfmod-long,
+    .gpk .seg .jfmod-short { display: contents; }
 
-    /* The one chooser (the user 2026-11-09, s7 wide again 2026-11-10): paper s-2 under the controls, s7 wide (at most the column), s0 corners, s-2
-       padding, an s-6 hairline, shadow 0 s-1 s1 at 61.8 %; tabs s2 high, s-3 apart, s-1 sides and s-2 corners, the open one on the
-       tint; a round s2 Close; one-line rows s1 + 2·s-2 high (the 40 px target), padding s-2 s-1 with the s-1 check s0 in, the value
+    .gpk.jfmod-tight .seg .jfmod-long,
+    .gpk:not(.jfmod-tight) .seg .jfmod-short { display: none; }
+
+    /* The one chooser (the user 2026-11-09, s7 wide again 2026-11-10): paper s-2 under the controls, s7 wide (at most the column, so
+       a phone's is the column's width), s0 corners, s-2 padding, an s-6 hairline, shadow 0 s-1 s1 at 61.8 %; no head (the user
+       2026-11-11: the controls row is its tabs, the open control on the tint, no Close); one-line rows s1 + 2·s-2 high (the 40 px target), padding s-2 s-1 with the s-1 check s0 in, the value
        as the control draws it and the details s-1 at the right edge, taking all the room left of them; the list scrolls past s5 beside its rail. */
     .gpk > .vlist.chooser {
         position: absolute;
@@ -561,79 +560,6 @@
         font-size: var(--jfmod-s0);
         line-height: 1;
         white-space: normal;
-    }
-
-    .gpk .vlist.chooser .chead {
-        display: flex;
-        align-items: center;
-        gap: var(--jfmod-s-3);
-        padding: 0 0 var(--jfmod-s-2);
-    }
-
-    .gpk .vlist.chooser .ctabs {
-        display: flex;
-        flex: 1;
-        align-items: center;
-        gap: var(--jfmod-s-3);
-    }
-
-    .gpk .vlist.chooser .ctab,
-    .gpk .vlist.chooser .cclose {
-        height: var(--jfmod-s2);
-        padding: 0 var(--jfmod-s-1);
-        border: 0;
-        border-radius: var(--jfmod-s-1);
-        background: transparent;
-        color: inherit;
-        font: inherit;
-        cursor: pointer;
-    }
-
-    .gpk .vlist.chooser .ctab { opacity: 0.618; }
-
-    .gpk .vlist.chooser .ctab.on {
-        background: var(--tint);
-        opacity: 1;
-    }
-
-    .gpk .vlist.chooser .cclose {
-        display: grid;
-        place-items: center;
-        width: var(--jfmod-s2);
-        margin-left: auto;
-        padding: 0;
-        border-radius: 50%;
-    }
-
-    .gpk .vlist.chooser .cclose svg {
-        width: var(--jfmod-s0);
-        height: var(--jfmod-s0);
-    }
-
-    .gpk .vlist.chooser .ctab:hover,
-    .gpk .vlist.chooser .cclose:hover { background: var(--tint); }
-
-    .gpk .vlist.chooser .ctab:focus-visible,
-    .gpk .vlist.chooser .cclose:focus-visible {
-        outline: var(--jfmod-s-5) solid var(--primary);
-        outline-offset: calc(-1 * var(--jfmod-s-5));
-    }
-
-    /* Tabs under their controls (the user 2026-11-10; `useTabsUnderControls` sets each tab's left and width and the chooser's
-       width, and its left at the first tab's control less its s-2 padding and s-6 hairline): each tab sits exactly under its control,
-       its text on the control's icon. */
-    .gpk > .vlist.chooser.jfmod-tabsUnder { max-width: none; }
-
-    .gpk .vlist.chooser.jfmod-tabsUnder .ctabs {
-        position: relative;
-        align-self: stretch;
-        height: var(--jfmod-s2);
-    }
-
-    .gpk .vlist.chooser.jfmod-tabsUnder .ctab {
-        position: absolute;
-        top: 0;
-        text-align: left;
     }
 
     .gpk .vlist.chooser .cbox { position: relative; }
@@ -761,6 +687,18 @@
         letter-spacing: 0;
     }
 
+    /* The commentary mark is its glyph alone, at the chip's height (D61). */
+    .gpk .vlist.chooser .vrow .qd .rflag.glyph {
+        padding: 0;
+        border: 0;
+    }
+
+    .gpk .vlist.chooser .vrow .qd .rflag.glyph svg {
+        width: var(--jfmod-s0);
+        height: var(--jfmod-s0);
+        fill: currentColor;
+    }
+
     .gpk .vlist.chooser .vrow.sel::before {
         left: var(--jfmod-s-1);
         width: var(--jfmod-s-1);
@@ -778,8 +716,6 @@
 .jfds.dev-phone .jfmod-titleTop .gpk {
     gap: 0 var(--jfmod-s-4);
     margin-top: 0;
-
-    &::after { display: none; }
 
     > .seg {
         --jfmod-base: calc(17.4px * 0.7861513778 * var(--jfmod-scale, 1));
