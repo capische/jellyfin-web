@@ -10,7 +10,7 @@ import { TRACK_ROLE_NAME, trackExtraWords, trackModifier, trackRole, type TrackR
 import { findSource, streamMarks, subtitleFormat } from '../constants/versions';
 import { type StripHosts } from './FileChooser';
 import { AudioTrackMarks, audioQuiet, QuietTrack } from '../design/MediaMarks';
-import { DesignContext, quietTracks } from '../design/Root';
+import { DesignContext, quietLook, quietTracks } from '../design/Root';
 import { TrackField, ChooseRow } from '../design/TrackField';
 
 // The media marks' own styles.
@@ -33,6 +33,8 @@ interface Entry {
     content: ReactNode;
     /** The closed value on a computer, which has no caption to name the field: `Subtitles Off`, `No Audio`. */
     quiet?: ReactNode;
+    /** The closed control's value, where it differs from the row's (the TV's quiet control over its own list). */
+    closed?: ReactNode;
 }
 
 interface NativeSelect {
@@ -102,21 +104,24 @@ const RoleMark: FC<{ role: TrackRole }> = ({ role }) => <span className={role ==
  * The language in 600 and its short modifier (D60), which wraps out of sight first when the cell is narrow (D78); a language
  * still too long is cut with an ellipsis.
  */
-export const TrackLanguage: FC<{ language: string; modifier?: string | null }> = ({ language, modifier }) => <span className='r'>
+export const TrackLanguage: FC<{ language: string; modifier?: string | null; children?: ReactNode }> = ({ language, modifier, children }) => <span className='r'>
     <span className='language'>{language}</span>
     {modifier && <span className='modifier'>({modifier})</span>}
+    {children}
 </span>;
 
 /**
  * One track as its cell and its row draw it (D59, D76): language and modifier, the format marks, at most one role mark. The
  * track's own title is never drawn as it is; its extra words are the list's second line (`trackExtraWords`, D81 option A).
  */
-export const TrackText: FC<{ stream: MediaStream; names: Record<string, string> | undefined }> = ({ stream, names }) => {
+export const TrackText: FC<{ stream: MediaStream; names: Record<string, string> | undefined; closed?: boolean }> = ({ stream, names, closed }) => {
     const code = stream.Language?.toLowerCase() ?? '';
     const language = names?.[code] ?? (stream.Language || 'Unknown');
     const format = stream.Type === 'Subtitle' ? subtitleFormat(stream) : null;
     const role = trackRole(stream);
-    const quiet = quietTracks(useContext(DesignContext));
+    const device = useContext(DesignContext);
+    // A closed control is quiet on every layout; a list row only in the quiet chooser (the TV's list keeps its marks).
+    const quiet = quietTracks(device) || (!!closed && quietLook(device));
     if (quiet) {
         // The quiet controls: the language, the Dolby lockup and the channels; the format chip, the role's mark and the extra words are the details.
         const parsed = streamMarks(stream);
@@ -125,12 +130,12 @@ export const TrackText: FC<{ stream: MediaStream; names: Record<string, string> 
             channels={stream.Type === 'Audio' ? parsed.audioChannels : null} chip={format} mark={role && <RoleMark role={role} />}
             details={[audio.format, trackExtraWords(stream)]} />;
     }
+    // The role mark right after the language, so the marks line up on every row (polish P4, the user 2026-11-21).
     return <>
-        <TrackLanguage language={language} modifier={trackModifier(stream)} />
+        <TrackLanguage language={language} modifier={trackModifier(stream)}>{role && <RoleMark role={role} />}</TrackLanguage>
         {stream.Type === 'Audio' ? <AudioTrackMarks parsed={streamMarks(stream)} /> : <span className='marks'>
             {format && <span className='mk tag'><span>{format}</span></span>}
         </span>}
-        {role && <RoleMark role={role} />}
     </>;
 };
 
@@ -148,7 +153,7 @@ const TrackDropdown: FC<TrackDropdownProps & { stacked: boolean }> = ({ name, en
     // The quiet controls' rows carry the extra words in their details (`TrackText`).
     const quiet = quietTracks(useContext(DesignContext));
     if (!current) return null;
-    return <TrackField kind={name === 'Audio' ? 'a' : 's'} name={name} value={current.content} quietValue={current.quiet} title={current.title} extra={current.extra} enabled={enabled && entries.length > 1} stacked={stacked}>
+    return <TrackField kind={name === 'Audio' ? 'a' : 's'} name={name} value={current.closed ?? current.content} quietValue={current.quiet} title={current.title} extra={current.extra} enabled={enabled && entries.length > 1} stacked={stacked}>
         {entries.map(entry => <ChooseRow key={entry.value} trackValue={entry.value} selected={entry === current} title={entry.title} onChoose={() => onChoose(entry.value)}>
             {entry.content}{entry.extra && !quiet && <span className='trackextra'>{entry.extra}</span>}
         </ChooseRow>)}
@@ -183,13 +188,15 @@ const TrackRow: FC<TrackRowProps> = ({ view, host, selector, name, type, sources
         const stream = streams.find(candidate => candidate.Type === type && String(candidate.Index) === option.value);
         let content: ReactNode = <TrackLanguage language={option.text} />;
         let quiet: ReactNode;
+        let closed: ReactNode;
         if (stream) {
             content = <TrackText stream={stream} names={names} />;
+            closed = <TrackText stream={stream} names={names} closed />;
         } else if (type === 'Subtitle' && option.value === '-1') {
             content = <TrackLanguage language='Off' />;
             quiet = <TrackLanguage language='Subtitles Off' />;
         }
-        return { value: option.value, title: option.text, content, quiet, extra: stream ? trackExtraWords(stream) || undefined : undefined };
+        return { value: option.value, title: option.text, content, quiet, closed, extra: stream ? trackExtraWords(stream) || undefined : undefined };
     });
     return createPortal(<TrackDropdown stacked={stacked} name={name} entries={entries} value={state.value} enabled={!state.disabled} onChoose={choose} />,
         host);

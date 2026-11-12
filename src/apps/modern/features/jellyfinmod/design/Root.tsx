@@ -1,4 +1,5 @@
 import React, { type FC, type PropsWithChildren, useLayoutEffect, useState, createContext, useRef } from 'react';
+import browser from 'scripts/browser';
 import './design.scss';
 import './cardRatings.scss';
 import './titleTop.scss';
@@ -34,8 +35,18 @@ export const DesignContext = createContext<Device | false>(false);
 /** ds.t19's quiet track controls and one chooser: computer, phone and tablet (the user, 2026-11-11); the TV keeps its strip. */
 export const quietTracks = (device: Device | false) => !!device && device !== 'tv';
 
+/** The quiet track controls' closed look (icon, value, chevron) on every layout, the TV too (the user, 2026-11-18: "I also
+ * expected TV to have the same video audio and subtitle dropdowns"); the TV's lists stay its own (`quietTracks`). */
+export const quietLook = (device: Device | false) => !!device;
+
+/** The newest webOS that keeps the dark TV glass in the light theme: webOS 6 (Chromium 79, the user's C1) and earlier, by the
+ * platform version upstream reads from the engine (`browser.web0sVersion`), never the TV model (the user, 2026-11-18). */
+export const LEGACY_WEBOS_MAX_VERSION = 6;
+
 // A click also moves focus, and a dialog focuses a control when a click opens it; the mockup's rings are for keys and the TV.
 if (typeof document !== 'undefined') {
+    // An unknown webOS version (NetCast) counts as old.
+    if (browser.web0s && (browser.web0sVersion ?? 0) <= LEGACY_WEBOS_MAX_VERSION) document.documentElement.classList.add('jfmod-webos-legacy');
     document.addEventListener('pointerdown', () => document.documentElement.classList.add('ds-pointer'), true);
     document.addEventListener('keydown', () => document.documentElement.classList.remove('ds-pointer'), true);
 }
@@ -78,9 +89,15 @@ export const DesignEnvironment: FC<PropsWithChildren> = ({ children }) => {
     return <DesignContext.Provider value={env.device}>{children}</DesignContext.Provider>;
 };
 
-export const Root: FC<PropsWithChildren<{ className?: string }>> = ({ children, className = '' }) => {
+/** A touch tablet (iPadOS Safari's desktop-class user agent under 900 px wide) draws a page that asks for it as the computer's
+ * (the title page, the user 2026-11-19: tablets get the redesign; the phone keeps its page). */
+// eslint-disable-next-line compat/compat -- capability detection: an engine without it is no touch tablet.
+const asComputer = (device: Device) => (device === 'tablet' && navigator.maxTouchPoints > 0 ? 'computer' : device);
+
+export const Root: FC<PropsWithChildren<{ className?: string; tabletAsComputer?: boolean }>> = ({ children, className = '', tabletAsComputer }) => {
     const ref = useRef<HTMLDivElement>(null);
-    const [env, setEnv] = useState(readEnvironment);
+    const [raw, setEnv] = useState(readEnvironment);
+    const env = tabletAsComputer ? { ...raw, device: asComputer(raw.device) } : raw;
     useLayoutEffect(() => {
         const update = () => setEnv(previous => {
             const next = readEnvironment();

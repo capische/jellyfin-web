@@ -160,11 +160,19 @@
 
 .jfds .jfmod-titleTop .jfmod-titleTags b { font-weight: 400; }
 
+/* A row of cards under the head (Cast, Guest Stars, Next Up, …) is wider than the screen; its slider moves inside it, so the row
+   clips its own width and the page never scrolls sideways (2026-11-19). `clip`, not `hidden`, keeps the rings above and below the
+   cards; an engine without `clip` (webOS 6) draws it as before. The hero clips its width the same way (round 7d block). */
+.jfds .jfmod-titleTop .titlefoot > .sect { overflow-x: clip; }
+
 /* ds.t10, the golden title head (the user, 2026-11-07, 18px base; mockup reviews/title-golden, its 18px proposal).
    Computer only: phone, tablet and TV keep the values above. Every length is a _golden.scss token (base × φⁿ), so the one
    --jfmod-scale on `.jfds` zooms the head together. Named exceptions: Play 3.333em high, 3em corners, white 85.4% (of its
    own font); the pill's 3em corners; 40 px icon targets; the 2:3 poster; the ratings popup's 1.236em words. */
-.jfds.dev-computer:not(.layout-tv) .jfmod-titleTop .jfmod-titleHead {
+
+/* ds.t20: the TV's redesigned series and movie pages take this head too, at the TV's B (round 6b; the user, 2026-11-17). */
+.jfds.dev-computer:not(.layout-tv) .jfmod-titleTop .jfmod-titleHead,
+.jfds.layout-tv .jfmod-titleTop.jfmod-titleE .jfmod-titleHead {
     --jfmod-head-muted: rgba(255, 255, 255, 0.764);
 
     padding: var(--jfmod-s1) var(--jfmod-s2);
@@ -392,6 +400,288 @@
     .jfmod-titleFacts .links { margin-top: var(--jfmod-s-1); }
 
     .jfmod-titleFactLabel { margin-right: var(--jfmod-s-1); }
+
+    /* ds.t20, quieter facts (the user, 2026-11-11, workspace reviews/fable-design-review P2): the values at 400 in the overview's
+       76.4% ink, under the labels' 61.8%; Tags one line with "more" (`Clamp`), as on the phone. */
+    .jfmod-titleFacts .tags b {
+        font-weight: 400;
+        color: var(--jfmod-head-muted);
+    }
+
+    .jfmod-titleTags {
+        display: block;
+        -webkit-line-clamp: unset;
+    }
+
+    .jfmod-clamp .jfmod-more { color: var(--text); }
+}
+
+/* ds.t20, the computer's series and movie title pages (the user, 2026-11-15/16; workspace reviews/fable-design-review/REVIEW.md,
+   the approved section and rounds 6 to 6c; mockup series6.html, View → After). B = 18 px, every value Bφⁿ. Named exceptions:
+   16:9 stills, the 40 px season pill, Play's 3.333em, the 2:3 poster. Phone, tablet and TV keep their pages (`.jfmod-titleE`
+   is set only on a computer). */
+.jfds.dev-computer:not(.layout-tv) .jfmod-titleTop.jfmod-titleE,
+.jfds.layout-tv .jfmod-titleTop.jfmod-titleE {
+    /* The dark ink as a plain colour first: older webOS has no color-mix(). */
+    --jfmod-ink-76: rgba(255, 255, 255, 0.764);
+    --jfmod-ink-62: rgba(255, 255, 255, 0.618);
+
+    @supports (color: color-mix(in srgb, #000 50%, transparent)) {
+        --jfmod-ink-76: color-mix(in srgb, var(--text) 76.4%, transparent);
+        --jfmod-ink-62: color-mix(in srgb, var(--text) 61.8%, transparent);
+    }
+
+    /* The reading measure on the description only, so the credits keep their one line (Codex review of 1cfb7e7fec, P3). */
+    .jfmod-titleHead .jfmod-titleReading { max-width: none; }
+    .jfmod-titleText { max-width: var(--jfmod-s8); }
+
+    /* The head: B at the top, Bφ⁻² at its foot, so the episode row's season pill follows it closely. */
+    .jfmod-titleHead { padding: var(--jfmod-s0) var(--jfmod-s2) var(--jfmod-s-2); }
+
+    /* Credits B under the description, two lines Bφ⁻² apart: label 61.8 % with Bφ⁻¹ after it, names 400 at 76.4 %, linked. */
+    .jfmod-credits {
+        margin-top: var(--jfmod-s0);
+        font-size: var(--jfmod-s0);
+        line-height: 1.618;
+        color: var(--jfmod-ink-76);
+    }
+
+    .jfmod-credits > div + div { margin-top: var(--jfmod-s-2); }
+
+    .jfmod-creditLabel {
+        margin-right: var(--jfmod-s-1);
+        color: var(--jfmod-ink-62);
+    }
+
+    .jfmod-credits a {
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .jfmod-credits a:hover {
+        color: var(--text);
+        text-decoration: underline;
+        text-decoration-thickness: var(--jfmod-s-6);
+        text-underline-offset: var(--jfmod-s-5);
+    }
+
+    /* Play, option E: two lines (`.epc`); a movie's small line sets its own width (no ghost). */
+    .actbar .play { position: relative; }
+
+    .actbar .play.jfmod-playE .sm {
+        width: auto;
+        min-width: 0;
+    }
+
+    /* The watch progress: the button filled from the left in the primary, the label drawn again on it in #101010 (6.7 : 1 in
+       both themes), its small line at 85.4 %. The fill is the button's own box, clipped at the position. */
+    .jfmod-playFill {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        display: inherit;
+        align-items: inherit;
+        justify-content: inherit;
+        padding: inherit;
+        border-radius: inherit;
+        background: #00a4dc;
+        color: #101010;
+        pointer-events: none;
+    }
+
+    .jfmod-playFill .f { opacity: 0.854; }
+
+    /* The episode row, full width under the head (round 6): the 40 px season pill, Bφ⁻² to the stills; small stills Bφ⁵ with
+       their lines under them, the selected one Bφ⁶ with its lines in a card-glass band; Bφ⁻¹ apart, top-aligned; the row as
+       high as the selected still, whole cards only (SeriesEpisodes.tsx), the rest empty. */
+    .jfmod-epRow .etop {
+        padding: 0 0 var(--jfmod-s-2);
+    }
+
+    .jfmod-epRow .spill {
+        height: 40px;
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+
+    .jfmod-epRow .arrows {
+        margin: calc((40px - var(--jfmod-s2) - 2 * var(--jfmod-s-3)) / 2) 0 calc((40px - var(--jfmod-s2) - 2 * var(--jfmod-s-3)) / 2) auto;
+    }
+
+    .jfmod-epRow .arrows.jfmod-hidden { visibility: hidden; }
+
+    .jfmod-nextEp {
+        margin-left: var(--jfmod-s0);
+        font-size: var(--jfmod-s0);
+        color: var(--jfmod-ink-76);
+    }
+
+    .jfmod-epRow .erail {
+        display: flex;
+        align-items: flex-start;
+        overflow: visible;
+
+        /* A touch screen's horizontal swipe pages the row (SeriesEpisodes.tsx); the page still scrolls up and down. */
+        touch-action: pan-y;
+
+        /* A fixed height, the selected still's: the cards resize inside it (their captions may hang below for the animation's
+           moment), so nothing under the row moves when the selection changes (the user, 2026-11-17). */
+        height: calc(var(--jfmod-s6) * 9 / 16);
+        margin: 0;
+        padding: 0;
+        font-size: var(--jfmod-s0);
+    }
+
+    .jfmod-epRow .erail .cell {
+        width: var(--jfmod-s5);
+        transition: width var(--d2) var(--ease);
+    }
+
+    .jfmod-epRow .erail .cell.sel { width: var(--jfmod-s6); }
+
+    /* Bφ⁻¹ between cards as a margin: older webOS has no flex gap. */
+    .jfmod-epRow .erail .cell + .cell { margin-left: var(--jfmod-s-1); }
+
+    /* Selecting animates (the user, 2026-11-16: "animate the selection"): the new card grows Bφ⁵ → Bφ⁶ as the old one shrinks
+       and the cards after them slide, over the mod's --d2 / --ease; each caption fades in at its new place (in the band, or under
+       the still) over the same time. Instant with reduced motion. */
+    .jfmod-epRow .erail .cell .capt { animation: jfmod-epCaption var(--d2) var(--ease); }
+
+    @media (prefers-reduced-motion: reduce) {
+        .jfmod-epRow .erail .cell { transition: none; }
+
+        .jfmod-epRow .erail .cell .capt,
+        .jfmod-epRow .erail .cell.sel .capt { animation: none; }
+    }
+
+    .jfmod-epRow .erail .tile {
+        position: relative;
+        padding: 0;
+    }
+
+    /* The watch bar keeps to the still's rounded corners on every card (the user, 2026-11-18). */
+    .jfmod-epRow .erail .cell .post { overflow: hidden; }
+
+    .jfmod-epRow .erail .cell.sel .capt {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 1;
+        padding: var(--jfmod-s-2) var(--jfmod-s-1);
+        border-radius: 0 0 0.618em 0.618em;
+        background-color: var(--card-glass-bg);
+        background-image: linear-gradient(to right, rgba(0, 164, 220, 0.382) 0, rgba(0, 164, 220, 0) 61.8%);
+        backdrop-filter: var(--card-glass-filter);
+        pointer-events: none;
+        animation-name: jfmod-epBand;
+    }
+
+    .jfmod-epRow .erail .cell.sel .capt a { pointer-events: auto; }
+
+    /* The band's title is the glass ink; the ring marks the selection. The watch bar stays over the band. */
+    .jfmod-epRow .erail .cell.sel .capt .t { color: inherit; }
+    .jfmod-epRow .erail .cell.sel .prog { z-index: 2; }
+
+    .jfmod-epLink {
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .jfmod-epLink:hover {
+        text-decoration: underline;
+        text-decoration-thickness: var(--jfmod-s-6);
+        text-underline-offset: var(--jfmod-s-5);
+    }
+
+    /* About ⟨title⟩ at the foot: a row title (Bφ¹, 400; Bφ² above, B below), then the title's facts and the selected file,
+       61.8 % : 38.2 %, Bφ² apart. Labels 61.8 % in a Bφ⁴ column (the file's Bφ³), B before the values, 400 at 76.4 %; rows
+       Bφ⁻² apart; a track that wraps hangs B. Words only. */
+    .jfmod-about {
+        padding: 0 var(--jfmod-gut);
+        font-size: var(--jfmod-s0);
+        line-height: 1.618;
+    }
+
+    .jfmod-about h2.rowt {
+        margin: 0;
+        padding: var(--jfmod-s2) 0 0;
+        font-size: var(--jfmod-s1);
+        font-weight: 400;
+        line-height: 1;
+    }
+
+    .jfmod-aboutGrid {
+        display: grid;
+        grid-template-columns: 1.618fr 1fr;
+        align-items: start;
+        column-gap: var(--jfmod-s2);
+        margin-top: var(--jfmod-s0);
+    }
+
+    .jfmod-about dl {
+        display: grid;
+        grid-template-columns: var(--jfmod-s4) minmax(0, 1fr);
+        gap: var(--jfmod-s-2) var(--jfmod-s0);
+        margin: 0;
+    }
+
+    .jfmod-about dl.media { grid-template-columns: var(--jfmod-s3) minmax(0, 1fr); }
+    .jfmod-about dt { color: var(--jfmod-ink-62); }
+
+    .jfmod-about dd {
+        min-width: 0;
+        margin: 0;
+        color: var(--jfmod-ink-76);
+    }
+
+    .jfmod-about dd.hang > div {
+        padding-left: var(--jfmod-s0);
+        text-indent: calc(-1 * var(--jfmod-s0));
+    }
+
+    .jfmod-about dd a {
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .jfmod-about dd a:hover { text-decoration: underline; }
+    .jfmod-aboutNote { color: var(--jfmod-ink-62); }
+    .jfmod-about .links { margin-top: var(--jfmod-s-1); }
+
+    .jfmod-aboutVersion,
+    .jfmod-about .jfmod-more {
+        position: relative;
+        padding: 0;
+        border: 0;
+        background: none;
+        color: inherit;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+    }
+
+    .jfmod-about .jfmod-more {
+        font-weight: 700;
+        color: var(--text);
+    }
+
+    .jfmod-aboutVersion.cur { color: var(--primary); }
+
+    .jfmod-aboutCheck {
+        position: absolute;
+        top: calc((1.618em - var(--jfmod-s-1)) / 2);
+        left: calc(-1 * (var(--jfmod-s-1) + var(--jfmod-s-3)));
+        width: var(--jfmod-s-1);
+        height: var(--jfmod-s-1);
+        fill: none;
+        stroke: var(--primary);
+        stroke-width: 4.2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
 }
 
 /* ds.t19's quiet track controls and their chooser on computer, phone and tablet (phone and tablet: the user, 2026-11-11, "It uses
@@ -399,7 +689,8 @@
 .jfds:not(.dev-computer):not(.layout-tv) .jfmod-titleTop { --jfmod-head-muted: rgba(255, 255, 255, 0.764); }
 .jfds:not(.dev-computer):not(.layout-tv)[data-theme='light'] .jfmod-titleTop { --jfmod-head-muted: var(--text); }
 
-.jfds:not(.layout-tv) .jfmod-titleTop {
+.jfds:not(.layout-tv) .jfmod-titleTop,
+.jfds.layout-tv .jfmod-titleTop {
     /* ds.t19 (the user 2026-11-08, workspace reviews/netflix-tracks/codex.html: "Less chrome. Same control."): Video, Audio and
        Subtitles as three quiet controls s0 under the pill, s-2 apart: the kind's s0 icon, the value at B, an s-1 chevron, s2 high,
        padding s-2 s-1, s-1 corners, no glass until hovered or open. The first control's text sits on the column's edge. */
@@ -805,4 +1096,477 @@
 
     &.open > .jfmod-clampText::before { display: none; }
     &.open .jfmod-more { float: none; }
+}
+
+@keyframes jfmod-epCaption {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes jfmod-epBand {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* ds.t20 on the TV (the user, 2026-11-17: "Row below, scroll to it"; workspace reviews/fable-design-review/mockup/series6-tv.html,
+   round 6b's values): the head's five gaps before ratings, actions, tracks, description and credits Bφ⁻¹; the poster at its full
+   size before round 7d; the row under the hero (round 7d, SeriesEpisodes.tsx `useTvScreen`). Selection follows the D-pad focus,
+   so the selected card takes the focus ring. The band is the TV glass, black 66 %, white, no blur. At 1280 × 720 the page takes
+   round 6b's B of 16.13 px (B in proportion to the screen's height; named exception, as 24.2 is); the bar keeps its own. */
+.jfds.layout-tv .jfmod-titleTop.jfmod-titleE {
+    @media (max-height: 800px) {
+        --jfmod-base: calc(16.13px * var(--jfmod-scale, 1));
+        --jfmod-s-7: calc(var(--jfmod-base) * 0.0344418537);
+        --jfmod-s-6: calc(var(--jfmod-base) * 0.05572809);
+        --jfmod-s-5: calc(var(--jfmod-base) * 0.0901699437);
+        --jfmod-s-4: calc(var(--jfmod-base) * 0.1458980338);
+        --jfmod-s-3: calc(var(--jfmod-base) * 0.2360679775);
+        --jfmod-s-2: calc(var(--jfmod-base) * 0.3819660113);
+        --jfmod-s-1: calc(var(--jfmod-base) * 0.6180339887);
+        --jfmod-s0: var(--jfmod-base);
+        --jfmod-s1: calc(var(--jfmod-base) * 1.6180339887);
+        --jfmod-s2: calc(var(--jfmod-base) * 2.6180339887);
+        --jfmod-s3: calc(var(--jfmod-base) * 4.2360679775);
+        --jfmod-s4: calc(var(--jfmod-base) * 6.8541019662);
+        --jfmod-s5: calc(var(--jfmod-base) * 11.0901699437);
+        --jfmod-s6: calc(var(--jfmod-base) * 17.94427191);
+        --jfmod-s7: calc(var(--jfmod-base) * 29.0344418537);
+        --jfmod-s8: calc(var(--jfmod-base) * 46.9787137637);
+        --jfmod-gut: var(--jfmod-s2);
+    }
+
+    .jfmod-titleHead .jfmod-metaRatings .rgwrap,
+    .jfmod-titleHead .actbar,
+    .jfmod-titleHead .gpk,
+    .jfmod-credits { margin-top: var(--jfmod-s-1); }
+
+    .jfmod-titleHead .jfmod-titleReading { margin-top: var(--jfmod-s-1); }
+
+    /* The season pill keeps its natural height, B + 2 Bφ⁻¹, with no 40 px floor on the TV (round 7, no touch). */
+    .jfmod-epRow .spill {
+        height: auto;
+        min-height: 0;
+        padding-top: var(--jfmod-s-1);
+        padding-bottom: var(--jfmod-s-1);
+    }
+
+    .jfmod-epRow .erail .cell.sel .capt {
+        background-color: rgba(0, 0, 0, 0.66);
+        backdrop-filter: none;
+        color: #fff;
+    }
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------
+   Round 7d (the user, 2026-11-17; workspace reviews/fable-design-review/mockup/series7-bg.html?view=after&scrim=after2&fit=screen
+   &cred=line): no poster in the head. The hero is the ground under the bar and the head; its Backdrop covers a box from 23.6 %
+   (φ⁻³) of the width to the right edge, top-anchored, Bφ² past the hero's foot to the top of the stills on a series, its left edge
+   melting over 14.6 % (φ⁻⁴) into the blurred copy (today's art ground). Two plates of the ground carry the text, each as wide as
+   its text plus a Bφ⁴ fade: 38.2 % behind the title, facts, pills and tracks; 0 → 61.8 % → 76.4 % behind the description and
+   credits; the text glows softly. The first screen is the hero and the episode row: the hero grows to fill what the row leaves,
+   its head at its foot, the row's foot Bφ² above the screen's foot, Cast at the fold. A movie's head sits at the hero's top.
+   No Backdrop: the poster is the blurred ground and stands whole on the right, as tall as the column.
+   webOS 6 (Chromium 79): no mask-composite (each plate fades one way in its background and the other in a single mask), no
+   aspect-ratio (the right poster is an <img> as tall as the column, width auto), no inset or flex gap (longhands, margins),
+   no min() (media queries). Named exceptions: the 23.6 % / 14.6 % picture box (window proportions), 2:3 poster, 16:9 stills.
+   --------------------------------------------------------------------------------------------------------------------- */
+/* stylelint-disable-next-line no-duplicate-selectors -- round 7d is its own block */
+.jfds.dev-computer:not(.layout-tv) .jfmod-titleTop.jfmod-titleE,
+.jfds.layout-tv .jfmod-titleTop.jfmod-titleE {
+    --jfmod-g: 16, 16, 16;
+
+    /* The screen's height: the page starts under the bar, whose height the hero's ground runs up under (computer and TV). */
+    .jfmod-screen1 {
+        display: flex;
+        flex-direction: column;
+        min-height: calc(100vh - var(--jfmod-barh));
+        padding-bottom: 0;
+    }
+
+    /* The text plates fade Bφ⁴ past their text to the right, past the screen's edge on a narrow window: the hero clips its width,
+       never its height (the rings and the plates' feet stay), so the page does not scroll sideways (2026-11-19). */
+    .jfmod-hero {
+        display: flex;
+        flex: 1 0 auto;
+        flex-direction: column;
+        overflow: visible;
+        overflow-x: clip;
+    }
+
+    /* Align Top (round 7g, the user 2026-11-18, as the movie): the head's text starts B under the bar and the room left lies
+       between the credits and the season pill. */
+    .jfmod-hero > .jfmod-titleHead { padding-top: var(--jfmod-s0); }
+
+    /* At least Bφ¹ from the credits to the season pill in every mode, clearly more than the head's Bφ⁻¹ gaps (the user,
+       2026-11-19: "A gap should be between Starring and Season button"); the fit gives up description lines for it. */
+    .jfmod-screenRow .jfmod-hero > .jfmod-titleHead { padding-bottom: var(--jfmod-s1); }
+
+    .jfmod-hero .col {
+        position: relative;
+        flex: 1 1 auto;
+        min-width: 0;
+        margin-left: 0;
+    }
+
+    .jfmod-heroArt {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 0;
+        overflow: hidden;
+        pointer-events: none;
+    }
+
+    .jfmod-screenRow .jfmod-heroArt { bottom: calc(-1 * var(--jfmod-s2)); }
+
+    /* The picture's box (the user, 2026-11-18: "Why matrix is so ugly on desktop?"): 23.6 % in from the left, 16:9 at its own
+       width (76.4 % × 9/16 = 42.975 % of the hero's width), top-anchored, so the Backdrop is never zoomed past its cover at the
+       box's width; a hero shorter than the box crops its foot, a taller one shows the ground under it. The box melts its left
+       edge (14.6 %), the picture fades its foot over Bφ⁴ (one mask each: webOS 6 has no mask-composite). */
+    .jfmod-heroBox {
+        position: absolute;
+        top: 0;
+        right: 0;
+        left: 23.6%;
+        height: 0;
+        padding-bottom: 42.975%;
+        mask-image: linear-gradient(to right, transparent 0, rgba(0, 0, 0, 0.382) 5.6%, rgba(0, 0, 0, 0.764) 9%, #000 14.6%);
+    }
+
+    .jfmod-heroPic {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        background-position: 50% 0;
+        background-size: cover;
+        mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - var(--jfmod-s4)), rgba(0, 0, 0, 0.618) calc(100% - var(--jfmod-s3)), rgba(0, 0, 0, 0.236) calc(100% - var(--jfmod-s2)), transparent 100%);
+    }
+
+    /* The blurred copy is ground: φ⁻³ bright (the art ground's 0.4 read as a grey smear under a bright Backdrop). */
+    .jfmod-heroArt .art { filter: blur(40px) brightness(0.236) saturate(1.1); }
+
+    /* A movie's hero ends Bφ² under the credits, at least φ⁻¹ of the screen high; Cast follows. */
+    &.jfmod-titleMovie .jfmod-screen1 { min-height: calc(61.8vh - var(--jfmod-barh)); }
+
+    /* The foot (the ground at the box's foot, 61.8 % at Bφ², 23.6 % at Bφ³, gone at Bφ⁴) and the bar (76.4 % at the top,
+       61.8 % at the bar's foot, gone Bφ³ under it). */
+    .jfmod-heroScrim {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        background:
+            linear-gradient(to top, rgb(var(--jfmod-g)) 0, rgb(var(--jfmod-g)) 1px, rgba(var(--jfmod-g), 0.618) var(--jfmod-s2), rgba(var(--jfmod-g), 0.236) var(--jfmod-s3), rgba(var(--jfmod-g), 0) var(--jfmod-s4)),
+            linear-gradient(to bottom, rgba(var(--jfmod-g), 0.764) 0, rgba(var(--jfmod-g), 0.618) var(--jfmod-bar), rgba(var(--jfmod-g), 0) calc(var(--jfmod-bar) + var(--jfmod-s3)));
+    }
+
+    .jfmod-heroPlain .jfmod-heroScrim { background: linear-gradient(to top, rgb(var(--jfmod-g)) 0, rgba(var(--jfmod-g), 0) var(--jfmod-s4)); }
+
+    /* The plates: as wide as their text, a Bφ⁴ fade to the right (the mask), and their vertical fades in the background. */
+    .jfmod-up,
+    .jfmod-rd {
+        position: relative;
+        width: fit-content;
+        max-width: 100%;
+    }
+
+    .jfmod-rd { min-width: var(--jfmod-s8); }
+
+    @media (max-width: 999px) {
+        .jfmod-rd { min-width: 0; }
+    }
+
+    .jfmod-up::before,
+    .jfmod-rd::before {
+        content: '';
+        position: absolute;
+        right: calc(-1 * var(--jfmod-s4));
+        left: calc(-1 * var(--jfmod-gut));
+        z-index: -1;
+        pointer-events: none;
+        mask-image: linear-gradient(to right, #000 0, #000 calc(100% - var(--jfmod-s4)), rgba(0, 0, 0, 0.618) calc(100% - var(--jfmod-s3)), rgba(0, 0, 0, 0.236) calc(100% - var(--jfmod-s2)), transparent 100%);
+    }
+
+    .jfmod-up::before {
+        top: calc(-1 * var(--jfmod-s3));
+        bottom: calc(-1 * var(--jfmod-s3));
+        background: linear-gradient(to bottom, rgba(var(--jfmod-g), 0) 0, rgba(var(--jfmod-g), 0.09) var(--jfmod-s1), rgba(var(--jfmod-g), 0.236) var(--jfmod-s2), rgba(var(--jfmod-g), 0.382) var(--jfmod-s3), rgba(var(--jfmod-g), 0.382) calc(100% - var(--jfmod-s3)), rgba(var(--jfmod-g), 0.236) calc(100% - var(--jfmod-s2)), rgba(var(--jfmod-g), 0.09) calc(100% - var(--jfmod-s1)), rgba(var(--jfmod-g), 0) 100%);
+    }
+
+    /* The lower plate no longer ends at the hero's foot (Align Top), so its foot fades out over Bφ⁴, the steps of its top in
+       reverse, with no visible line (the user, 2026-11-18). */
+    .jfmod-rd::before {
+        top: calc(-1 * var(--jfmod-s3));
+        bottom: calc(-1 * var(--jfmod-s4));
+        background: linear-gradient(to bottom, rgba(var(--jfmod-g), 0) 0, rgba(var(--jfmod-g), 0.146) var(--jfmod-s1), rgba(var(--jfmod-g), 0.382) var(--jfmod-s2), rgba(var(--jfmod-g), 0.618) var(--jfmod-s3), rgba(var(--jfmod-g), 0.764) calc(100% - var(--jfmod-s4)), rgba(var(--jfmod-g), 0.618) calc(100% - var(--jfmod-s3)), rgba(var(--jfmod-g), 0.382) calc(100% - var(--jfmod-s2)), rgba(var(--jfmod-g), 0.146) calc(100% - var(--jfmod-s1)), rgba(var(--jfmod-g), 0) 100%);
+    }
+
+    .jfmod-heroPlain .jfmod-up::before,
+    .jfmod-heroPlain .jfmod-rd::before { display: none; }
+
+    .jfmod-hero:not(.jfmod-heroPlain) .itemName,
+    .jfmod-hero:not(.jfmod-heroPlain) .jfmod-titleReading { text-shadow: 0 0 var(--jfmod-s-2) rgba(var(--jfmod-g), 0.764), 0 0 var(--jfmod-s0) rgba(var(--jfmod-g), 0.618); }
+
+    .jfmod-hero:not(.jfmod-heroPlain) .meta,
+    .jfmod-hero:not(.jfmod-heroPlain) .gpk { text-shadow: 0 0 var(--jfmod-s-3) rgba(var(--jfmod-g), 0.854), 0 0 var(--jfmod-s-2) rgba(var(--jfmod-g), 0.764), 0 0 var(--jfmod-s0) rgba(var(--jfmod-g), 0.618); }
+
+    /* No Backdrop: the poster whole on the right, as tall as the column. */
+    .jfmod-heroPoster {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: auto;
+        height: 100%;
+        border-radius: var(--jfmod-s-1);
+        box-shadow: 0 var(--jfmod-s-1) var(--jfmod-s1) rgba(0, 0, 0, 0.618);
+    }
+
+    /* Credits on one line, Bφ¹ apart, wrapping when they must (Bφ⁻² between lines). */
+    /* stylelint-disable-next-line no-duplicate-selectors -- round 7d's line */
+    .jfmod-credits {
+        display: flex;
+        flex-wrap: wrap;
+        margin-top: calc(var(--jfmod-s0) - var(--jfmod-s-2));
+    }
+
+    .jfmod-credits > div,
+    .jfmod-credits > div + div { margin: var(--jfmod-s-2) var(--jfmod-s1) 0 0; }
+
+    /* The row under the hero, over the picture's foot; its foot Bφ² above the screen's foot; Cast at the fold. */
+    .jfmod-screen1 > .jfmod-epRow {
+        position: relative;
+        z-index: 3;
+        padding-bottom: calc(var(--jfmod-s2) + var(--jfmod-s-3));
+    }
+
+    .jfmod-screenRow + .titlefoot { margin-top: calc(-1 * var(--jfmod-s2)); }
+
+    /* The remote's and the keyboard's focus in the Play row and on the track controls: an Bφ⁻³ primary ring on each (the user,
+       2026-11-17: "I did not see selection of Video and tool bar buttons"); the mouse draws none. */
+    .actbar .dbtn:focus,
+    .actbar .play:focus,
+    .gpk .seg.focusable:focus,
+    .jfmod-epRow .erail .cell:focus .post { box-shadow: 0 0 0 var(--jfmod-s-3) var(--primary); }
+
+    /* The season pill draws its ring inside, Bφ⁻² above the stills, so Bφ⁻² of clear ground stays between it and the selected
+       card, which has no ring at rest (the user, 2026-11-18: rings should not touch). */
+    .jfmod-epRow .spill:focus { box-shadow: inset 0 0 0 var(--jfmod-s-3) var(--primary); }
+
+    /* Selected is not focused (the user, 2026-11-18, cx2 of series7-bg.html): the selected card's band takes a wash of the primary,
+       38.2 % at its leading edge, gone at 61.8 % of its width, over its glass (a plain gradient, webOS 6; the band's rule); the ink
+       is unchanged and no ring is drawn round it (the older rings, _golden.scss, are cleared). On focus the wash stays and the blue
+       Bφ⁻³ ring is added. */
+    .jfmod-epRow .erail .cell.sel:not(:focus) .post { box-shadow: none; }
+
+    /* The empty room of an episode with no file's track controls (EpisodeTrackFields). */
+    .jfmod-gpkEmpty { visibility: hidden; }
+
+    /* The slide (round 7d): the rail moves under the fixed slot; a card that left rides it once more while it fades. */
+    .jfmod-screen1 .jfmod-epRow .erail { position: relative; }
+
+    .jfmod-epRow .erail .jfmod-ghost {
+        position: absolute;
+        top: 0;
+        margin: 0;
+        pointer-events: none;
+    }
+
+    /* A movie: the hero is the screen's height, its head at the top (the user, 2026-11-17). */
+    &.jfmod-titleMovie .jfmod-hero > .jfmod-titleHead { padding-bottom: var(--jfmod-s2); }
+}
+
+/* The light theme's hero: a light ground and plates, and the dark ink, on the computer (its round 7d block outranked the plain
+   light rule) and on the TV (2026-11-18). */
+.jfds.dev-computer:not(.layout-tv)[data-theme='light'] .jfmod-titleTop.jfmod-titleE,
+.jfds.layout-tv[data-theme='light'] .jfmod-titleTop.jfmod-titleE { --jfmod-g: 242, 242, 242; }
+
+.jfds.layout-tv[data-theme='light'] .jfmod-titleTop.jfmod-titleE .jfmod-titleHead { --jfmod-head-muted: var(--text); }
+
+/* The light theme's glow without its B-wide layer (polish P1, the user 2026-11-21: "Remove"): the title and the reading keep the
+   Bφ⁻² glow, the facts and the tracks the Bφ⁻³ and Bφ⁻² ones; the plates stay. */
+.jfds.dev-computer:not(.layout-tv)[data-theme='light'] .jfmod-titleTop.jfmod-titleE .jfmod-hero:not(.jfmod-heroPlain),
+.jfds.layout-tv[data-theme='light'] .jfmod-titleTop.jfmod-titleE .jfmod-hero:not(.jfmod-heroPlain) {
+    .itemName,
+    .jfmod-titleReading { text-shadow: 0 0 var(--jfmod-s-2) rgba(var(--jfmod-g), 0.764); }
+
+    .meta,
+    .gpk { text-shadow: 0 0 var(--jfmod-s-3) rgba(var(--jfmod-g), 0.854), 0 0 var(--jfmod-s-2) rgba(var(--jfmod-g), 0.764); }
+}
+
+/* The episode cards' second line (polish P5, the user 2026-11-21): the bullet at 61.8 % (φ⁻¹), the star Bφ⁻¹ centred on the
+   score; the title and the score unchanged. */
+.jfds.dev-computer:not(.layout-tv) .jfmod-titleTop.jfmod-titleE .jfmod-epRow .capt .ln.d,
+.jfds.layout-tv .jfmod-titleTop.jfmod-titleE .jfmod-epRow .capt .ln.d {
+    .bullet { opacity: 0.618; }
+
+    .star {
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .star svg {
+        width: var(--jfmod-s-1);
+        height: var(--jfmod-s-1);
+    }
+}
+
+/* The TV's Play: its small line at 85.4 % (1 − φ⁻⁴) on the unfilled part too, as on the fill (polish P2, the user 2026-11-21). */
+.jfds.layout-tv .jfmod-titleTop.jfmod-titleE .jfmod-hero .actbar .play .epc .sm { opacity: 0.854; }
+
+/* The light theme's ink without color-mix() (webOS 6): dark, as --text at 76.4 % and 61.8 % (the legacy pills keep their dark
+   glass; Codex review of 1cfb7e7fec, P2). */
+@supports not (color: color-mix(in srgb, #000 50%, transparent)) {
+    .jfds.dev-computer:not(.layout-tv)[data-theme='light'] .jfmod-titleTop.jfmod-titleE,
+    .jfds.layout-tv[data-theme='light'] .jfmod-titleTop.jfmod-titleE {
+        --jfmod-ink-76: rgba(0, 0, 0, 0.665);
+        --jfmod-ink-62: rgba(0, 0, 0, 0.538);
+    }
+}
+.jfds[data-theme='light'] .jfmod-titleTop.jfmod-titleE .jfmod-hero .jfmod-heroArt .art { filter: blur(40px) brightness(1.25) saturate(0.8); }
+
+/* The TV's quiet track controls (the user, 2026-11-18: "I also expected TV to have the same video audio and subtitle dropdowns"):
+   ds.t19's controls (above) at the TV's B. The remote's focus is the Bφ⁻³ ring round the control, no outline; the TV's own list
+   opens in its control, at least Bφ⁷ wide; the Dolby lockup at 16/18 B. */
+/* stylelint-disable-next-line no-duplicate-selectors -- the TV's quiet controls */
+.jfds.layout-tv .jfmod-titleTop {
+    .gpk .seg:focus-visible { outline: none; }
+    .gpk .seg.focusable:focus { box-shadow: 0 0 0 var(--jfmod-s-3) var(--primary); }
+    .gpk .dolby { height: calc(var(--jfmod-base) * 0.8888888889); }
+
+    .gpk .seg > .vlist {
+        right: auto;
+        min-width: var(--jfmod-s7);
+    }
+
+    /* The list's rows (polish P4, the user 2026-11-21): Bφ⁻¹ of room for the focus ring, the tick centred in its own B column, Bφ⁻²
+       before the text; the language (with a commentary mark Bφ⁻² after it, TrackText) at least Bφ⁵ wide, so the codec and the
+       channels line up on every row. */
+    .gpk .vlist .vrow { padding-left: calc(var(--jfmod-s-1) + var(--jfmod-s0) + var(--jfmod-s-2)); }
+    .gpk .vlist .vrow.sel::before { left: calc(var(--jfmod-s-1) + (var(--jfmod-s0) - var(--jfmod-s-1)) / 2); }
+
+    .gpk .vlist .vrow .r {
+        box-sizing: border-box;
+        min-width: var(--jfmod-s5);
+        margin-right: var(--jfmod-s-2);
+    }
+
+    .gpk .vlist .vrow .r .rflag.glyph { margin: 0 0 0 var(--jfmod-s-2); }
+}
+
+/* webOS 6 and earlier (Chromium 79, the C1) have no flex gap: the quiet controls' gaps as margins. */
+html.jfmod-webos-legacy .jfds.layout-tv .jfmod-titleTop {
+    .gpk,
+    .gpk .seg,
+    .gpk .val { gap: 0; }
+
+    .gpk .seg.a,
+    .gpk .seg.s,
+    .gpk .seg > .val,
+    .gpk .seg > .chev,
+    .gpk .val > * + * { margin-left: var(--jfmod-s-2); }
+
+    .gpk .val > .jfmod-short { margin-left: 0; }
+    .gpk .val .dolby + .chn { margin-left: var(--jfmod-s-3); }
+}
+
+/* A computer window narrower than 4:3 (portrait, near-square such as 1000 × 928, 5:4 such as 1280 × 1024) flows (the user,
+   2026-11-18): the hero as tall as its content, the row, Cast and the rest straight after it, no fit (TitleAbout `useFlowWindow`,
+   the same query). The picture keeps its 16:9 box. The TV always fits its screen. */
+@media (max-aspect-ratio: 3999/3000) {
+    .jfds.dev-computer:not(.layout-tv) .jfmod-titleTop.jfmod-titleE .jfmod-screen1,
+    .jfds.dev-computer:not(.layout-tv) .jfmod-titleTop.jfmod-titleE.jfmod-titleMovie .jfmod-screen1 { min-height: 0; }
+}
+
+/* Grows (round 7g, the user 2026-11-18; workspace reviews/fable-design-review/mockup/series7-bg.html, scale=grow): on a computer
+   the title page's B follows the screen as the TV's does. Drawn for 1440 × 900 at B = 18 px; B = 18 px × the smaller of
+   height ÷ 900 and width ÷ 1440, from 18 px to 18 px × φ (29.12 px): 21.6 at 1920 × 1080, 28.8 at 2560 × 1440. The tokens are
+   computed where they are declared, so the page declares them again; the bar keeps its own B, and the page keeps the bar's
+   gutter (--jfmod-gut, inherited from .jfds), so its left edge stays on the bar's. The two lengths not on B scale with it: the
+   season pill's 40 px floor (40/18 B) and the Dolby lockup's 16 px (16/18 B). The TV is unchanged. */
+/* stylelint-disable-next-line no-duplicate-selectors -- round 7g's computer B */
+.jfds.dev-computer:not(.layout-tv) .jfmod-titleTop.jfmod-titleE {
+    --jfmod-base: calc(clamp(18px, min(2vh, 1.25vw), 29.12px) * var(--jfmod-scale, 1));
+    --jfmod-s-7: calc(var(--jfmod-base) * 0.0344418537);
+    --jfmod-s-6: calc(var(--jfmod-base) * 0.05572809);
+    --jfmod-s-5: calc(var(--jfmod-base) * 0.0901699437);
+    --jfmod-s-4: calc(var(--jfmod-base) * 0.1458980338);
+    --jfmod-s-3: calc(var(--jfmod-base) * 0.2360679775);
+    --jfmod-s-2: calc(var(--jfmod-base) * 0.3819660113);
+    --jfmod-s-1: calc(var(--jfmod-base) * 0.6180339887);
+    --jfmod-s0: var(--jfmod-base);
+    --jfmod-s1: calc(var(--jfmod-base) * 1.6180339887);
+    --jfmod-s2: calc(var(--jfmod-base) * 2.6180339887);
+    --jfmod-s3: calc(var(--jfmod-base) * 4.2360679775);
+    --jfmod-s4: calc(var(--jfmod-base) * 6.8541019662);
+    --jfmod-s5: calc(var(--jfmod-base) * 11.0901699437);
+    --jfmod-s6: calc(var(--jfmod-base) * 17.94427191);
+    --jfmod-s7: calc(var(--jfmod-base) * 29.0344418537);
+    --jfmod-s8: calc(var(--jfmod-base) * 46.9787137637);
+
+    .jfmod-epRow .spill { height: calc(var(--jfmod-base) * 2.2222222222); }
+
+    /* The pager (polish P3, the user 2026-11-21): its capsule the season pill's height (40/18 B), each arrow 40/18 B (never under
+       40 px), the chevrons Bφ⁻¹. */
+    .jfmod-epRow .arrows {
+        margin: 0 0 0 auto;
+        padding: 0;
+    }
+
+    .jfmod-epRow .arrows .dbtn {
+        width: calc(var(--jfmod-base) * 2.2222222222);
+        height: calc(var(--jfmod-base) * 2.2222222222);
+        min-width: 40px;
+        min-height: 40px;
+    }
+
+    .jfmod-epRow .arrows .dbtn svg {
+        width: var(--jfmod-s-1);
+        height: var(--jfmod-s-1);
+    }
+
+    /* The rating chip (polish P6, the user 2026-11-21): Bφ⁻² before the chevron, the chevron Bφ⁻¹; the chip keeps its height. */
+    .jfmod-hero .rgroup .jfmod-rchev {
+        width: var(--jfmod-s-1);
+        height: var(--jfmod-s-1);
+        margin-left: var(--jfmod-s-2);
+    }
+
+    .gpk .dolby { height: calc(var(--jfmod-base) * 0.8888888889); }
+
+    /* The mouse over any card on the title page, the episodes (the selected one too, its wash kept) and every row under them
+       (Cast, Guest Stars, Next Up, More Like This, …): the guidelines' field ring, Bφ⁻³ in the solid primary, as the keyboard's
+       focus (the user, 2026-11-18/19: "this is the thickness!", "Cast and Guest don't have the same hover including selected
+       Episode", then every row). Every other page keeps upstream's 0.135em. The ring is Bφ⁻³ of the 18 px reference B, 4.25 px at
+       every window size (polish P7, the user 2026-11-21: "Keep 4.25px"); the keyboard's focus grows with the page's B. */
+    .jfmod-epRow .erail .cell:not(:focus):hover .post,
+    .titlefoot .sect .cell:hover .post { box-shadow: 0 0 0 calc(18px * 0.2360679775 * var(--jfmod-scale, 1)) var(--primary); }
+
+    .jfmod-titleHead {
+        padding-right: var(--jfmod-gut);
+        padding-left: var(--jfmod-gut);
+    }
+}
+
+/* The TV's row titles (the reading measure is the computer's and the TV's, in the ds.t20 block). */
+/* stylelint-disable-next-line no-duplicate-selectors -- round 7d's TV values */
+.jfds.layout-tv .jfmod-titleTop.jfmod-titleE {
+    /* The TV's row titles keep their em padding (1.618em of a 1.618em title: φ² at the root), so Cast's title is drawn back by it. */
+    .jfmod-screenRow + .titlefoot { margin-top: -2.618em; }
+}
+
+/* A pointer's click focuses a button too; its ring is for the keyboard and the remote only. */
+.ds-pointer .jfds.dev-computer:not(.layout-tv) .jfmod-titleTop.jfmod-titleE {
+    .actbar .dbtn:focus,
+    .actbar .play:focus,
+    .gpk .seg.focusable:focus,
+    .jfmod-epRow .spill:focus,
+    .jfmod-epRow .erail .cell:focus .post { box-shadow: none; }
+
+    .jfmod-epRow .erail .cell.sel .post { box-shadow: none; }
+    .jfmod-epRow .erail .cell:hover .post { box-shadow: 0 0 0 var(--jfmod-s-3) var(--primary); }
 }

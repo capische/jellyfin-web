@@ -22,7 +22,8 @@ approval of the 18px proposal. Tokens `--jfmod-s<n>` from `design/_golden.scss` 
 The group leaves the metadata words for its own line s0 below them (the slot stays in `.meta` and is ordered last, so the stock
 star/tomato hiding and the row hold are unchanged): one card-glass pill s2 high, padding 0 s0, s2 corners, in full ink. Each
 mark (s0 high) sits beside its value (s0, 600) with s-2 between; marks s0 apart; a chevron (`.jfmod-rchev`, s0, 76.4%) s0 after
-the last. One highlight: the whole pill takes the 12% tint while the popup shows or under the pointer; keyboard focus 18% white
+the last; on the redesigned title page (computer) the chevron is s-1, s-2 after the last mark, and the pill keeps its height
+(polish P6, approved by the user 2026-11-21). One highlight: the whole pill takes the 12% tint while the popup shows or under the pointer; keyboard focus 18% white
 and the ring; after a pointer click opened a source the pill is its plain glass again. The popup hangs s-2 below the pill and
 is at least as wide (no bleed now); its 1.236em words are a retained exception, now of the 18px base. On its own line Trakt gives way only
 when the pill is wider than the column. Links, rows, counts, focus order, Back and the TV are unchanged.

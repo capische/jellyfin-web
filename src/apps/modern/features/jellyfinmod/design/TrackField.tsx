@@ -4,7 +4,7 @@ import inputManager from 'scripts/inputManager';
 import { getKeyName } from 'scripts/keyboardNavigation';
 import { isBackKey } from '../shell/dpadModals';
 import { Icon, type IconName } from './Icon';
-import { DesignContext, quietTracks } from './Root';
+import { DesignContext, quietLook, quietTracks } from './Root';
 
 type TrackKind = 'v' | 'a' | 's';
 interface ChooserTab { name: string; kind: string }
@@ -143,12 +143,14 @@ interface QuietFieldProps {
     name: string;
     enabled: boolean;
     open: boolean;
-    onToggle: () => void;
+    onToggle: (event: React.MouseEvent) => void;
     onKeyDown: (event: React.KeyboardEvent) => void;
     children: ReactNode;
+    /** The TV's list, inside its control. */
+    sheet?: ReactNode;
 }
 
-const QuietField = React.forwardRef<HTMLDivElement, QuietFieldProps>(({ kind, name, enabled, open, onToggle, onKeyDown, children }, ref) => {
+const QuietField = React.forwardRef<HTMLDivElement, QuietFieldProps>(({ kind, name, enabled, open, onToggle, onKeyDown, children, sheet }, ref) => {
     if (!enabled) {
         return <div ref={ref} className={'seg ' + kind} data-jfmod-track-field={name} data-jfmod-kind={kind}>
             <Icon name={KIND_ICON[kind]} className='kicon' /><span className='val'>{children}</span>
@@ -156,7 +158,7 @@ const QuietField = React.forwardRef<HTMLDivElement, QuietFieldProps>(({ kind, na
     }
     return <div ref={ref} role='button' tabIndex={0} aria-haspopup='listbox' aria-expanded={open} aria-label={name} className={'seg ' + kind + ' focusable'}
         data-jfmod-track-field={name} data-jfmod-kind={kind} onClick={onToggle} onKeyDown={onKeyDown}>
-        <Icon name={KIND_ICON[kind]} className='kicon' /><span className='val'>{children}</span><Icon name='down' className='chev' />
+        <Icon name={KIND_ICON[kind]} className='kicon' /><span className='val'>{children}</span><Icon name='down' className='chev' />{sheet}
     </div>;
 });
 QuietField.displayName = 'QuietField';
@@ -167,19 +169,31 @@ QuietField.displayName = 'QuietField';
  * opens in one paper chooser under the strip with no head of its own (the user 2026-11-11): the controls row is its tabs, the open
  * control on the tint, and another control closes this list and opens its own.
  */
+/** A click on the control that is not in its open list. */
+const outsideList = (list: React.RefObject<HTMLDivElement>, toggle: () => void) => (event: React.MouseEvent) => {
+    if (!list.current?.contains(event.target as Node)) toggle();
+};
+
+/** Where a quiet control's list goes: the computer's chooser and the phone's card list after it; the TV's list in it, as from the
+ * captioned field (`.gpk .seg > .vlist`). */
+const placeSheet = (sheet: ReactNode, quiet: boolean, inCard: boolean): [ReactNode, ReactNode] => (quiet || inCard ? [undefined, sheet] : [sheet, undefined]);
+
 export const TrackField: FC<{ kind: TrackKind; name: string; value: ReactNode; enabled?: boolean; stacked: boolean;
     children?: ReactNode; onOpen?: () => void; onClose?: () => void; closeOnChoose?: boolean; title?: string; extra?: string;
     /** The closed quiet value, where no caption names the field (`Subtitles Off`); `value` (`Off`, the icon naming it) while the
      * controls would not fit one row with it (`useTightRow`). */
     quietValue?: ReactNode }> = ({ kind, name, value, enabled = true, stacked, children, onOpen, onClose, closeOnChoose = true, title, extra, quietValue }) => {
-    const quiet = quietTracks(useContext(DesignContext));
+    const device = useContext(DesignContext);
+    // The list: the computer's one chooser, or the TV's own list; the trigger: the quiet control on every layout.
+    const quiet = quietTracks(device);
+    const look = quietLook(device);
     const [open, setOpen] = useState(false);
     const [tabs, setTabs] = useState<ChooserTab[]>([]);
     const [focus, setFocus] = useState(false);
     const trigger = useRef<HTMLDivElement>(null);
     const list = useRef<HTMLDivElement>(null);
     const focused = useRef<{ source?: string | null; track?: string | null; control?: string }>();
-    useTightRow(trigger, quiet && !!quietValue);
+    useTightRow(trigger, look && !!quietValue);
     const close = useCallback(() => {
         setOpen(false);
         onClose?.();
@@ -275,16 +289,18 @@ export const TrackField: FC<{ kind: TrackKind; name: string; value: ReactNode; e
     };
     const role = enabled ? 'button' : undefined;
     const control = enabled ? { tabIndex: 0, 'aria-haspopup': 'listbox' as const, 'aria-expanded': open } : {};
-    if (quiet) {
-        return <><QuietField ref={trigger} kind={kind} name={name} enabled={enabled} open={open} onToggle={toggle}
-            onKeyDown={keys}>{quietValue ? <><span className='jfmod-long'>{quietValue}</span><span className='jfmod-short'>{value}</span></> : value}</QuietField>{sheet}</>;
+    if (look) {
+        const [inner, after] = placeSheet(sheet, quiet, inCard);
+        return <><QuietField ref={trigger} kind={kind} name={name} enabled={enabled} open={open}
+            onToggle={outsideList(list, toggle)} sheet={inner}
+            onKeyDown={keys}>{quietValue ? <><span className='jfmod-long'>{quietValue}</span><span className='jfmod-short'>{value}</span></> : value}</QuietField>{after}</>;
     }
 
     return <><div ref={trigger} role={role} {...control}
         className={'seg ' + kind + ' glassy' + (open || focus ? ' on' : '') + (enabled ? ' focusable' : '')}
         title={title} aria-label={name} data-jfmod-track-field={name}
         onFocus={event => { if (event.target === event.currentTarget) setFocus(true); }} onBlur={() => setFocus(false)}
-        onClick={event => { if (!list.current?.contains(event.target as Node)) toggle(); }}
+        onClick={outsideList(list, toggle)}
         onKeyDown={keys}>
         <span className='cap'>{name}{extra && <span className='x'>{' · ' + extra}</span>}</span><span className='val'>{value}{enabled && <Icon name={open ? 'up' : 'down'} className='chev end' />}</span>
         {!inCard && sheet}

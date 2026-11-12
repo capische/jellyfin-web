@@ -442,7 +442,8 @@
    (s3 in all). Named exceptions: 2:3 posters and people, 16:9 stills, 40 px targets, the card's own em values (ring, corners,
    corner marks, progress), the glass recipe.
    --------------------------------------------------------------------------------------------------------------------- */
-&.dev-computer:not(.layout-tv) .jfmod-titleTop .titlefoot {
+&.dev-computer:not(.layout-tv) .jfmod-titleTop .titlefoot,
+&.dev-computer:not(.layout-tv) .jfmod-titleTop .jfmod-screen1 {
     padding-bottom: var(--jfmod-s2);
 
     .sect { padding: 0 var(--jfmod-gut); }
@@ -473,7 +474,8 @@
    each at its own base B: cells --jfmod-sgap apart (padded half), stills --jfmod-still. Computer, tablet and TV s1 and s6;
    phone s0 and s5. The slider arrows are the computer's: touch swipes the strip and the TV's D-pad walks it.
    --------------------------------------------------------------------------------------------------------------------- */
-.jfmod-titleTop .titlefoot {
+.jfmod-titleTop .titlefoot,
+.jfmod-titleTop .jfmod-screen1 {
     --jfmod-sgap: var(--jfmod-s1);
     --jfmod-still: var(--jfmod-s6);
 
@@ -601,14 +603,16 @@
 }
 
 &:not(.dev-computer) .jfmod-titleTop .titlefoot,
-&.layout-tv .jfmod-titleTop .titlefoot {
+&.layout-tv .jfmod-titleTop .titlefoot,
+&.layout-tv .jfmod-titleTop .jfmod-screen1 {
     .estrip .etop { padding-top: var(--jfmod-s1); }
     .estrip .arrows { display: none; }
     .erail .cell.sfirst { margin-left: var(--jfmod-s1); }
 }
 
 /* The TV: the selection keeps the card's thinner ring, so the D-pad's focus (the keyboard ring) stands out from it. */
-&.layout-tv .jfmod-titleTop .titlefoot {
+&.layout-tv .jfmod-titleTop .titlefoot,
+&.layout-tv .jfmod-titleTop .jfmod-screen1 {
     .spill:focus {
         box-shadow: 0 0 0 var(--jfmod-s-3) var(--primary);
         outline: none;

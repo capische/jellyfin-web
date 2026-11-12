@@ -1,5 +1,19 @@
 # Buttons and row actions
 
+**Play in two lines with its progress (ds.t20, option E): approved by the user 2026-11-15/16, REVIEW.md rounds 6 to 6c, built, not
+accepted, computer only.** On a computer's series and movie pages Play keeps its 3.333em pill and `.epc` two lines (the small line
+Bφ⁻¹ / 600 at 61.8%, Bφ⁻³ under the label; on the TV's title page 85.4 % on the unfilled part too, as on the fill: polish P2,
+approved by the user 2026-11-21). Series: *Play Episode 7* over *49m · Ends 10:49 PM*; part-way still *Play Episode 7*
+(never *Resume*, the user 2026-11-17) over *32m left · Ends 10:32 PM* (*1h 12m left* over an hour), no season; playback resumes
+from the saved position. Movie: *Play* over *Ends 11:00 PM* (its runtime is on the facts line); part-way *Play* over *52m left ·
+Ends 9:36 PM*; its small line sets the width (`.jfmod-playE`); the accessible label is *Play* too. On the remote and the
+keyboard the Play row is a stop with Left and Right along its buttons, each with a Bφ⁻³ primary ring (none after a click); on
+the TV a focused round button shows that ring alone, with no blue fill and no growth, its icon and ground unchanged (the user,
+2026-11-18: "selection on TV should be circle not fill"; on every TV page, below). The time is the locale's
+(24-hour where it is). **Progress fill:** only while the title, or the episode on the button, is part-way: the button's own box
+filled from the left to position ÷ runtime in `#00a4dc`, the label drawn again on it in `#101010`, its small line at 85.4%
+(`PlayFill`, `.jfmod-playFill`, clipped with `clip-path`). No separate *Ends* beside the pill. Phone, tablet and TV keep ds.t18.
+
 **Video row actions moved to More (ds.t12): approved by the user 2026-11-07, built, not accepted.** A Video list row has no
 History, Keep or Remove buttons any more, on every layout; they are the title More menu's Selected Version entries
 ([menus.md](menus.md)). The `data-jfmod-file-history|pin|remove` hooks are gone; the entries are
@@ -67,7 +81,7 @@ closed disclosure buttons, with a decorative Material chevron rotating .382s (.1
 its setup wizard, `shell/sharedChrome.scss` draws all labelled buttons as 2.7816em pills (1.3908em corners), side padding
 1.618em, 1em Title Case labels. Main: primary/white 700, hover #19b4ea. Other: transparent/.09em neutral outline/600,
 hover 12% tint. Destroy: #c62828/white 600, hover #d84343. Disabled labelled buttons: no fill, hairline, 61.8% ink.
-Keyboard focus: .15em primary ring .15em off the pill, on `.btn`, the action pill's and the player's `.dbtn` and `.play` and a link; a round `.ib` and a card's `.disc` draw the card pill's .135em ring (ds.t7, built, not accepted). Nothing the design draws shows the browser's own ring. A click never leaves a ring, even after a key press: on a computer the rings show only until the next pointer press (`.ds-pointer`, set on pointer down and cleared on a key; the user, 2026-11-06). TV: .16em ink ring, 1.08 growth, other filled primary; destroy stays red.
+Keyboard focus: .15em primary ring .15em off the pill, on `.btn`, the action pill's and the player's `.dbtn` and `.play` and a link; a round `.ib` and a card's `.disc` draw the card pill's .135em ring (ds.t7, built, not accepted). Nothing the design draws shows the browser's own ring. A click never leaves a ring, even after a key press: on a computer the rings show only until the next pointer press (`.ds-pointer`, set on pointer down and cleared on a key; the user, 2026-11-06). TV: .16em ink ring, 1.08 growth, other filled primary; destroy stays red. **The round icon buttons of an action pill** (`.actbar .dbtn`: Home's hero, the title, season, episode and browse pages, the library toolbar, the player's controls) take the primary Bφ⁻³ ring outside the button on the TV, with no fill and no growth, their icon and ground unchanged (the user, 2026-11-18, "yes" to the ring on all pages; `_ds.scss`). In the light theme on the TV (not webOS 6 and earlier) the action pill is the white glass with dark icons and Play is the computer's dark Play; a title page's main button focus ring is the primary there, not white ([card-glass.md](card-glass.md)).
 Press .96/.146s, tint .236s; instant focus on TV and no press transform with reduced motion. Row actions retain their existing
 40px sizes and glyph state; TV uses the white double ring (.12em paper gap + .16em white = .28em outer shadow), no scaling,
 including the Video row's History/Keep/Remove. Refused actions keep their focus stop. The removal dialog's safe outcome is

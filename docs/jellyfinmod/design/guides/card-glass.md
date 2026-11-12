@@ -1,5 +1,10 @@
 # Card glass
 
+**The selected episode's band (ds.t20), approved by the user 2026-11-15/16, REVIEW.md rounds 6 to 6c, built, not accepted.** On a
+computer the series page's selected episode card (Bφ⁶) carries its two caption lines in a band of this glass along the still's
+foot: `--card-glass-bg` / `--card-glass-filter`, padding Bφ⁻² / Bφ⁻¹, the still's bottom corners; the title in the glass ink (not
+the primary), the watch bar drawn over the band (`titleTop.scss`, `.jfmod-epRow`). About 40% of the still sits under it.
+
 **Progress disc (ds.t16), approved by the user 2026-11-07, built, not accepted.** The card's centre disc keeps this glass while
 it shows a download's ring, percent and `3 of 12` ([download-state-mark.md](download-state-mark.md)); no second tint. Its words
 are two digits and a short count, within this guide's "a glyph or two digits" spirit, at 1em and 0.618em 600 in the glass ink.
@@ -37,6 +42,13 @@ the `-webkit-` forms. The bar colour is the theme's `--jf-palette-AppBar-default
 | `[data-theme='light']` | white at **61.8 %** (`--jfmod-light-glass-fill`) | `blur(12px) saturate(170%) brightness(1.09)`, no contrast step (`--jfmod-light-glass-blur`, `-saturate`, `-brightness`) | black 87 % (`--jfmod-light-glass-ink`) | black 25 % | `#c62828` |
 | `[data-theme='appletv']` | bar colour lightened 70 % → white, at **30 %** | `blur(12px) saturate(170%) contrast(0.7) brightness(1.15)` | `text-primary` | black 25 % | `#c62828` |
 | **TV layout** (`.layout-tv`), any theme | solid `rgba(0,0,0,.66)` | none | `#fff` | white 30 % | `#ff5a4f` |
+
+**The TV's pills in the light theme (the user, 2026-11-18: "I like white more"):** two looks only. Modern: the `.glassy` pills
+(action pill, season pill, Home's hero pill), on every TV page (the user, 2026-11-19), take the light-theme row above, the computer's white glass and ink, and the dark Play;
+without blur (`no-bf`), white 85.4 % (1 − φ⁻⁴). Legacy: webOS 6 and earlier keep the dark TV glass, decided by the platform
+version, never the model: upstream's `browser.web0sVersion` (Chromium major: 79 → 6, 87 → 22, 94 → 23, 108 → 24, 120 → 25; unknown
+counts as old) against `LEGACY_WEBOS_MAX_VERSION = 6` (`Root.tsx`), set as `html.jfmod-webos-legacy`. The card band and the dark
+theme on the TV keep the row above.
 | no `backdrop-filter` or `color-mix()` | solid `rgba(0,0,0,.66)` (discs); upstream's solid bar | none | `#fff` | white 30 % | `#ff5a4f` |
 
 The ink, track and failure colours are the custom properties `--jfmod-card-ink`, `--jfmod-card-track`,

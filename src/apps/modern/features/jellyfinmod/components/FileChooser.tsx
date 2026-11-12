@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { TrackField, ChooseRow } from '../design/TrackField';
 import { DesignMediaMarks, QuietTrack, videoQuiet } from '../design/MediaMarks';
 import { Icon } from '../design/Icon';
-import { DesignContext, quietTracks } from '../design/Root';
+import { DesignContext, quietLook, quietTracks } from '../design/Root';
 
 import { bestFirst, describeVersion, fileMarks, findSource, sameItemId } from '../constants/versions';
 import type { VersionDto } from '../types/versions';
@@ -172,9 +172,8 @@ export interface StripHosts {
  * forth at the switch.
  */
 const stacks = (strip: HTMLElement) => {
-    const root = strip.closest('.jfds');
-    // Computer, phone and tablet draw the quiet controls, which never stack (the user, 2026-11-07 and 2026-11-11); the TV's strip may.
-    if (root?.matches('.jfds:not(.layout-tv)')) return false;
+    // Every layout draws the quiet controls, which never stack (the user, 2026-11-07, 2026-11-11, and the TV 2026-11-18).
+    if (strip.closest('.jfds')) return false;
     return strip.clientWidth < (TRACK_CELLS_EMS + STACK_EMS + 2 * 0.382) * parseFloat(getComputedStyle(strip).fontSize);
 };
 
@@ -245,16 +244,18 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, removeDa
     useViewerChoice(view, chosen);
     useDevicePreference(view, versions.length > 1 ? preferred : null, chosen);
     const [open, setOpen] = useState(false);
-    // The quiet controls show one file plainly, with nothing to open (ds.t19); the TV keeps its list (pending entry).
-    const computer = quietTracks(useContext(DesignContext));
-    const plain = computer && versions.length < 2;
+    // The quiet controls show one file plainly, with nothing to open (ds.t19); the TV keeps its list (pending entry). On a computer
+    // Video is always a stop on the remote and keyboard path and opens its list, one entry for one file (round 7, the user 2026-11-17).
+    const device = useContext(DesignContext);
+    const computer = quietTracks(device);
+    const plain = computer && device !== 'computer' && versions.length < 2;
     const selected = selectedVersion(versions, current);
     // The size moved to the caption (`VIDEO · 13.2 GB`, the user 2026-11-07); each row keeps its own.
     const later = (version: VersionDto) => [version.episodeRange, removeDate(version) && 'removes ' + removeDate(version)].filter(Boolean).join(' · ');
     const summary = (version: VersionDto, closed = false) => {
         const name = <span className='r'>{describeVersion(version).resolution}{version.phoneCopy && <span className='pm' title={PHONE_COPY_LABEL}><Icon name='phone' /></span>}</span>;
         const parsed = fileMarks(version, findSource(sources, version.mediaSourceId)).video;
-        if (computer) {
+        if (computer || (closed && quietLook(device))) {
             // One line: the resolution and Dolby Vision; the codec, ranges, size (and a row's episodes and removal) are the details.
             const video = videoQuiet(parsed);
             return <QuietTrack name={name} lockup={video.lockup} details={[...video.details, describeVersion(version).size, closed ? null : later(version)]} />;

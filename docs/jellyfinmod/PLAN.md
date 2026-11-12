@@ -2733,3 +2733,13 @@ controls (it had no strip) and Play passes the choices. Code: `design/TrackField
 [media marks](design/guides/media-marks.md), [title pages](design/guides/title-pages.md). Verified only on the computer (1920,
 1440, 1024), dark, in Playwright Chromium; phone, tablet, TV, the light theme, real Chrome, the runners and the Codex review are
 later gates.
+
+## ds.t20 — the series and movie title pages redesigned on the computer and the TV (2026-11-17)
+
+**Built (not accepted), first look on beta (computer and TV).** Round 7d's hero (the Backdrop on the right, melting into the blurred
+ground, plates and glow; no poster in the head, a whole poster on the right when there is no Backdrop), the first screen of hero
+and episode row with the description cut to fit, credits on one line, Play label E with its fill, the big selected card in a
+fixed-height row, About at the foot, and the TV's D-pad path (Play → tracks → season pill → row → Cast; selection follows focus,
+OK plays). Spec: workspace `reviews/fable-design-review/REVIEW.md` (approved section, rounds 6 to 7d, user 2026-11-15 to 17) and
+[title pages](design/guides/title-pages.md). Phone unchanged. Verified in Playwright Chromium (computer, tablet landscape and TV
+emulated, dark); the light theme, real Chrome, the C1, the runners and the Codex review are later gates.

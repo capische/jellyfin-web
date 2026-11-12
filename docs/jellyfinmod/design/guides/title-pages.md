@@ -1,5 +1,112 @@
 # Title pages and art ground
 
+**Series and movie pages redesigned on a computer and the TV (ds.t20): approved by the user 2026-11-15/16 (workspace
+`reviews/fable-design-review/REVIEW.md`, the approved section, rounds 6 to 6c), 2026-11-16 (animate the selection) and 2026-11-17
+(round 7d, mockup `series7-bg.html?view=after&scrim=after2&fit=screen&cred=line`, replacing the poster head and the TV glide);
+built, not accepted, first look on beta (computer and TV, dark).** B on a computer **grows with the screen** (round 7g, the user
+2026-11-18, `scale=grow`): drawn for 1440 × 900 at 18 px, B = clamp(18 px, min(2vh, 1.25vw), 29.12 px) × `--jfmod-scale`, so
+18 at 1440 × 900 and smaller, 21.6 at 1920 × 1080, 28.8 at 2560 × 1440; the page declares its tokens again under that B, and
+the season pill's 40 px floor and the Dolby lockup's 16 px scale with it (40/18 B, 16/18 B). The bar keeps its own B and the page
+keeps the bar's gutter (Bφ² of the bar's B), so their left edges stay aligned. 24.2 px on the TV (16.13 px on a
+1280 × 720 screen, in proportion to its height; the bar keeps its own B), unchanged; every value Bφⁿ. The phone keeps its page
+(`.jfmod-titleE` is set on a computer and the TV). Code: `design/Head.tsx` (`Hero`), `TitlePage.tsx` (`Screen1`), `TitleAbout.tsx`
+(`useFitLines`), `SeriesEpisodes.tsx` (`EpisodeRow`, `useTvScreen`, `useTvKeys`), `titleTop.scss` (the ds.t20 and round 7d blocks).
+
+- **Hero (round 7d), no poster in the head.** The ground runs up under the bar. The Backdrop covers a box from 23.6 % (φ⁻³) of the
+  width to the right edge, top-anchored, **16:9 at its own width** (42.975 % of the hero's width high, `.jfmod-heroBox`), so the
+  Backdrop is never zoomed past its cover at the box's width (the user, 2026-11-18: "Why matrix is so ugly on desktop?"): a hero
+  shorter than the box crops its foot, a taller one (a narrow or tall window) shows the ground under the picture, whose foot fades
+  out over Bφ⁴. Its left edge melts over 14.6 % (φ⁻⁴) of its width into the blurred copy, dimmed to brightness 0.236 (φ⁻³; the
+  art ground's 0.4 read as a grey smear) so it reads as ground. One mask per element (the box's left melt, the picture's foot). Scrim: the foot (the ground at the box's foot, 61.8 %
+  at Bφ², 23.6 % at Bφ³, gone at Bφ⁴) and the bar (76.4 % at the top, 61.8 % at its foot, gone Bφ³ under it). **Plates** behind
+  the text, each as wide as its text plus a Bφ⁴ fade to the right: 38.2 % behind title, facts, ratings, actions and tracks
+  (fading over Bφ³ above and below); 0 → 14.6 % → 38.2 % → 61.8 % → 76.4 % behind the description and credits, down to the stills.
+  The title and reading glow with the ground (`0 0 Bφ⁻² 76.4 %, 0 0 B 61.8 %`; facts and tracks one tighter layer at 85.4 %).
+  **No Backdrop:** the poster is the blurred ground and stands whole on the right, as tall as the column (an `<img>`, width auto),
+  no plates. webOS 6: one mask per plate (the other fade in its background), no `aspect-ratio`, `inset`, flex `gap` or `min()`.
+  Named exceptions: the 23.6 % / 14.6 % box (window proportions), 2:3 poster, 16:9 stills.
+- **First screen (fit=screen):** on a series the hero and the episode row fill the screen (`jfmod-screen1`, the screen's height
+  less the bar's): **Align Top** (round 7g, the user 2026-11-18, as a movie): the head's text starts B under the bar and the
+  room left lies between the credits and the season pill, never less than Bφ¹ in any mode (fit, flow, TV; the user
+  2026-11-19: "A gap should be between Starring and Season button"; the fit gives up description lines for it) (the lower plate fades out over Bφ⁴ at its foot, its top's steps in reverse, no visible line); the row's foot (the selected card's ring) Bφ² above the screen's foot (the
+  TV's safe foot), Cast's title at the fold, and nothing below moves while a selection animates (the row's height is fixed). The
+  description gives up whole lines, down to one, until the row fits, and takes them back when the hero has room under the head (`useFitLines`,
+  computer, tablet and TV alike; it replaces the touch-only cut). A window too short even for one line scrolls (below ~776 px).
+  **Window shape decides the fit (computer, the user 2026-11-18):** at 4:3 or wider the page fits the screen as above; a window
+  narrower than 4:3 (portrait, near-square such as 1000 × 928, 5:4 such as 1280 × 1024; `@media (max-aspect-ratio: 3999/3000)`,
+  `useFlowWindow`) **flows**: the hero is as tall as its content, the row, Cast and the rest follow straight after, the fit loop
+  does not run and the description keeps its normal cap; movies flow the same way, and the picture keeps its 16:9 box. The TV
+  always fits.
+  **A movie:** its head sits at the hero's top and the hero ends Bφ² under the credits, at least φ⁻¹ (61.8 %) of the screen
+  high (the user, 2026-11-18); Cast follows it on the first screen.
+- **Column:** title; the **facts line** Bφ⁻² under it, `year • Genres • seasons or runtime • age rating • Ended|Continuing`
+  (series only; never "TV Series"), B at pitch φ, 76.4% ink, bullets with Bφ⁻¹ either side; Genres three at most, and if the
+  line would wrap *Science Fiction* becomes *Sci-Fi*, then genres drop from the end, keeping one (`FactsLine`). Then the ratings
+  pill, the action pill, the track controls (each B apart; Bφ⁻¹ on the TV), the tagline and description Bφ¹ under the tracks (cut
+  at 3 lines with **more**; below 1440 px wide, the build's choice, no tagline and 2 lines; the TV 2 lines with its tagline), and
+  the **credits on one line** B under it: *Created by* (a movie: *Directed by*) and *Starring* (the first three actors), Bφ¹ apart,
+  wrapping Bφ⁻² apart when they must; label 61.8% with Bφ⁻¹ after it, names 400 at 76.4%, linked (plain on the TV).
+- **The remote, and the keyboard on a computer (round 7d, the user 2026-11-17):** the path is the Play row (Play and the buttons
+  beside it, Left and Right between them) → the track controls (**Video is always a stop**, OK opening its list, one entry for one
+  file; Left and Right between them) → the season pill (a stop; OK opens the season list) → the row → Cast, Up retracing it to the
+  control last focused in each (`useDpad`; a Bφ⁻³ primary ring on the Play row's buttons, the track controls, the season pill and
+  the focused card; on a computer the arrows move the focus there as the TV's do; the mouse is
+  untouched). Focus entering the row lands on the selected episode; **selection follows focus** and rests in the row's second
+  slot (the first when only one card fits): Left and Right slide the row one card under it while the arriving card grows Bφ⁵ → Bφ⁶ and the leaving one shrinks, a
+  card leaving the row fades out and one entering fades in, --d2 on --ease (`useRowSlide`); at the row's ends the selection moves
+  along instead. **OK plays the episode at once** (resuming one started), or on an episode with no file does what the head's
+  button does (Download). The first screen opts out of the TV's scroll manager (`data-scroll-mode-*`), and focus coming back into
+  it from Cast glides the page to the top (0.618 s, `--d3`, on `--ease`; instant with reduced motion; on a computer only when the
+  keyboard moved it). The page opens with the selected episode in the second slot.
+- **Selected is not focused (the user, 2026-11-18, cx2 of `series7-bg.html`):** the selected card keeps its Bφ⁶ size and band, and
+  the band takes a **wash of the primary**, 38.2 % (φ⁻²) at its leading edge, gone at 61.8 % (φ⁻¹) of its width, over its glass
+  (a plain linear-gradient, webOS 6), the ink unchanged; no ring is drawn round it. The blue Bφ⁻³ ring is the remote's or the
+  keyboard's focus only and is added to the wash, so on the TV, where focus in the row selects, the focused card is the big card
+  with the wash and the ring. On a computer the mouse shows the wash and no ring, and the pointer over a small card draws the Bφ⁻³ ring in the solid primary, the guidelines' field ring and the keyboard's, on every card on the page: the episodes (the
+  selected one over its wash) and every row under them, Cast, Guest Stars, Next Up, More Like This and the rest; every other page
+  keeps upstream's 0.135em hover (the user, 2026-11-18/19: "this is the thickness!", "Cast and Guest don't have the same hover
+  including selected Episode", then every row; the
+  user, 2026-11-18: "blue but somehow faded out? or thinner?"); the keyboard's ring stays Bφ⁻³ solid. The watch bar is clipped to the still's
+  corners on every card. **No two rings touch:** at least Bφ⁻² of clear ground between rings; the season pill draws its ring
+  inside its edge and sits Bφ⁻² above the stills, and the selected card has no ring at rest, so Bφ⁻² stays clear.
+- **TV:** the description stops at Bφ⁸; the track controls are the computer's quiet ones at the TV's B, each a remote stop with
+  the Bφ⁻³ ring round it, opening the TV's own list (the user, 2026-11-18, [track-dropdown.md](track-dropdown.md)); in the light
+  theme the pills take the computer's white glass, webOS 6 and earlier keeping the dark ([card-glass.md](card-glass.md));
+  *more* and the credit names are no D-pad stops; the season pill is B + 2 Bφ⁻¹ high with no 40 px floor. The selected card takes the wash above,
+  the focused one the blue ring too; its band is the TV glass (black 66 %, white, no blur). iPadOS Safari's desktop-class user agent gets the computer
+  page; an iPad that reports a mobile user agent gets the phone page, unchanged. **Tablets (the user, 2026-11-19):** a touch
+  tablet under 900 px wide (iPadOS Safari's desktop-class agent in portrait) draws the title page as the computer's (`Root
+  tabletAsComputer`), so it fits in landscape and flows in portrait as a computer window of that shape; the rest of the app keeps
+  its tablet page. A swipe across the episode row pages it as the arrows do (`touch-action: pan-y`), and a tap selects a card as a
+  click does (a card with no file shows the cloud disc, which a tap or a click on it opens).
+- **Play (option E):** [buttons-and-row-actions.md](buttons-and-row-actions.md); never *Resume* (the user, 2026-11-17), on the older
+  episode, season and other title pages' Play too (2026-11-18; the controller's command still resumes). Nothing sits beside the action pill.
+- **Polish (P1–P7 of the Astra review, approved by the user 2026-11-21), built, not accepted:** in the light theme the hero's
+  glow loses its B-wide layer (title and reading Bφ⁻², facts and tracks Bφ⁻³ and Bφ⁻²); the TV's Play small line 85.4 % on the
+  unfilled part ([buttons-and-row-actions.md](buttons-and-row-actions.md)); the computer's episode pager a capsule of the
+  season pill's height (40/18 B), arrows 40/18 B (≥ 40 px), chevrons Bφ⁻¹; the TV track list's rows
+  ([track-dropdown.md](track-dropdown.md)); the episode cards' bullet at 61.8 % and the star Bφ⁻¹ centred on the score; the
+  rating chip's chevron Bφ⁻¹, Bφ⁻² after the marks ([ratings.md](ratings.md)); the mouse's hover ring 4.25 px (Bφ⁻³ of the 18 px
+  reference B) at every window size, the keyboard's focus growing with the page. The season list opens on the current season.
+- **Episode row (series):** full width under the head on the gutter. The season pill (40 px high, a named exception) and the
+  arrows on one line, *Next episode 21 Nov* B after the pill when Jellyfin knows an unaired episode; Bφ⁻² to the stills. Small
+  stills Bφ⁵ (199.6 × 112.3) with their two lines under them (Bφ⁻² above); the **selected** episode, the one on Play, Bφ⁶
+  (323 × 181.7) with the wash (above) and its two lines in a bottom card-glass band ([card-glass.md](card-glass.md)).
+  Bφ⁻¹ apart, top-aligned; the row a fixed height, the selected still's, so nothing under it moves while a selection
+  animates (the user, 2026-11-17). **Whole cards only:** k = 1 + ⌊(W − Bφ⁶) ÷ (Bφ⁵ + Bφ⁻¹)⌋
+  (B grows with a computer's screen, so the count follows the window and B), the rest empty; the row opens at min(selected, N − k), so the selected episode sits near the
+  start with earlier ones behind it. A click on a card selects it (Play, Ends and the track controls follow at once) and the
+  change is animated: the new card grows Bφ⁵ → Bφ⁶ while the old one shrinks and the cards after them slide, over the mod's
+  `--d2` (0.382 s) and `--ease`, each caption fading in at its new place, band or under the still; instant with reduced motion,
+  and the row does not scroll. Its **title is a link to the episode's page**. The arrows page k − 1 cards; the pill names the
+  first card's season and jumps to a season. No wider gap before a season's first card (whole cards only).
+- **About ⟨title⟩** at the foot after the rows: row title Bφ¹ / 400 with Bφ² above and B below; two columns 61.8% : 38.2%,
+  Bφ² apart; labels 61.8% in a Bφ⁴ column (the file's Bφ³), B before values at 400 / 76.4%, rows Bφ⁻² apart, a wrapped track
+  hangs B; words only. Left: Created or Directed by, the details (Writers, Studios, …), Genres, Age rating, Tags, all of them,
+  then the external links. Right, the selected file (the head's Video control, or the selected episode's): *Episode*, *Versions*
+  (several files: one line each, the selected one in the primary with the check, a click selects it) or *Version*, *File*,
+  *Video* (two lines), *Audio* (six lines, then *N more*), *Subtitles* (a paragraph per format).
+
 **Video, Audio and Subtitles as quiet controls (ds.t19): approved by the user 2026-11-08, built, not accepted, computer first look.**
 On a computer the track strip under the pill is three quiet controls with one chooser ([track-dropdown.md](track-dropdown.md)),
 s0 under the pill; a series page shows them for the selected episode, and Play sends the episode's choices.
@@ -37,12 +144,16 @@ switch (`episodePage`); a click elsewhere on the card still only selects it.
 **Phone, tablet and TV (the user, 2026-11-10, built, not accepted, gate 1 on beta):** the same pill and strip at each layout's
 own B, with no arrow pill (touch swipes the strip; the TV's D-pad walks it, Enter selects). Pill row s1 above; phone stills s5
 s0 apart, tablet and TV s6 s1 apart; a season's first card has s1 more. On the TV the selection keeps the 0.135em ring and the
-focused card takes the 0.236em one; the pill takes an s-3 primary ring on focus.
+focused card takes the 0.236em one; the pill takes an s-3 primary ring on focus (ds.t20's first screen on the computer and
+the TV instead: the wash and the blue ring, as above).
 A card selected while partly off the strip slides to its left edge, whole (the user, 2026-11-10).
 **Description and Tags on phone and tablet (the user, 2026-11-10, built, not accepted, gate 1 on beta):** a description longer than
 3 lines is cut at 3 and Tags at 1, with an ellipsis and a lowercase **more** (white 700, the text's own size, s-2 after it) at
-the end of the last line; opened, the full text ends in **less**. A text that fits gets neither; computer and TV show it whole
-(`Clamp` in TitlePage.tsx, `.jfmod-clamp` in titleTop.scss).
+the end of the last line; opened, the full text ends in **less**. A text that fits gets neither; the TV shows it whole, a computer
+cuts Tags and a series' description since ds.t20 (below) (`Clamp` in TitlePage.tsx, `.jfmod-clamp` in titleTop.scss).
+**Quieter facts on Season and Episode pages (ds.t20, the user, 2026-11-11, `reviews/fable-design-review` P2, built, not accepted):** on a
+computer the fact values are 400 in the description's 76.4% ink, the labels stay 61.8%, and Tags take one line with **more** (white
+700 in the dark theme, the text colour in the light). The series and movie pages moved these facts to About (below).
 **The selected episode's tracks on phone, tablet and TV (the user, 2026-11-10, built, not accepted, gate 1 on beta):** under the
 pill, the selected episode's track controls as a movie's (track-dropdown.md): the quiet controls and chooser on phone and tablet
 (the user, 2026-11-11), the strip on the TV; they follow the selection and Play sends the choices, as on a computer.
@@ -86,8 +197,8 @@ Code: `design/titleTop.scss` (the ds.t10 block), `Ratings.tsx`, `TitlePage.tsx`.
   keeps s-2. Play s0 words, min width s4, side padding s0, glyph s0 with s-2 before its word, s-2 before the
   first icon; Play keeps 3.333em / 3em / 85.4% white. Icon buttons s2 round (40 px minimum), glyphs s1.
 - Tracks s0 below the pill ([track-dropdown.md](track-dropdown.md)). Reading s1 below them, at most s8 wide: tagline s0/600 in full
-  ink, s-2 to the overview, s0 at pitch φ in 76.4% ink; facts s0 below, s0 at pitch φ in full ink, s-2 apart, labels 61.8% with
-  s-1 after them; tags still clamp at 3 lines.
+  ink, s-2 to the overview, s0 at pitch φ in 76.4% ink; facts s0 below, s0 at pitch φ, s-2 apart, labels 61.8% with
+  s-1 after them; values 400 in 76.4% ink and Tags one line with "more" since ds.t20 (above; was 600 in full ink, 3 lines).
 
 
 **Status: approved 2026-11-06, D288–D295, built, not accepted.** Computer first look only; phone/TV specifics and full acceptance follow the user's first look. These values supersede the older presentation notes below.

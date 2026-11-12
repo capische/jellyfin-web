@@ -1,5 +1,25 @@
 # Track strip and dropdown (the custom dropdown)
 
+**The TV list's rows (polish P4, approved by the user 2026-11-21), built, not accepted.** Bφ⁻¹ of room inside the row for the
+focus ring, the selected row's tick centred in its own B column, Bφ⁻² before the text; the language at least Bφ⁵ wide with a
+commentary mark Bφ⁻² after it, inside the language (`TrackText`, `TrackLanguage` children), so the codec and channels line up on
+every row. The open list still fits: Peep Show's Audio ends at 637 of 1080 and 452 of 720; a 37-row subtitle list scrolls
+inside itself.
+
+**The quiet controls on the TV too (the user, 2026-11-18: "I also expected TV to have the same video audio and subtitle
+dropdowns"), built, not accepted.** Every layout draws the closed controls as the computer's quiet ones (the kind's icon, the value,
+a chevron; `quietLook`, `Root.tsx`), at the TV's B on the TV, and they never stack. Only the trigger changed: the TV keeps its own
+list (`quietTracks` still false there), opened by OK inside its control at least Bφ⁷ wide, walked by Up and Down, chosen by OK,
+closed by Back, focus returning to the control; the title page's D-pad leaves an open list's keys to it. The remote's focus is the
+Bφ⁻³ primary ring round the control, no outline. Video always shows; Audio and Subtitles show as on the computer. The Dolby lockup
+is 16/18 B. webOS 6 and earlier (`jfmod-webos-legacy`) draw the gaps as margins, having no flex gap. Every TV page that draws the
+track controls takes them, the older episode page too (the user, 2026-11-19: they stay on all TV pages). A commentary track's mark
+is its speech bubble alone at the row's type, outside the computer's chooser too (it drew an empty box there, 2026-11-19).
+
+**Video always a stop on a computer (round 7d, the user 2026-11-17: "I did not see selection of Video"), built, not accepted.** On a
+computer's quiet controls Video is a control with its chooser even for one file (one entry), so the remote and keyboard path always
+stops on it (title-pages.md); phone and tablet keep one file plain.
+
 **Quiet controls and one chooser on the computer (ds.t19): approved by the user 2026-11-08, built, not accepted, computer first
 look.** The user, of workspace `reviews/netflix-tracks/codex.html`: "I love this one. Less chrome. Same control." **Phone and tablet
 too (the user 2026-11-11, built, not accepted, gate 1 on beta):** title top on computer, phone and tablet (`.jfds:not(.layout-tv)

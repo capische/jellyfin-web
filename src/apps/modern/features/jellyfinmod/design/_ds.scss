@@ -112,7 +112,8 @@ button { font: inherit; color: inherit; }
 .actbar .play.round svg { width: 1.6em; height: 1.6em; margin: 0; }
 .actbar .dbtn.focus, .actbar .play.focus { position: relative; z-index: 1; }
 &.layout-tv .actbar .play.focus { box-shadow: 0 0 0 0.15em var(--primary); transform: scale(1.08); }
-&.layout-tv .actbar .dbtn.focus { background: var(--primary); color: #fff; transform: scale(1.2); }
+/* A round button's TV focus: the primary Bφ⁻³ ring outside it, no fill and no growth, on every page (the user, 2026-11-18). */
+&.layout-tv .actbar .dbtn.focus, &.layout-tv .actbar .dbtn:focus { position: relative; z-index: 1; box-shadow: 0 0 0 var(--jfmod-s-3) var(--primary); }
 .actbar .sep { width: 1px; height: 1.618em; margin: 0 0.382em; background: currentColor; opacity: 0.2; }
 
 
@@ -510,6 +511,10 @@ h2.sect2 { margin: 1.618em 0 0.618em; font-size: 1.236em; font-weight: 600; line
 .atm .n { margin-left: 0.3em; opacity: 0.618; }
 .rflag { display: inline-flex; align-items: center; height: 1.2em; margin-right: 0.45em; padding: 0 0.3em; border: 1px solid currentColor; border-radius: 0.2em; font-size: 60%; font-weight: 700; letter-spacing: 0.04em; }
 .rflag.fl { color: var(--ok); } .rflag.pr { color: var(--primary); }
+/* The commentary mark is its glyph alone, at the row's type (D61): no pill round it, the speech bubble 1em (it drew an empty box
+   outside the computer's chooser, the user 2026-11-19). */
+.rflag.glyph { height: auto; padding: 0; border: 0; font-size: inherit; }
+.rflag.glyph svg { width: 1em; height: 1em; fill: currentColor; }
 
 /* dialogs: paper, 0.618em corners; full screen on the phone and the TV */
 .under { overflow: hidden; pointer-events: none; }
@@ -1035,6 +1040,13 @@ h2.sect2 { margin: 1.618em 0 0.618em; font-size: 1.236em; font-weight: 600; line
 .gpk .seg.v .val .marks::before { content: ''; width: 0; height: 0.764em; }
 &.dev-phone .libhead .actbar .play { height: 3.09em; }
 &:not(html)[data-theme='dark'].no-bf .plain .glassy { background: var(--paper); }
+/* The light theme's TV glass (the user, 2026-11-18: "Why TV got dark buttons when desktop white? I like white more"): the computer's
+   light glass and ink, and its dark Play, on the TV too; without blur, white 85.4 % (1 − φ⁻⁴). webOS 6 and earlier keep the dark
+   TV glass, by the platform version, not the model (`jfmod-webos-legacy`, Root.tsx). The blue focus ring stays. */
+html:not(.jfmod-webos-legacy) &:not(html)[data-theme='light'].layout-tv .glassy { background: var(--card-glass-bg); -webkit-backdrop-filter: var(--card-glass-filter); backdrop-filter: var(--card-glass-filter); color: var(--card-ink); }
+html:not(.jfmod-webos-legacy) &:not(html)[data-theme='light'].layout-tv.no-bf .glassy { background: rgba(255, 255, 255, 0.854); -webkit-backdrop-filter: none; backdrop-filter: none; color: var(--light-glass-ink); }
+html:not(.jfmod-webos-legacy) &:not(html)[data-theme='light'].layout-tv .actbar .play { background: rgba(16, 16, 16, 0.854); color: #fff; }
+html:not(.jfmod-webos-legacy) &:not(html)[data-theme='light'].layout-tv .jfmod-titleTop .actbar .play.mainb.focus { box-shadow: 0 0 0 0.15em var(--primary); }
 
 /* Under a 1366 px window the top bar drops the wordmark, as the tablet does, so the nav clears the centred search box (D254). */
 &.layout-tv .pmenu.rmenu { max-height: none; overflow: visible; }
