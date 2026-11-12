@@ -91,21 +91,22 @@ const Clamp: FC<{ lines: number; className?: string; children: React.ReactElemen
         observer.observe(node);
         return () => observer.disconnect();
     }, [clamps, open, children]);
-    // An open text folds again when its width or its words change (a rotated tablet, new metadata), so it is measured afresh and
-    // a text that now fits loses "less" too (Codex review of ds.t14, P3).
+    // An open text folds again when the window's width or its words change (a rotated tablet, new metadata), so it is measured
+    // afresh and a text that now fits loses "less" too (Codex review of ds.t14, P3). The window's width, not the text's, so the
+    // page scrollbar that opening may bring does not fold it straight back.
     useLayoutEffect(() => {
         const node = text.current;
         if (!open || !node) return;
-        const width = node.clientWidth;
+        const width = window.innerWidth;
         const fold = () => setOpen(false);
-        const resize = new ResizeObserver(() => {
-            if (node.clientWidth !== width) fold();
-        });
+        const resize = () => {
+            if (window.innerWidth !== width) fold();
+        };
         const words = new MutationObserver(fold);
-        resize.observe(node);
+        window.addEventListener('resize', resize);
         words.observe(node, { childList: true, subtree: true, characterData: true });
         return () => {
-            resize.disconnect();
+            window.removeEventListener('resize', resize);
             words.disconnect();
         };
     }, [open]);
