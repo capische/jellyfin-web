@@ -10,7 +10,7 @@ import { TRACK_ROLE_NAME, trackExtraWords, trackModifier, trackRole, type TrackR
 import { findSource, streamMarks, subtitleFormat } from '../constants/versions';
 import { type StripHosts } from './FileChooser';
 import { AudioTrackMarks, audioQuiet, QuietTrack } from '../design/MediaMarks';
-import { DesignContext, quietLook, quietTracks } from '../design/Root';
+import { DesignContext, quietLook } from '../design/Root';
 import { TrackField, ChooseRow } from '../design/TrackField';
 
 // The media marks' own styles.
@@ -120,8 +120,8 @@ export const TrackText: FC<{ stream: MediaStream; names: Record<string, string> 
     const format = stream.Type === 'Subtitle' ? subtitleFormat(stream) : null;
     const role = trackRole(stream);
     const device = useContext(DesignContext);
-    // A closed control is quiet on every layout; a list row only in the quiet chooser (the TV's list keeps its marks).
-    const quiet = quietTracks(device) || (!!closed && quietLook(device));
+    // Quiet on every layout, the control and the list's rows alike (the TV's rows too: design A, gate 2, the user 2026-11-23).
+    const quiet = quietLook(device);
     if (quiet) {
         // The quiet controls: the language, the Dolby lockup and the channels; the format chip, the role's mark and the extra words are the details.
         const parsed = streamMarks(stream);
@@ -151,7 +151,7 @@ interface TrackDropdownProps {
 const TrackDropdown: FC<TrackDropdownProps & { stacked: boolean }> = ({ name, entries, value, enabled, onChoose, stacked }) => {
     const current = entries.find(entry => entry.value === value) ?? entries[0];
     // The quiet controls' rows carry the extra words in their details (`TrackText`).
-    const quiet = quietTracks(useContext(DesignContext));
+    const quiet = quietLook(useContext(DesignContext));
     if (!current) return null;
     return <TrackField kind={name === 'Audio' ? 'a' : 's'} name={name} value={current.closed ?? current.content} quietValue={current.quiet} title={current.title} extra={current.extra} enabled={enabled && entries.length > 1} stacked={stacked}>
         {entries.map(entry => <ChooseRow key={entry.value} trackValue={entry.value} selected={entry === current} title={entry.title} onChoose={() => onChoose(entry.value)}>

@@ -833,7 +833,7 @@
        the column's width. s0 corners, an s-6 hairline drawn as a shadow so it takes no room, shadow 0 s-2 s1 at 38.2 % (light 23.6 %);
        padding s-4 on the panel and s-3 on the list, so a row's s-3 of its own puts the tick under the control's icon. No head (the
        user 2026-11-11: the controls row is its tabs). The list scrolls past s6 beside its rail. */
-    .gpk > .vlist.chooser {
+    .gpk .vlist.chooser {
         --jfmod-row-muted: rgba(255, 255, 255, 0.7);
 
         position: absolute;
@@ -1051,15 +1051,15 @@
     }
 }
 
-/* The light theme's chooser: a lighter shadow and the details in dark ink at 61.8 %. */
-.jfds:not(.layout-tv)[data-theme='light'] .jfmod-titleTop .gpk > .vlist.chooser {
+/* The light theme's chooser and TV list: a lighter shadow and the details in dark ink at 61.8 %. */
+.jfds[data-theme='light'] .jfmod-titleTop .gpk .vlist.chooser {
     --jfmod-row-muted: rgba(0, 0, 0, 0.618);
 
     box-shadow: 0 0 0 var(--jfmod-s-6) var(--hair), 0 var(--jfmod-s-2) var(--jfmod-s1) rgba(0, 0, 0, 0.236);
 }
 
 /* A phone's chooser is the column's width, from its left, as before design A. */
-.jfds.dev-phone .jfmod-titleTop .gpk > .vlist.chooser {
+.jfds.dev-phone .jfmod-titleTop .gpk .vlist.chooser {
     width: var(--jfmod-s7);
     max-width: 100%;
 }
@@ -1507,24 +1507,20 @@
     .gpk .seg.focusable:focus { box-shadow: 0 0 0 var(--jfmod-s-3) var(--primary); }
     .gpk .dolby { height: calc(var(--jfmod-base) * 0.8888888889); }
 
-    .gpk .seg > .vlist {
-        right: auto;
-        min-width: var(--jfmod-s7);
+    /* Design A's list on the TV (gate 2, the user 2026-11-23): the chooser's panel and rows (above) at the TV's B, opened inside its
+       control so it hangs from it, as wide as its rows. No hover; the remote's focus is a 12 % fill and the Bφ⁻³ ring round the row,
+       drawn in the list's padding, so the tick still sits under the control's icon (it replaces polish P4's ring inside the row). */
+    .gpk .seg > .vlist.chooser { right: auto; }
+
+    .gpk .vlist.chooser .vrow:hover { background: transparent; }
+
+    .gpk .vlist.chooser .vrow.foc,
+    .gpk .vlist.chooser .vrow:focus {
+        position: relative;
+        z-index: 1;
+        background: var(--tint);
+        box-shadow: 0 0 0 var(--jfmod-s-3) var(--primary);
     }
-
-    /* The list's rows (polish P4, the user 2026-11-21): Bφ⁻¹ of room for the focus ring, the tick centred in its own B column, Bφ⁻²
-       before the text; the language (with a commentary mark Bφ⁻² after it, TrackText) at least Bφ⁵ wide, so the codec and the
-       channels line up on every row. */
-    .gpk .vlist .vrow { padding-left: calc(var(--jfmod-s-1) + var(--jfmod-s0) + var(--jfmod-s-2)); }
-    .gpk .vlist .vrow.sel::before { left: calc(var(--jfmod-s-1) + (var(--jfmod-s0) - var(--jfmod-s-1)) / 2); }
-
-    .gpk .vlist .vrow .r {
-        box-sizing: border-box;
-        min-width: var(--jfmod-s5);
-        margin-right: var(--jfmod-s-2);
-    }
-
-    .gpk .vlist .vrow .r .rflag.glyph { margin: 0 0 0 var(--jfmod-s-2); }
 }
 
 /* webOS 6 and earlier (Chromium 79, the C1) have no flex gap: the quiet controls' gaps as margins. */
@@ -1541,6 +1537,15 @@ html.jfmod-webos-legacy .jfds.layout-tv .jfmod-titleTop {
 
     .gpk .val > .jfmod-short { margin-left: 0; }
     .gpk .val .dolby + .chn { margin-left: var(--jfmod-s-3); }
+
+    /* The list's rows too. */
+    .gpk .vlist.chooser .vrow .qv,
+    .gpk .vlist.chooser .vrow .qd { gap: 0; }
+
+    .gpk .vlist.chooser .vrow .qv > * + *,
+    .gpk .vlist.chooser .vrow .qd > * + * { margin-left: var(--jfmod-s-2); }
+
+    .gpk .vlist.chooser .vrow .qv .dolby + .chn { margin-left: var(--jfmod-s-3); }
 }
 
 /* A computer window narrower than 4:3 (portrait, near-square such as 1000 × 928, 5:4 such as 1280 × 1024) flows (the user,

@@ -2,11 +2,17 @@
 
 **The chooser belongs to its control (design A, approved by the user 2026-11-23, with B's "No Subtitles"), built, not accepted,
 gate 1: computer, dark, on beta; changed at the user's first look, 2026-11-23: the list as wide as its content with the details
-on the right, no dropdown for one file or one audio track, no glow on filled marks.** Workspace
+on the right, no dropdown for one file or one audio track, no glow on filled marks; gate 2 (the user 2026-11-23): the TV's
+list, the light theme, phone and tablet.** Workspace
 `reviews/dropdown-rethink/fable.html` and `fable.md`; it reverses the s7 slab from the column's left (2026-11-10/11) and the blue
-name on the current row. Computer,
-phone and tablet chooser (`.vlist.chooser`, `design/titleTop.scss`); the TV's own list and the closed controls are unchanged
-(the TV's rows take design A at gate 2).
+name on the current row. Every layout draws this list (`.vlist.chooser`, `design/titleTop.scss`): the computer, phone and
+tablet as one chooser after the controls, the TV as its own list inside its control (its keys as before: Up and Down walk it,
+OK picks, Back closes, Left and Right stay in it), at the TV's B. The closed controls are unchanged.
+- **The TV (gate 2):** the same panel and rows; no hover; the remote's focus is a 12 % fill and the **Bφ⁻³ ring round the row**,
+  drawn in the list's padding (Bφ⁻⁴ + Bφ⁻³), so the tick still sits under the control's icon (measured within 0.03 px at 1920). It
+  replaces polish P4's ring inside the row and its Bφ⁵ language column. The list still fits: Peep Show's Audio ends at 631 of
+  1080 and Hack Your Health's 37 subtitles scroll inside a list ending at 950 of 1080. webOS 6 draws the rows' gaps as margins.
+- **Light theme:** the same panel with a 23.6 % shadow and the details at black 61.8 %; the TV's focus fill is the theme's tint.
 - **Panel:** paper Bφ⁻² under its own control, left edges together (`TrackField` places it from the control, clamped to the
   title column `.col`, and under its own control when the controls wrap), **as wide as its rows, at most Bφ⁷** (a phone's
   stays the column's width from its left); B corners; padding
@@ -36,7 +42,7 @@ phone and tablet chooser (`.vlist.chooser`, `design/titleTop.scss`); the TV's ow
 - Code: `design/TrackField.tsx` (the placement), `design/MediaMarks.tsx` (`QuietTrack` `row`, `size`),
   `components/FileChooser.tsx`, `components/TrackDropdown.tsx`, `design/TitlePage.tsx` (`EpisodeTrackFields`), `design/titleTop.scss`.
 
-**The TV list's rows (polish P4, approved by the user 2026-11-21), built, not accepted.** Bφ⁻¹ of room inside the row for the
+**The TV list's rows (polish P4, approved by the user 2026-11-21); superseded 2026-11-23 by design A's rows (above).** Bφ⁻¹ of room inside the row for the
 focus ring, the selected row's tick centred in its own B column, Bφ⁻² before the text; the language at least Bφ⁵ wide with a
 commentary mark Bφ⁻² after it, inside the language (`TrackText`, `TrackLanguage` children), so the codec and channels line up on
 every row. The open list still fits: Peep Show's Audio ends at 637 of 1080 and 452 of 720; a 37-row subtitle list scrolls

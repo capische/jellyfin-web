@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { TrackField, ChooseRow } from '../design/TrackField';
 import { DesignMediaMarks, QuietTrack, videoQuiet } from '../design/MediaMarks';
 import { Icon } from '../design/Icon';
-import { DesignContext, quietLook, quietTracks } from '../design/Root';
+import { DesignContext, quietLook } from '../design/Root';
 
 import { bestFirst, describeVersion, fileMarks, findSource, sameItemId } from '../constants/versions';
 import type { VersionDto } from '../types/versions';
@@ -247,7 +247,6 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, removeDa
     // One file is a plain value on every layout: no chevron, nothing to open, not a stop (the user 2026-11-23: "I don't think we need
     // to have dropdown at all if only 1 video or audio"); a pending entry then sits under the strip.
     const device = useContext(DesignContext);
-    const computer = quietTracks(device);
     const plain = versions.length < 2;
     const selected = selectedVersion(versions, current);
     // The size moved to the caption (`VIDEO · 13.2 GB`, the user 2026-11-07); each row keeps its own.
@@ -255,7 +254,7 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, removeDa
     const summary = (version: VersionDto, closed = false) => {
         const name = <span className='r'>{describeVersion(version).resolution}{version.phoneCopy && <span className='pm' title={PHONE_COPY_LABEL}><Icon name='phone' /></span>}</span>;
         const parsed = fileMarks(version, findSource(sources, version.mediaSourceId)).video;
-        if (computer || (closed && quietLook(device))) {
+        if (quietLook(device)) {
             // One line: the resolution and Dolby Vision; the codec, ranges, size (and a row's episodes and removal) are the details.
             const video = videoQuiet(parsed);
             // A row's size stands at its right edge, where the sizes compare (design A, the user 2026-11-23).
@@ -280,7 +279,7 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, removeDa
             {bestFirst(versions).map(version => <ChooseRow key={version.mediaSourceId} sourceId={version.mediaSourceId} selected={version === selected}
                 onChoose={() => choose(version)} title={[version.episodeRange, removeDate(version)].filter(Boolean).join(' · ')}>
                 {summary(version)}
-                {!computer && later(version) && <span className='trackextra'>{later(version)}</span>}
+                {!quietLook(device) && later(version) && <span className='trackextra'>{later(version)}</span>}
             </ChooseRow>)}
             {pending}
         </TrackField>, strip.video)}

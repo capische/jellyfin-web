@@ -235,17 +235,14 @@ export const TrackField: FC<{ kind: TrackKind; name: string; value: ReactNode; e
         if (!open || !list.current) return;
         const selected = list.current.querySelector<HTMLElement>('[aria-selected=true]') ?? list.current.querySelector<HTMLElement>('.focusable');
         if (selected) {
-            if (quiet) {
-                focusInChooser(selected, list.current);
-                // The list opens with the current row in its middle (design A).
-                const scroller = list.current.querySelector<HTMLElement>('.clist');
-                if (scroller) {
-                    const row = selected.getBoundingClientRect();
-                    const box = scroller.getBoundingClientRect();
-                    scroller.scrollTop += row.top + row.height / 2 - (box.top + box.height / 2);
-                }
-            } else {
-                focusManager.focus(selected);
+            if (quiet) focusInChooser(selected, list.current);
+            else focusManager.focus(selected);
+            // The list opens with the current row in its middle (design A), the TV's too.
+            const scroller = list.current.querySelector<HTMLElement>('.clist');
+            if (scroller) {
+                const row = selected.getBoundingClientRect();
+                const box = scroller.getBoundingClientRect();
+                scroller.scrollTop += row.top + row.height / 2 - (box.top + box.height / 2);
             }
         }
     }, [open, quiet]);
@@ -298,15 +295,17 @@ export const TrackField: FC<{ kind: TrackKind; name: string; value: ReactNode; e
         close();
         trigger.current?.parentElement?.querySelector<HTMLElement>(`.seg[data-jfmod-track-field="${other}"]`)?.click();
     };
-    const sheet = open && <div ref={list} className={'vlist focuscontainer-y' + (quiet ? ' chooser' : '')} data-list={kind}
-        role={quiet ? undefined : 'listbox'} aria-label={quiet ? undefined : name} tabIndex={-1} onClick={choose}
+    // Every layout's quiet controls draw design A's list (the TV's too, gate 2, the user 2026-11-23); only the computer, phone and
+    // tablet have one chooser with tabs, the TV keeps its own list inside its control and its own keys.
+    const sheet = open && <div ref={list} className={'vlist focuscontainer-y' + (look ? ' chooser' : '')} data-list={kind}
+        role={look ? undefined : 'listbox'} aria-label={look ? undefined : name} tabIndex={-1} onClick={choose}
         onFocusCapture={event => {
             const target = event.target as HTMLElement;
             const row = target.closest<HTMLElement>('.vrow');
             focused.current = { source: row?.dataset.jfmodMediaSourceId, track: row?.dataset.jfmodTrack,
                 control: target.hasAttribute('data-jfmod-pending-remove') ? 'data-jfmod-pending-remove' : undefined };
         }}
-        onKeyDown={event => walkList(event, quiet ? { kind, tabs, switchTo } : null, trigger.current)}>{quiet ? <ScrollRail name={name}>{children}</ScrollRail> : children}</div>;
+        onKeyDown={event => walkList(event, quiet ? { kind, tabs, switchTo } : null, trigger.current)}>{look ? <ScrollRail name={name}>{children}</ScrollRail> : children}</div>;
     const toggle = () => {
         if (!enabled) return;
         if (open) {

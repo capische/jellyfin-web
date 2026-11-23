@@ -16,7 +16,7 @@ import Events from 'utils/events';
 import { Head } from './Head';
 import { watchedLabel, watchedDate } from '../utils/watched';
 import RatingIcon from '../components/RatingIcon';
-import { Root, DesignContext, quietLook, quietTracks } from './Root';
+import { Root, DesignContext, quietLook } from './Root';
 import { Icon, Cloud, Clock } from './Icon';
 import { Poster } from './Poster';
 import { DownloadMark } from './StateMark';
@@ -237,7 +237,7 @@ const posterActionIcon = (primary: TitleCommand | undefined, mark: TitleCard['ma
 
 const TrackValue: FC<{ option?: TitleTrack['options'][number]; closed?: boolean }> = ({ option, closed }) => {
     const device = useContext(DesignContext);
-    if (quietTracks(device) || (closed && quietLook(device))) {
+    if (quietLook(device)) {
         const video = option?.video ? videoQuiet(streamMarks(option.video)) : { lockup: null, details: [] };
         const size = option?.size ? formatBytes(option.size) : null;
         // A chooser row's size stands at its right edge (design A, the user 2026-11-23).

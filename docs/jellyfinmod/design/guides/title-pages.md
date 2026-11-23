@@ -84,7 +84,7 @@ keeps the bar's gutter (Bφ² of the bar's B), so their left edges stay aligned.
 - **Polish (P1–P7 of the Astra review, approved by the user 2026-11-21), built, not accepted:** in the light theme the hero's
   glow loses its B-wide layer (title and reading Bφ⁻², facts and tracks Bφ⁻³ and Bφ⁻²); the TV's Play small line 85.4 % on the
   unfilled part ([buttons-and-row-actions.md](buttons-and-row-actions.md)); the computer's episode pager a capsule of the
-  season pill's height (40/18 B), arrows 40/18 B (≥ 40 px), chevrons Bφ⁻¹; the TV track list's rows
+  season pill's height (40/18 B), arrows 40/18 B (≥ 40 px), chevrons Bφ⁻¹; the TV track list's rows (now design A's, 2026-11-23)
   ([track-dropdown.md](track-dropdown.md)); the episode cards' bullet at 61.8 % and the star Bφ⁻¹ centred on the score; the
   rating chip's chevron Bφ⁻¹, Bφ⁻² after the marks ([ratings.md](ratings.md)); the mouse's hover ring 4.25 px (Bφ⁻³ of the 18 px
   reference B) at every window size, the keyboard's focus growing with the page. The season list opens on the current season.
