@@ -157,7 +157,9 @@ computer the fact values are 400 in the description's 76.4% ink, the labels stay
 700 in the dark theme, the text colour in the light). The series and movie pages moved these facts to About (below).
 **The selected episode's tracks on phone, tablet and TV (the user, 2026-11-10, built, not accepted, gate 1 on beta):** under the
 pill, the selected episode's track controls as a movie's (track-dropdown.md): the quiet controls and chooser on phone and tablet
-(the user, 2026-11-11), the strip on the TV; they follow the selection and Play sends the choices, as on a computer.
+(the user, 2026-11-11), the strip on the TV; they follow the selection and Play sends the choices, as on a computer. On a phone the
+controls are centred under the centred head, the phone's Bφ⁻¹ (10.75 px) apart (the user 2026-11-23, option 2,
+[track-dropdown.md](track-dropdown.md)).
 Rows on every title page (computer): titles s1 at line 1, s2 above and s0 below, on the gutter; posters s5, people s4, stills
 s6, s1 apart. Order: **Cast** (actors only), **Guest Stars** (a series page's: the selected episode's, titled with its
 `S1:E1 · Title`), the rest, **More Like This** last. **Download's cloud is s1** (the round actions' glyph size; Play's triangle

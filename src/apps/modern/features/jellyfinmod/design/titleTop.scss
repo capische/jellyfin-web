@@ -1065,10 +1065,13 @@
 }
 
 /* The phone's closed controls on one line (the user, 2026-11-11: "It is too big", "smaller dolby icons and fit all of them"):
-   right under the pill, at B·φ^-½ (13.68 px), s-4 apart with s-3 sides; the Dolby lockup 10 px high (a named exception, as its
-   16 px is), each control still 40 px high (the touch target). The chooser keeps the phone's B and its 40 px rows. */
+   right under the pill, at B·φ^-½ (13.68 px) with s-3 sides; the Dolby lockup 10 px high (a named exception, as its 16 px is),
+   each control still 40 px high (the touch target). Centred under the centred head, s-1 apart (the phone's B·φ⁻¹, 10.75 px), a
+   wrapped line centred the same way (the user 2026-11-23, option 2; s-4 apart from the left before). The chooser keeps the
+   phone's B and its 40 px rows. */
 .jfds.dev-phone .jfmod-titleTop .gpk {
-    gap: 0 var(--jfmod-s-4);
+    justify-content: center;
+    gap: 0 var(--jfmod-s-1);
     margin-top: 0;
 
     > .seg {

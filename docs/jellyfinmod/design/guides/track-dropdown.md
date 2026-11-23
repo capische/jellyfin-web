@@ -62,7 +62,9 @@ look.** The user, of workspace `reviews/netflix-tracks/codex.html`: "I love this
 too (the user 2026-11-11, built, not accepted, gate 1 on beta):** title top on computer, phone and tablet (`.jfds:not(.layout-tv)
 .jfmod-titleTop`, the ds.t19 block of `design/titleTop.scss`, `quietTracks` in `Root.tsx`), each at its own B (computer 18 px); tokens
 `sN` = `--jfmod-s<n>`. The TV keeps the strip below. On a phone the closed controls sit under the head on one line, right under the
-pill (the user 2026-11-11: "It is too big", "smaller dolby icons and fit all of them"): B·φ^-½ (13.68 px), s-4 apart, s-3 sides,
+pill (the user 2026-11-11: "It is too big", "smaller dolby icons and fit all of them"): B·φ^-½ (13.68 px), s-3 sides, **centred, s-1 apart** (the phone's B·φ⁻¹, 10.75 px; a wrapped line centred too; the user
+2026-11-23, option 2, replacing s-4 apart from the left; a tablet's head is left-aligned beside its poster, so its controls stay
+left),
 the Dolby lockup 10 px (a named exception, its words at their own 12 units so they fill the box), each still 40 px high, and a movie's strip never stacks either (the user 2026-11-11); the chooser keeps the phone's B and its 40 px rows.
 
 - **Closed:** three quiet controls s0 under the action pill, s-2 apart, no captions and no glass: each the kind's s0 icon (Material
