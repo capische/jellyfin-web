@@ -128,7 +128,7 @@ export const TrackText: FC<{ stream: MediaStream; names: Record<string, string> 
         const audio = stream.Type === 'Audio' ? audioQuiet(parsed) : { lockup: null, format: null };
         return <QuietTrack name={<TrackLanguage language={language} modifier={trackModifier(stream)} />} lockup={audio.lockup}
             channels={stream.Type === 'Audio' ? parsed.audioChannels : null} chip={format} mark={role && <RoleMark role={role} />}
-            details={[audio.format, trackExtraWords(stream)]} />;
+            details={[audio.format, trackExtraWords(stream)]} row={!closed} />;
     }
     // The role mark right after the language, so the marks line up on every row (polish P4, the user 2026-11-21).
     return <>

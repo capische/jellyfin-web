@@ -235,10 +235,47 @@ export const TrackField: FC<{ kind: TrackKind; name: string; value: ReactNode; e
         if (!open || !list.current) return;
         const selected = list.current.querySelector<HTMLElement>('[aria-selected=true]') ?? list.current.querySelector<HTMLElement>('.focusable');
         if (selected) {
-            if (quiet) focusInChooser(selected, list.current);
-            else focusManager.focus(selected);
+            if (quiet) {
+                focusInChooser(selected, list.current);
+                // The list opens with the current row in its middle (design A).
+                const scroller = list.current.querySelector<HTMLElement>('.clist');
+                if (scroller) {
+                    const row = selected.getBoundingClientRect();
+                    const box = scroller.getBoundingClientRect();
+                    scroller.scrollTop += row.top + row.height / 2 - (box.top + box.height / 2);
+                }
+            } else {
+                focusManager.focus(selected);
+            }
         }
     }, [open, quiet]);
+    // The chooser hangs from its own control, as wide as its rows, never past the column (design A, the user 2026-11-23); a phone's
+    // is the column's width, as before. Placed again when its width changes (the rail's room arrives a render later) or the window's.
+    useLayoutEffect(() => {
+        const panel = list.current;
+        const control = trigger.current;
+        if (!open || !quiet || !panel || !control || device === 'phone') return;
+        const place = () => {
+            // The column, not the controls' row, which is only as wide as the controls.
+            const strip = panel.parentElement?.getBoundingClientRect();
+            const column = (panel.closest('.col') ?? panel.parentElement)?.getBoundingClientRect();
+            if (!strip || !column) return;
+            const box = control.getBoundingClientRect();
+            const left = Math.max(column.left, Math.min(box.left, column.right - panel.offsetWidth));
+            panel.style.left = left - strip.left + 'px';
+            // Under its own control when the controls wrap onto a second line.
+            panel.style.top = box.bottom - strip.top + 'px';
+        };
+        place();
+        // eslint-disable-next-line compat/compat -- Chromium 79 supports ResizeObserver; older engines keep the resize fallback.
+        const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(place);
+        observer?.observe(panel);
+        window.addEventListener('resize', place);
+        return () => {
+            observer?.disconnect();
+            window.removeEventListener('resize', place);
+        };
+    }, [open, quiet, device]);
     useLayoutEffect(() => {
         if (!open || !focused.current || document.activeElement !== document.body) return;
         const was = focused.current;

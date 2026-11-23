@@ -239,8 +239,10 @@ const TrackValue: FC<{ option?: TitleTrack['options'][number]; closed?: boolean 
     const device = useContext(DesignContext);
     if (quietTracks(device) || (closed && quietLook(device))) {
         const video = option?.video ? videoQuiet(streamMarks(option.video)) : { lockup: null, details: [] };
-        return <QuietTrack name={<span className='r'>{option?.text}</span>} lockup={video.lockup}
-            details={[...video.details, option?.size ? formatBytes(option.size) : null]} />;
+        const size = option?.size ? formatBytes(option.size) : null;
+        // A chooser row's size stands at its right edge (design A, the user 2026-11-23).
+        return <QuietTrack name={<span className='r'>{option?.text}</span>} lockup={video.lockup} row={!closed}
+            details={closed ? [...video.details, size] : video.details} size={closed ? null : size} />;
     }
     return <>
         <span className='r'>{option?.text}</span>
@@ -290,7 +292,6 @@ const useLanguageNames = () => {
  * title page's controls and chooser over the episode's own media sources; Play sends the choices (`useSeriesEpisodes`).
  */
 const EpisodeTrackFields: FC<{ series: SeriesModel }> = ({ series }) => {
-    const device = useContext(DesignContext);
     const { itemId, names, sources, source, chosen, set, isPlaceholderData } = useEpisodeSource(series);
     // The quiet controls never stack, on any layout (2026-11-18).
     const stacked = false;
@@ -313,7 +314,7 @@ const EpisodeTrackFields: FC<{ series: SeriesModel }> = ({ series }) => {
     // A new episode closes the old chooser; its retained controls cannot change the new episode while loading.
     return <div key={itemId} className='gpk' aria-busy={isPlaceholderData} ref={node => node?.toggleAttribute('inert', isPlaceholderData)}>
         <TrackField kind='v' name='Video' value={<TrackValue closed option={option(source, sources.indexOf(source))} />}
-            enabled={sources.length > 1 || device === 'computer' || device === 'tv'}
+            enabled={sources.length > 1}
             stacked={stacked}>
             {sources.map((candidate, index) => <ChooseRow key={candidate.Id} sourceId={candidate.Id ?? undefined} selected={candidate === source}
                 onChoose={() => set({ source: candidate.Id ?? undefined, audio: undefined, subtitle: undefined })}><TrackValue option={option(candidate, index)} /></ChooseRow>)}
@@ -325,7 +326,7 @@ const EpisodeTrackFields: FC<{ series: SeriesModel }> = ({ series }) => {
                 onChoose={() => set({ source: source.Id ?? undefined, audio: stream.Index })}><TrackText stream={stream} names={names} /></ChooseRow>)}
         </TrackField>
         <TrackField kind='s' name='Subtitles' enabled={subtitles.length > 0} stacked={stacked} title={subtitleNow?.DisplayTitle ?? undefined}
-            value={subtitleNow ? <TrackText stream={subtitleNow} names={names} closed /> : <TrackLanguage language='Off' />}
+            value={subtitleNow ? <TrackText stream={subtitleNow} names={names} closed /> : <TrackLanguage language={subtitles.length ? 'Off' : 'None'} />}
             quietValue={subtitleNow ? undefined : <TrackLanguage language={subtitles.length ? 'Subtitles Off' : 'No Subtitles'} />}>
             <ChooseRow trackValue='-1' selected={!subtitleNow} onChoose={() => set({ source: source.Id ?? undefined, subtitle: -1 })}><TrackLanguage language='Off' /></ChooseRow>
             {subtitles.map(stream => <ChooseRow key={stream.Index} trackValue={String(stream.Index)} selected={stream === subtitleNow} title={stream.DisplayTitle ?? undefined}

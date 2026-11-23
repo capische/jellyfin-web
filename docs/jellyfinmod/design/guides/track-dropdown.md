@@ -1,5 +1,38 @@
 # Track strip and dropdown (the custom dropdown)
 
+**The chooser belongs to its control (design A, approved by the user 2026-11-23, with B's "No Subtitles"), built, not accepted,
+gate 1: computer, dark, on beta; changed at the user's first look, 2026-11-23: the list as wide as its content with the details
+on the right, no dropdown for one file or one audio track, no glow on filled marks.** Workspace
+`reviews/dropdown-rethink/fable.html` and `fable.md`; it reverses the s7 slab from the column's left (2026-11-10/11) and the blue
+name on the current row. Computer,
+phone and tablet chooser (`.vlist.chooser`, `design/titleTop.scss`); the TV's own list and the closed controls are unchanged
+(the TV's rows take design A at gate 2).
+- **Panel:** paper Bφ⁻² under its own control, left edges together (`TrackField` places it from the control, clamped to the
+  title column `.col`, and under its own control when the controls wrap), **as wide as its rows, at most Bφ⁷** (a phone's
+  stays the column's width from its left); B corners; padding
+  Bφ⁻⁴ on the panel and Bφ⁻³ on the list (`.clist`); the Bφ⁻⁶ hairline drawn as a shadow (no room taken); shadow 0 Bφ⁻² Bφ¹ black
+  38.2 % (light 23.6 %). The list scrolls past Bφ⁶ (the rail's ends Bφ⁻³ in, the list's right padding B + Bφ⁻³ while it scrolls)
+  and opens with the current row in its middle.
+- **Row:** Bφ¹ + 2·Bφ⁻² high, Bφ⁻¹ corners, padding Bφ⁻² Bφ⁻¹ Bφ⁻² Bφ⁻³, so the **tick (B, its own column, Material check in the
+  primary) sits under the control's icon and the value under the control's value** (measured 0.00 and ≤ 0.02 px at 1440). The
+  value (`.qv`: the name, a role mark after it, the Dolby lockup, the channels) has no minimum width; **the details stand at the
+  row's right end** (`.qd`, `margin-left: auto`, at least B after the value) at Bφ⁻½ (14.15 px) in 70 % ink (light 61.8 %):
+  Audio's format word and extra words, a subtitle's format chip and extra words, Video's codec, ranges, episodes and removal, then
+  **Video's size last** (`.sz`, Bφ⁻½, tabular figures). So the panel is only as wide as its longest row (the user's first look,
+  2026-11-23: Peep Show's subtitles 188 px, audio 212; Hack Your Health's subtitles 263, audio 228). The role mark (SDH, FORCED, the
+  commentary bubble) moved from the details into the value; the closed control still shows no role mark. The format chips and the
+  rating icons take no glow from the head (`text-shadow: none`, 2026-11-23: it blurred them).
+- **One signal per meaning:** current = the tick alone, the name in normal ink (no blue name; the other menus keep theirs, see
+  [menus.md](menus.md)); hover = white 8 % fill; keyboard = the fill plus a Bφ⁻⁵ primary ring inside, none after a click.
+- **One file or one audio track: no dropdown** (the user 2026-11-23, at the first look: "I don't think we need to have dropdown at
+  all if only 1 video or audio"; it replaces round 7d's "Video always a stop" and design A's line of facts). The control keeps its
+  value with no chevron, opens nothing, has no hover fill and is not a Tab or remote stop, on every layout, the TV too; a pending
+  entry then sits under the controls. The file's codec and size are in the title's More menu, *Selected Version* ([menus.md](menus.md)).
+- **No Subtitles:** a title with no subtitle tracks reads **No Subtitles** on its static control (the tight row **None**, also on a
+  series page); a title with tracks and none chosen reads **Subtitles Off**.
+- Code: `design/TrackField.tsx` (the placement), `design/MediaMarks.tsx` (`QuietTrack` `row`, `size`),
+  `components/FileChooser.tsx`, `components/TrackDropdown.tsx`, `design/TitlePage.tsx` (`EpisodeTrackFields`), `design/titleTop.scss`.
+
 **The TV list's rows (polish P4, approved by the user 2026-11-21), built, not accepted.** Bφ⁻¹ of room inside the row for the
 focus ring, the selected row's tick centred in its own B column, Bφ⁻² before the text; the language at least Bφ⁵ wide with a
 commentary mark Bφ⁻² after it, inside the language (`TrackText`, `TrackLanguage` children), so the codec and channels line up on
@@ -16,7 +49,8 @@ is 16/18 B. webOS 6 and earlier (`jfmod-webos-legacy`) draw the gaps as margins,
 track controls takes them, the older episode page too (the user, 2026-11-19: they stay on all TV pages). A commentary track's mark
 is its speech bubble alone at the row's type, outside the computer's chooser too (it drew an empty box there, 2026-11-19).
 
-**Video always a stop on a computer (round 7d, the user 2026-11-17: "I did not see selection of Video"), built, not accepted.** On a
+**Video always a stop on a computer (round 7d, the user 2026-11-17: "I did not see selection of Video"); superseded 2026-11-23: one
+file is a plain value again (above).** On a
 computer's quiet controls Video is a control with its chooser even for one file (one entry), so the remote and keyboard path always
 stops on it (title-pages.md); phone and tablet keep one file plain.
 

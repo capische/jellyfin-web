@@ -244,11 +244,11 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, removeDa
     useViewerChoice(view, chosen);
     useDevicePreference(view, versions.length > 1 ? preferred : null, chosen);
     const [open, setOpen] = useState(false);
-    // The quiet controls show one file plainly, with nothing to open (ds.t19); the TV keeps its list (pending entry). On a computer
-    // Video is always a stop on the remote and keyboard path and opens its list, one entry for one file (round 7, the user 2026-11-17).
+    // One file is a plain value on every layout: no chevron, nothing to open, not a stop (the user 2026-11-23: "I don't think we need
+    // to have dropdown at all if only 1 video or audio"); a pending entry then sits under the strip.
     const device = useContext(DesignContext);
     const computer = quietTracks(device);
-    const plain = computer && device !== 'computer' && versions.length < 2;
+    const plain = versions.length < 2;
     const selected = selectedVersion(versions, current);
     // The size moved to the caption (`VIDEO · 13.2 GB`, the user 2026-11-07); each row keeps its own.
     const later = (version: VersionDto) => [version.episodeRange, removeDate(version) && 'removes ' + removeDate(version)].filter(Boolean).join(' · ');
@@ -258,7 +258,9 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, removeDa
         if (computer || (closed && quietLook(device))) {
             // One line: the resolution and Dolby Vision; the codec, ranges, size (and a row's episodes and removal) are the details.
             const video = videoQuiet(parsed);
-            return <QuietTrack name={name} lockup={video.lockup} details={[...video.details, describeVersion(version).size, closed ? null : later(version)]} />;
+            // A row's size stands at its right edge, where the sizes compare (design A, the user 2026-11-23).
+            if (!closed) return <QuietTrack row name={name} lockup={video.lockup} details={[...video.details, later(version)]} size={describeVersion(version).size} />;
+            return <QuietTrack name={name} lockup={video.lockup} details={[...video.details, describeVersion(version).size]} />;
         }
         return <>
             {name}

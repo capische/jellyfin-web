@@ -47,8 +47,8 @@ keeps the bar's gutter (Bφ² of the bar's B), so their left edges stay aligned.
   the **credits on one line** B under it: *Created by* (a movie: *Directed by*) and *Starring* (the first three actors), Bφ¹ apart,
   wrapping Bφ⁻² apart when they must; label 61.8% with Bφ⁻¹ after it, names 400 at 76.4%, linked (plain on the TV).
 - **The remote, and the keyboard on a computer (round 7d, the user 2026-11-17):** the path is the Play row (Play and the buttons
-  beside it, Left and Right between them) → the track controls (**Video is always a stop**, OK opening its list, one entry for one
-  file; Left and Right between them) → the season pill (a stop; OK opens the season list) → the row → Cast, Up retracing it to the
+  beside it, Left and Right between them) → the track controls (each with a choice is a stop, OK opening its list; one file or one audio track
+  is a plain value and not a stop, the user 2026-11-23, replacing "Video is always a stop", [track-dropdown.md](track-dropdown.md); Left and Right between them) → the season pill (a stop; OK opens the season list) → the row → Cast, Up retracing it to the
   control last focused in each (`useDpad`; a Bφ⁻³ primary ring on the Play row's buttons, the track controls, the season pill and
   the focused card; on a computer the arrows move the focus there as the TV's do; the mouse is
   untouched). Focus entering the row lands on the selected episode; **selection follows focus** and rests in the row's second

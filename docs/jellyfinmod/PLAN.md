@@ -2743,3 +2743,9 @@ fixed-height row, About at the foot, and the TV's D-pad path (Play â†’ tracks â†
 OK plays). Spec: workspace `reviews/fable-design-review/REVIEW.md` (approved section, rounds 6 to 7d, user 2026-11-15 to 17) and
 [title pages](design/guides/title-pages.md). Phone unchanged. Verified in Playwright Chromium (computer, tablet landscape and TV
 emulated, dark); the light theme, real Chrome, the C1, the runners and the Codex review are later gates.
+
+**Track chooser design A (the user 2026-11-23, with B's "No Subtitles"), built (not accepted), gate 1: computer, dark, on beta.**
+The chooser hangs from its own control as wide as its rows, the tick under the control's icon, the details at the row's right
+end with Video's size last; one file or one audio track has no dropdown; filled marks take no glow (the user's first look,
+2026-11-23); [track dropdown](design/guides/track-dropdown.md). The TV's rows,
+phone, tablet, light, real Chrome and the Codex review are later gates.

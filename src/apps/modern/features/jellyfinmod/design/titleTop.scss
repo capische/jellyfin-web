@@ -828,50 +828,59 @@
     .gpk.jfmod-tight .seg .jfmod-long,
     .gpk:not(.jfmod-tight) .seg .jfmod-short { display: none; }
 
-    /* The one chooser (the user 2026-11-09, s7 wide again 2026-11-10): paper s-2 under the controls, s7 wide (at most the column, so
-       a phone's is the column's width), s0 corners, s-2 padding, an s-6 hairline, shadow 0 s-1 s1 at 61.8 %; no head (the user
-       2026-11-11: the controls row is its tabs, the open control on the tint, no Close); one-line rows s1 + 2·s-2 high (the 40 px target), padding s-2 s-1 with the s-1 check s0 in, the value
-       as the control draws it and the details s-1 at the right edge, taking all the room left of them; the list scrolls past s5 beside its rail. */
+    /* The one chooser (design A, the user 2026-11-23, replacing the column-wide s7 slab of 2026-11-10): paper s-2 under its own
+       control, left edges together (`TrackField` places it, never past the column), as wide as its rows and at most s7; a phone's is
+       the column's width. s0 corners, an s-6 hairline drawn as a shadow so it takes no room, shadow 0 s-2 s1 at 38.2 % (light 23.6 %);
+       padding s-4 on the panel and s-3 on the list, so a row's s-3 of its own puts the tick under the control's icon. No head (the
+       user 2026-11-11: the controls row is its tabs). The list scrolls past s6 beside its rail. */
     .gpk > .vlist.chooser {
+        --jfmod-row-muted: rgba(255, 255, 255, 0.7);
+
         position: absolute;
         z-index: 7;
-        top: calc(100% + var(--jfmod-s-2));
+        top: 100%;
         left: 0;
-        width: var(--jfmod-s7);
-        max-width: 100%;
+        width: max-content;
+        max-width: none;
         max-height: none;
-        margin: 0;
-        padding: var(--jfmod-s-2);
+        margin: var(--jfmod-s-2) 0 0;
+        padding: var(--jfmod-s-4);
         overflow: visible;
-        border: var(--jfmod-s-6) solid var(--hair);
+        border: 0;
         border-radius: var(--jfmod-s0);
         background: var(--paper);
         color: var(--text);
-        box-shadow: 0 var(--jfmod-s-1) var(--jfmod-s1) rgba(0, 0, 0, 0.618);
+        box-shadow: 0 0 0 var(--jfmod-s-6) var(--hair), 0 var(--jfmod-s-2) var(--jfmod-s1) rgba(0, 0, 0, 0.382);
         font-size: var(--jfmod-s0);
         line-height: 1;
         white-space: normal;
     }
 
-    .gpk .vlist.chooser .cbox { position: relative; }
+    /* At most s7 wide with its padding (no min(): the same block reaches webOS). */
+    .gpk .vlist.chooser .cbox {
+        position: relative;
+        max-width: calc(var(--jfmod-s7) - 2 * var(--jfmod-s-4));
+    }
 
     .gpk .vlist.chooser .clist {
-        max-height: var(--jfmod-s5);
+        box-sizing: border-box;
+        max-height: calc(var(--jfmod-s6) + 2 * var(--jfmod-s-3));
+        padding: var(--jfmod-s-3);
         overflow-y: auto;
         scrollbar-width: none;
     }
 
     .gpk .vlist.chooser .clist::-webkit-scrollbar { display: none; }
 
-    .gpk .vlist.chooser .cbox.scrolls .clist { padding-right: var(--jfmod-s0); }
+    .gpk .vlist.chooser .cbox.scrolls .clist { padding-right: calc(var(--jfmod-s0) + var(--jfmod-s-3)); }
 
     /* The rail (the user 2026-11-09, B): an s0 column at the list's right edge in the muted ink, an s-1 chevron at each end while
        that end has more rows, an s-5 track s-3 from them and an s-3 thumb with s-1 corners for the visible part. */
     .gpk .vlist.chooser .crail {
         position: absolute;
-        top: 0;
+        top: var(--jfmod-s-3);
         right: 0;
-        bottom: 0;
+        bottom: var(--jfmod-s-3);
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -908,19 +917,53 @@
         background: currentColor;
     }
 
+    /* The row repeats the control (design A): the tick in its own s0 column under the control's icon, s-2 to the value under the
+       control's value (the name, a role mark, the Dolby lockup and the channels); the details at the row's right end, at least s0
+       after the value, at B·φ^-½ in 70 % ink, a Video row's size last (the user's first look, 2026-11-23: the list as wide as its
+       content, details on the right). One signal per meaning: the tick says current (the name keeps its ink), hover is an 8 %
+       fill, the keyboard adds an s-5 ring inside. */
     .gpk .vlist.chooser .vrow {
         display: flex;
         flex-wrap: nowrap;
         align-items: center;
-        gap: var(--jfmod-s-2);
+        gap: 0;
         min-height: calc(var(--jfmod-s1) + 2 * var(--jfmod-s-2));
-        padding: var(--jfmod-s-2) var(--jfmod-s-1) var(--jfmod-s-2) calc(var(--jfmod-s-1) + var(--jfmod-s0) + var(--jfmod-s-2));
+        padding: var(--jfmod-s-2) var(--jfmod-s-1) var(--jfmod-s-2) var(--jfmod-s-3);
         border-radius: var(--jfmod-s-1);
+        color: var(--text);
         line-height: 1;
         white-space: nowrap;
     }
 
-    .gpk .vlist.chooser .vrow > * { margin: 0; }
+    .gpk .vlist.chooser .vrow > *,
+    .gpk .vlist.chooser .vrow .qv > * { margin: 0; }
+
+    .gpk .vlist.chooser .vrow::before {
+        content: '';
+        position: static;
+        flex: none;
+        width: var(--jfmod-s0);
+        height: var(--jfmod-s0);
+        margin: 0 var(--jfmod-s-2) 0 0;
+    }
+
+    .gpk .vlist.chooser .vrow > .qv {
+        display: flex;
+        flex: none;
+        align-items: center;
+        gap: var(--jfmod-s-2);
+    }
+
+    .gpk .vlist.chooser .vrow > .sz {
+        flex: none;
+        margin-left: auto;
+        padding-left: var(--jfmod-s0);
+        color: var(--jfmod-row-muted);
+        font-size: calc(var(--jfmod-s0) * 0.7861513778);
+        font-variant-numeric: tabular-nums;
+    }
+
+    .gpk .vlist.chooser .vrow > .qd + .sz { margin-left: 0; }
 
     /* The list's rows keep the channels s-3 after the lockup too. */
     .gpk .vlist.chooser .vrow .dolby + .chn { margin-left: calc(var(--jfmod-s-3) - var(--jfmod-s-2)); }
@@ -944,9 +987,10 @@
         gap: var(--jfmod-s-2);
         min-width: 0;
         margin-left: auto;
-        padding-left: var(--jfmod-s-1);
-        font-size: var(--jfmod-s-1);
-        color: var(--jfmod-head-muted);
+        padding-left: var(--jfmod-s0);
+        overflow: hidden;
+        font-size: calc(var(--jfmod-s0) * 0.7861513778);
+        color: var(--jfmod-row-muted);
     }
 
     .gpk .vlist.chooser .vrow .qw {
@@ -966,8 +1010,9 @@
         letter-spacing: 0;
     }
 
-    /* A track's role mark beside it, outlined (the user 2026-11-11: SDH as a pill, not a word): the chip's size, a hairline of the ink. */
-    .gpk .vlist.chooser .vrow .qd .rflag {
+    /* A track's role mark after its name in the value (design A), outlined (the user 2026-11-11: SDH as a pill, not a word): the
+       chip's size, a hairline of the ink. */
+    .gpk .vlist.chooser .vrow .rflag {
         flex: none;
         box-sizing: border-box;
         height: var(--jfmod-s0);
@@ -979,26 +1024,44 @@
     }
 
     /* The commentary mark is its glyph alone, at the chip's height (D61). */
-    .gpk .vlist.chooser .vrow .qd .rflag.glyph {
+    .gpk .vlist.chooser .vrow .rflag.glyph {
         padding: 0;
         border: 0;
     }
 
-    .gpk .vlist.chooser .vrow .qd .rflag.glyph svg {
+    .gpk .vlist.chooser .vrow .rflag.glyph svg {
         width: var(--jfmod-s0);
         height: var(--jfmod-s0);
         fill: currentColor;
     }
 
+    /* The current row: the primary tick, s0, its own column (Material check). */
     .gpk .vlist.chooser .vrow.sel::before {
-        left: var(--jfmod-s-1);
-        width: var(--jfmod-s-1);
-        height: var(--jfmod-s-1);
-        margin-top: calc(var(--jfmod-s-1) / -2);
+        position: static;
+        width: var(--jfmod-s0);
+        height: var(--jfmod-s0);
+        margin: 0 var(--jfmod-s-2) 0 0;
+        background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2300a4dc'%3E%3Cpath d='M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E") center / contain no-repeat;
     }
 
     .gpk .vlist.chooser .vrow.foc,
-    .gpk .vlist.chooser .vrow:focus { box-shadow: inset 0 0 0 var(--jfmod-s-4) var(--primary); }
+    .gpk .vlist.chooser .vrow:focus {
+        background: var(--hover-fill);
+        box-shadow: inset 0 0 0 var(--jfmod-s-5) var(--primary);
+    }
+}
+
+/* The light theme's chooser: a lighter shadow and the details in dark ink at 61.8 %. */
+.jfds:not(.layout-tv)[data-theme='light'] .jfmod-titleTop .gpk > .vlist.chooser {
+    --jfmod-row-muted: rgba(0, 0, 0, 0.618);
+
+    box-shadow: 0 0 0 var(--jfmod-s-6) var(--hair), 0 var(--jfmod-s-2) var(--jfmod-s1) rgba(0, 0, 0, 0.236);
+}
+
+/* A phone's chooser is the column's width, from its left, as before design A. */
+.jfds.dev-phone .jfmod-titleTop .gpk > .vlist.chooser {
+    width: var(--jfmod-s7);
+    max-width: 100%;
 }
 
 /* The phone's closed controls on one line (the user, 2026-11-11: "It is too big", "smaller dolby icons and fit all of them"):
@@ -1034,6 +1097,9 @@
 /* A click that opened a list leaves no ring on its selected row (the keyboard's ring above). */
 .ds-pointer .jfds:not(.layout-tv) .jfmod-titleTop .gpk .vlist.chooser .vrow.foc,
 .ds-pointer .jfds:not(.layout-tv) .jfmod-titleTop .gpk .vlist.chooser .vrow:focus { box-shadow: none; }
+
+.ds-pointer .jfds:not(.layout-tv) .jfmod-titleTop .gpk .vlist.chooser .vrow.foc:not(:hover),
+.ds-pointer .jfds:not(.layout-tv) .jfmod-titleTop .gpk .vlist.chooser .vrow:focus:not(:hover) { background: transparent; }
 
 /* A pointer click that opened a source leaves the pill's own glass, not a lit pill (ratings.md, one highlight). */
 .ds-pointer .jfds.dev-computer:not(.layout-tv) .jfmod-titleTop .jfmod-titleHead .rgwrap:not(.on) .rgroup.foc { background: var(--card-glass-bg); }
@@ -1569,4 +1635,14 @@ html.jfmod-webos-legacy .jfds.layout-tv .jfmod-titleTop {
 
     .jfmod-epRow .erail .cell.sel .post { box-shadow: none; }
     .jfmod-epRow .erail .cell:hover .post { box-shadow: 0 0 0 var(--jfmod-s-3) var(--primary); }
+}
+
+/* Marks with their own fill take no glow (the user's first look, 2026-11-23: the head's dark glow blurred the TMDB pill's SVG text
+   and the SRT and VOBSUB chips): the format chips and the rating icons on a title page. */
+/* stylelint-disable-next-line no-duplicate-selectors -- the glow fix is its own block */
+.jfds .jfmod-titleTop {
+    .mk.tag,
+    .mk.tag *,
+    [data-jfmod-icon],
+    [data-jfmod-icon] * { text-shadow: none; }
 }

@@ -41,6 +41,8 @@ upstream `components/actionSheet/actionSheet.ts` is a thin presentation adapter.
   1em horizontal padding; optional 1.4em icon with .618em to the name. Group labels .72em/600, uppercase, .06em tracking,
   61.8% ink. Dividers 1px with .618em inset. Trailing values .854em, 70% ink.
 - Current: primary name plus the .618em primary check at .236em from the left; no selected fill, left bar or trailing check.
+  The title page's track chooser is the exception (design A, the user 2026-11-23, [track-dropdown.md](track-dropdown.md)): the
+  tick alone in its own column, the name in normal ink; the other menus keep the blue name until their own pass.
   Marks/icons and metadata keep their own ink. Legacy selection comes from the existing options; MUI selection comes from
   aria-selected/Mui-selected or its existing Check/Sort-direction icon, without changing what a row does.
 - Hover: grey fill, .236s, pointer only. Keyboard: .135em inner primary ring. TV: .236em inner primary ring, instant;

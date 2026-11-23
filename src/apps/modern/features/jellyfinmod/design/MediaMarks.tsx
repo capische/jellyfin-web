@@ -96,8 +96,14 @@ export const QuietTrack: FC<{ name: ReactNode; lockup?: DolbyKind | null; channe
     /** A subtitle's format as its chip, before the words (the user 2026-11-10: "use pills for SRT as it was before"). */
     chip?: string | null;
     /** The track's role as its outlined mark after the chip, not a word (the user 2026-11-11: "use SDH pill ... Not a text"). */
-    mark?: ReactNode }> = ({ name, lockup, channels, details, chip, mark }) => {
+    mark?: ReactNode;
+    /** A chooser's row (design A, the user 2026-11-23): the value in its own column with the role mark after the name, the details
+     * right after it, and a Video row's size at the right edge. */
+    row?: boolean;
+    size?: string | null }> = ({ name, lockup, channels, details, chip, mark, row, size }) => {
     const words = details.filter(Boolean).join(' · ');
-    return <>{name}{lockup && <DolbyLockup kind={lockup} />}{channels && <span className='chn'>{channels}</span>}
-        {(chip || mark || words) && <span className='qd'>{chip && <Chip>{chip}</Chip>}{mark}{words && <span className='qw'>{words}</span>}</span>}</>;
+    const value = <>{name}{row && mark}{lockup && <DolbyLockup kind={lockup} />}{channels && <span className='chn'>{channels}</span>}</>;
+    const facts = (chip || (!row && mark) || words) && <span className='qd'>{chip && <Chip>{chip}</Chip>}{!row && mark}{words && <span className='qw'>{words}</span>}</span>;
+    if (row) return <><span className='qv'>{value}</span>{facts}{size && <span className='sz'>{size}</span>}</>;
+    return <>{value}{facts}</>;
 };
