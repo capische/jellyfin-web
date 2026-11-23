@@ -133,7 +133,8 @@ left edge, so it switches once a season's last card has passed and back when scr
 slider smoothly to that season's first card and leaves the selection. A season's first card has s2 more before it (s3 in all).
 Cards are the poster card's 16:9 cell ([poster-card.md](poster-card.md)): s6 stills s1 apart, `N. Title` in 700 and
 `24m • ★ 7.9` below, no description. The episode the page was opened on (`episodeId`: on Home, as Netflix does it, a Continue Watching episode with a file plays from its card, resuming one started, and its name opens the series page this way; any other episode on Home opens it from the card; the user, 2026-11-10), else the **first unwatched** aired episode, is selected (a 0.236em primary ring and a primary
-title; hover keeps the 0.135em ring) and opens second from the left; a click selects. The pill's **main button follows the
+title; hover keeps the 0.135em ring) and opens second from the left, or first when the two cards do not both fit in the part of
+the strip the window shows (a phone; the user 2026-11-23, the computer's rule); a click selects. The pill's **main button follows the
 selection**: **Play** (never Resume, no episode code; it resumes an episode in progress), **Download** (blue, first) for an
 episode with no file, or a disabled **Airs 14 Nov** (clock, hairline, muted ink) for one not aired. The round cloud (Get Another
 Quality) is in the pill only beside Play, before More. Episode Retention, History and the per-episode download lines are gone

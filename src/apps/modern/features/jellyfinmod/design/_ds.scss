@@ -103,6 +103,8 @@ button { font: inherit; color: inherit; }
 &.dev-phone .actbar .play.epb { flex: none; }
 &.dev-phone .actbar:has(.play.epb) { overflow-x: auto; scrollbar-width: none; }
 &.dev-phone .actbar:has(.play.epb)::-webkit-scrollbar { display: none; }
+/* A button the scrolling bar brings into view (hover, focus) keeps the bar's .382em inset on its side, as at rest (the user, 2026-11-23). */
+&.dev-phone .actbar:has(.play.epb) > * { scroll-margin: 0 0.382em; }
 .actbar .play svg { width: 1.4em; height: 1.4em; margin-right: 0.3em; }
 .actbar .play:hover, .actbar .play.sim-hover { background: #fff; }
 &:not(html)[data-theme='light']:not(.layout-tv) .actbar .play { background: rgba(16, 16, 16, 0.854); color: #fff; }

@@ -28,6 +28,9 @@ phone and tablet chooser (`.vlist.chooser`, `design/titleTop.scss`); the TV's ow
   all if only 1 video or audio"; it replaces round 7d's "Video always a stop" and design A's line of facts). The control keeps its
   value with no chevron, opens nothing, has no hover fill and is not a Tab or remote stop, on every layout, the TV too; a pending
   entry then sits under the controls. The file's codec and size are in the title's More menu, *Selected Version* ([menus.md](menus.md)).
+- **An episode with no file** (its main button Download): the computer and the TV keep the controls' empty room so the fitted first
+  screen never moves; a phone or tablet leaves no room, the description following the action bar at its usual spacing (the user,
+  2026-11-23: "i don't think we need this gap if the episode is due for download").
 - **No Subtitles:** a title with no subtitle tracks reads **No Subtitles** on its static control (the tight row **None**, also on a
   series page); a title with tracks and none chosen reads **Subtitles Off**.
 - Code: `design/TrackField.tsx` (the placement), `design/MediaMarks.tsx` (`QuietTrack` `row`, `size`),

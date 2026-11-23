@@ -612,15 +612,23 @@ const EpisodeSlider: FC<{ series: SeriesModel }> = ({ series }) => {
         setSeason(seasonAtEdge(node));
         setEnds({ start: node.scrollLeft <= 1, end: node.scrollLeft >= node.scrollWidth - node.clientWidth - 1 });
     }, []);
-    // The selected card opens second, its previous episode at the left edge; once per series.
+    // The selected card opens second, its previous episode at the left edge, or first when the two do not both fit in the part of
+    // the strip the window shows (a phone; the computer's rule, the user 2026-11-23); once per series.
     const placed = useRef('');
     const first = episodes[0]?.key ?? '';
     useLayoutEffect(() => {
         const node = strip.current;
         if (!node || !first || placed.current === first) return;
         placed.current = first;
-        const card = node.children[Math.max(0, selectedIndex - 1)] as HTMLElement | undefined;
-        node.scrollLeft = card ? card.offsetLeft - parseFloat(getComputedStyle(node).paddingLeft) : 0;
+        const pad = parseFloat(getComputedStyle(node).paddingLeft);
+        const selected = node.children[Math.max(0, selectedIndex)] as HTMLElement | undefined;
+        let card = node.children[Math.max(0, selectedIndex - 1)] as HTMLElement | undefined;
+        if (card && selected && card !== selected) {
+            const box = node.getBoundingClientRect();
+            const shown = Math.min(box.right, document.documentElement.clientWidth) - box.left;
+            if (selected.offsetLeft + selected.offsetWidth - (card.offsetLeft - pad) > shown - pad) card = selected;
+        }
+        node.scrollLeft = card ? card.offsetLeft - pad : 0;
         sync();
     }, [first, selectedIndex, sync]);
     useEffect(() => {

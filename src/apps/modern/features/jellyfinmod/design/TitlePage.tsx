@@ -292,12 +292,15 @@ const useLanguageNames = () => {
  * title page's controls and chooser over the episode's own media sources; Play sends the choices (`useSeriesEpisodes`).
  */
 const EpisodeTrackFields: FC<{ series: SeriesModel }> = ({ series }) => {
+    const device = useContext(DesignContext);
     const { itemId, names, sources, source, chosen, set, isPlaceholderData } = useEpisodeSource(series);
     // The quiet controls never stack, on any layout (2026-11-18).
     const stacked = false;
     // An episode with no file keeps the controls' room on a series with files, so a selection never moves the row or Cast (7d).
     if (!sources || !source || !chosen || !set) {
-        return series.episodes.some(candidate => candidate.hasFile) ? <div className='gpk jfmod-gpkEmpty' aria-hidden='true'><span className='seg'>&nbsp;</span></div> : null;
+        // Only the computer's and the TV's fitted first screen need it; a phone or tablet leaves no gap (the user, 2026-11-23).
+        const keep = (device === 'computer' || device === 'tv') && series.episodes.some(candidate => candidate.hasFile);
+        return keep ? <div className='gpk jfmod-gpkEmpty' aria-hidden='true'><span className='seg'>&nbsp;</span></div> : null;
     }
     const streams = source.MediaStreams ?? [];
     const audios = streams.filter(stream => stream.Type === 'Audio');

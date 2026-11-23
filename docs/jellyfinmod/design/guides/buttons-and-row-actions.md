@@ -29,7 +29,8 @@ On a series page the main button plays (or downloads) the selected episode, so i
 "Play Episode 3" (or "Download Episode 3") at the button's size, 700, then "Season 1 · 24m" at the layout's s-1, 600, in
 61.8% ink, s-3 apart, inside Play's 3.333em height (`.play.epb > .epc`, in `_ds.scss`, every layout; on the computer the
 button's size is s0; mockup `reviews/episode-play-button/`). A phone has no room for the words and every action, so there the
-button keeps its width and the pill scrolls sideways. Specials read "Specials"; no runtime
+button keeps its width and the pill scrolls sideways; a button it brings into view (hover, focus) keeps the bar's .382em inset
+on its side (`scroll-margin`, the user 2026-11-23: the More button's hover sat flush with the bar's edge). Specials read "Specials"; no runtime
 leaves just the season. A hidden "Play Episode 88" sets the width, so the button and the icons beside it hold still from
 episode to episode. No title in the button (the user chose it over options A and B): the episode's own name is on its
 card in the rail, in the hover hint and in the `aria-label` ("Play Episode 3, On The Pull"). An unaired episode keeps
