@@ -536,7 +536,7 @@
 
     .jfmod-epRow .erail .cell {
         width: var(--jfmod-s5);
-        transition: width var(--d2) var(--ease);
+        transition: width 0.486s cubic-bezier(0.382, 0, 0.618, 1);
     }
 
     .jfmod-epRow .erail .cell.sel { width: var(--jfmod-s6); }
@@ -547,7 +547,7 @@
     /* Selecting animates (the user, 2026-11-16: "animate the selection"): the new card grows Bφ⁵ → Bφ⁶ as the old one shrinks
        and the cards after them slide, over the mod's --d2 / --ease; each caption fades in at its new place (in the band, or under
        the still) over the same time. Instant with reduced motion. */
-    .jfmod-epRow .erail .cell .capt { animation: jfmod-epCaption var(--d2) var(--ease); }
+    .jfmod-epRow .erail .cell .capt { animation: jfmod-epCaption 0.486s cubic-bezier(0.382, 0, 0.618, 1); }
 
     @media (prefers-reduced-motion: reduce) {
         .jfmod-epRow .erail .cell { transition: none; }

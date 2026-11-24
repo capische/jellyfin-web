@@ -51,13 +51,13 @@ keeps the bar's gutter (Bφ² of the bar's B), so their left edges stay aligned.
   is a plain value and not a stop, the user 2026-11-23, replacing "Video is always a stop", [track-dropdown.md](track-dropdown.md); Left and Right between them) → the season pill (a stop; OK opens the season list) → the row → Cast, Up retracing it to the
   control last focused in each (`useDpad`; a Bφ⁻³ primary ring on the Play row's buttons, the track controls, the season pill and
   the focused card; on a computer the arrows move the focus there as the TV's do; the mouse is
-  untouched). Focus entering the row lands on the selected episode; **selection follows focus** and rests in the row's second
-  slot (the first when only one card fits): Left and Right slide the row one card under it while the arriving card grows Bφ⁵ → Bφ⁶ and the leaving one shrinks, a
-  card leaving the row fades out and one entering fades in, --d2 on --ease (`useRowSlide`); at the row's ends the selection moves
-  along instead. **OK plays the episode at once** (resuming one started), or on an episode with no file does what the head's
+  untouched). Focus entering the row lands on the selected episode; **selection follows focus** and rests in the row's **first
+  slot**, under the title, the season pill and Play (the user with Astra and Fable, 2026-11-23, no arrow for earlier episodes): Left and Right slide the row one card under it while the arriving card grows Bφ⁵ → Bφ⁶ and the leaving one shrinks, a
+  card leaving the row fades out and one entering fades in, φ^-1.5 (0.486 s; the user slowed it 2026-11-24, then asked a bit faster 2026-11-25) on an even ease in and out, cubic-bezier(0.382, 0, 0.618, 1), not --ease's quick start, the row moving by exactly how far a kept card moved; the leaving card keeps its look and slides out to the left, fading only in the last φ⁻² of the move, while its focus ring fades out and the arriving card's fades in (script animations, since the TV turns focus transitions off; the user, 2026-11-25). Positions are read as drawn, so a held or quickly repeated key carries on from where the row is, at speed (ease out only, started on the same frame), with no jump or pause (`useRowSlide`); at the series' end the row stays
+  anchored with room to its right. **OK plays the episode at once** (resuming one started), or on an episode with no file does what the head's
   button does (Download). The first screen opts out of the TV's scroll manager (`data-scroll-mode-*`), and focus coming back into
   it from Cast glides the page to the top (0.618 s, `--d3`, on `--ease`; instant with reduced motion; on a computer only when the
-  keyboard moved it). The page opens with the selected episode in the second slot.
+  keyboard moved it). The page opens with the selected episode in the first slot.
 - **Selected is not focused (the user, 2026-11-18, cx2 of `series7-bg.html`):** the selected card keeps its Bφ⁶ size and band, and
   the band takes a **wash of the primary**, 38.2 % (φ⁻²) at its leading edge, gone at 61.8 % (φ⁻¹) of its width, over its glass
   (a plain linear-gradient, webOS 6), the ink unchanged; no ring is drawn round it. The blue Bφ⁻³ ring is the remote's or the
@@ -97,7 +97,7 @@ keeps the bar's gutter (Bφ² of the bar's B), so their left edges stay aligned.
   (B grows with a computer's screen, so the count follows the window and B), the rest empty; the row opens at min(selected, N − k), so the selected episode sits near the
   start with earlier ones behind it. A click on a card selects it (Play, Ends and the track controls follow at once) and the
   change is animated: the new card grows Bφ⁵ → Bφ⁶ while the old one shrinks and the cards after them slide, over the mod's
-  `--d2` (0.382 s) and `--ease`, each caption fading in at its new place, band or under the still; instant with reduced motion,
+  0.486 s (φ^-1.5) and cubic-bezier(0.382, 0, 0.618, 1), each caption fading in at its new place, band or under the still; instant with reduced motion,
   and the row does not scroll. Its **title is a link to the episode's page**. The arrows page k − 1 cards; the pill names the
   first card's season and jumps to a season. No wider gap before a season's first card (whole cards only).
 - **About ⟨title⟩** at the foot after the rows: row title Bφ¹ / 400 with Bφ² above and B below; two columns 61.8% : 38.2%,

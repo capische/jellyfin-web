@@ -410,50 +410,83 @@ const useTvScreen = (row: React.RefObject<HTMLDivElement>, on: boolean, selected
 /**
  * Round 7d's slide (the user, 2026-11-17): when the remote or the keyboard moves the selection, the row slides one card under the
  * fixed slot while the arriving card grows and the leaving one shrinks (their widths' own transition); a card leaving the row is
- * drawn once more where it was and fades out, one entering fades in. --d2 (0.382 s) on --ease; nothing moves with reduced motion.
+ * drawn once more where it was and fades out, one entering fades in. φ^-1.5 (0.486 s, between --d2 and --d3, the user 2026-11-25) on an even ease in and out, cubic-bezier(φ⁻², 0, φ⁻¹, 1), so it glides (the user,
+ * 2026-11-24); the row moves by exactly how far a card it keeps moved, so nothing jumps. Nothing moves with reduced motion.
  */
+/** The focus ring drawn on a card's still, or '' when it has none (the mouse draws none). */
+const focusRing = (card?: HTMLElement) => {
+    const shadow = card ? getComputedStyle(card.querySelector('.post') ?? card).boxShadow : 'none';
+    return shadow === 'none' ? '' : shadow;
+};
+
 const useRowSlide = (row: React.RefObject<HTMLDivElement>, first: number) => {
-    const before = useRef<{ start: number; widths: Map<string, number>; nodes: Map<string, HTMLElement> } | null>(null);
+    const before = useRef<{ start: number; ring: string; widths: Map<string, number>; lefts: Map<string, number>; nodes: Map<string, HTMLElement>;
+        ghosts: Array<[HTMLElement, number]> } | null>(null);
+    // The running slide and ring fade, kept here: getAnimations() is newer than the TV's Chromium 79.
+    const running = useRef<{ slide?: Animation; ring?: Animation }>({});
     useLayoutEffect(() => {
         const prev = before.current;
         before.current = null;
         const rail = row.current;
         if (!prev || !rail || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-        const timing = { duration: 382, easing: 'cubic-bezier(0.236, 0, 0, 1)' };
+        // An even ease in and out (φ⁻², φ⁻¹), not --ease's quick pull at the start (the user, 2026-11-24).
+        // A press during a slide carries on at speed (ease out only), so a held key glides instead of stopping at every card.
+        const moving = running.current.slide?.playState === 'running';
+        const timing = { duration: 486, easing: moving ? 'cubic-bezier(0, 0, 0.618, 1)' : 'cubic-bezier(0.382, 0, 0.618, 1)' };
         const cards = Array.from(rail.querySelectorAll<HTMLElement>('.cell[data-key]'));
         for (const card of cards.filter(candidate => !prev.widths.has(candidate.dataset.key ?? ''))) card.animate([{ opacity: 0 }, { opacity: 1 }], timing);
         const moved = first - prev.start;
-        const small = cards.find(card => !card.classList.contains('sel'));
-        if (!moved || !small || cards.length < 2) return;
-        const gap = parseFloat(getComputedStyle(cards[1]).marginLeft) || 0;
-        rail.animate([{ transform: `translateX(${moved * (small.offsetWidth + gap)}px)` }, { transform: 'none' }], timing);
-        const last = cards[cards.length - 1];
-        let left = 0;
-        let right = last.offsetLeft + last.offsetWidth + gap;
+        const kept = cards.find(card => prev.lefts.has(card.dataset.key ?? ''));
+        if (!moved || !kept || cards.length < 2) return;
+        // Positions are taken as drawn, so a press during a slide carries on from where the row is instead of jumping (a held or
+        // quickly repeated key): the running slide stops, and the row and every card leaving it go on from where they are.
+        running.current.slide?.cancel();
+        const origin = rail.getBoundingClientRect().left;
+        const shift = (prev.lefts.get(kept.dataset.key ?? '') ?? 0) - kept.getBoundingClientRect().left;
+        running.current.slide = rail.animate([{ transform: `translateX(${shift}px)` }, { transform: 'none' }], timing);
+        // Started on this frame, not held pending for the next ones, so a repeated press does not pause the row.
+        if (moving) running.current.slide.startTime = document.timeline.currentTime;
+        const place = (left: number) => (left - origin - shift) + 'px';
+        for (const [ghost, left] of prev.ghosts) ghost.style.left = place(left);
+        // The focus ring does not jump: the arriving card's fades in as it slides into the slot, and the leaving card carries its
+        // ring out, fading (the user, 2026-11-25). Script animations, since the TV turns focus transitions off.
+        const clear = prev.ring.replace(/rgba?\([^)]*\)/, 'transparent');
+        const arriving = cards.find(card => card.classList.contains('sel'))?.querySelector<HTMLElement>('.post');
+        if (prev.ring && arriving) running.current.ring = arriving.animate([{ boxShadow: clear }, { boxShadow: prev.ring }], timing);
         Array.from(prev.nodes.keys()).filter(key => !cards.some(card => card.dataset.key === key)).forEach(key => {
             const ghost = prev.nodes.get(key)!;
-            const width = prev.widths.get(key) ?? 0;
-            const leftSide = moved > 0;
-            if (leftSide) left -= width + gap;
+            // The leaving card keeps its look (selected band, and the focus ring it had) and slides out with the row from where it
+            // was drawn, fading only once mostly gone; its own .cell + .cell margin must not shift it (the user, 2026-11-25).
             ghost.classList.add('jfmod-ghost');
-            ghost.classList.remove('sel', 'focusable');
+            ghost.classList.remove('focusable');
+            ghost.style.margin = '0';
             ghost.removeAttribute('data-key');
             ghost.removeAttribute('tabindex');
             ghost.setAttribute('aria-hidden', 'true');
             ghost.setAttribute('inert', '');
-            ghost.style.left = (leftSide ? left : right) + 'px';
-            ghost.style.width = width + 'px';
-            if (!leftSide) right += width + gap;
+            ghost.style.left = place(prev.lefts.get(key) ?? 0);
+            ghost.style.width = (prev.widths.get(key) ?? 0) + 'px';
             rail.appendChild(ghost);
-            ghost.animate([{ opacity: 1 }, { opacity: 0 }], timing).onfinish = () => ghost.remove();
+            const post = ghost.querySelector<HTMLElement>('.post');
+            if (prev.ring && post && ghost.classList.contains('sel')) post.animate([{ boxShadow: prev.ring }, { boxShadow: clear }], timing);
+            ghost.animate(moved > 0 ? [{ opacity: 1 }, { opacity: 1, offset: 0.618 }, { opacity: 0 }] : [{ opacity: 1 }, { opacity: 0 }], timing)
+                .onfinish = () => ghost.remove();
         });
     }, [row, first]);
     return useCallback(() => {
         const rail = row.current;
         if (!rail) return;
         const cards = Array.from(rail.querySelectorAll<HTMLElement>('.cell[data-key]'));
-        before.current = { start: Number(rail.dataset.first ?? 0), widths: new Map(cards.map(card => [card.dataset.key ?? '', card.offsetWidth])),
-            nodes: new Map(cards.map(card => [card.dataset.key ?? '', card.cloneNode(true) as HTMLElement])) };
+        const focused = cards.find(card => card.contains(document.activeElement));
+        // The ring as CSS draws it, not part-way through its fade-in.
+        running.current.ring?.cancel();
+        running.current.ring = undefined;
+        before.current = { start: Number(rail.dataset.first ?? 0),
+            widths: new Map(cards.map(card => [card.dataset.key ?? '', card.getBoundingClientRect().width])),
+            lefts: new Map(cards.map(card => [card.dataset.key ?? '', card.getBoundingClientRect().left])),
+            nodes: new Map(cards.map(card => [card.dataset.key ?? '', card.cloneNode(true) as HTMLElement])),
+            ghosts: Array.from(rail.querySelectorAll<HTMLElement>('.jfmod-ghost')).map(ghost => [ghost, ghost.getBoundingClientRect().left]),
+            ring: focusRing(focused) };
     }, [row]);
 };
 
@@ -462,7 +495,7 @@ const useRowSlide = (row: React.RefObject<HTMLDivElement>, first: number) => {
  * at once (resuming one started) or, with no file, does what the head's button does (Download); Up goes to the season pill
  * (round 7d), Down to Cast as the D-pad finds it.
  */
-interface RowWindow { series: SeriesModel; first: number; count: number; setStart: (start: number) => void; setFocusKey: (key: string) => void; snapshot: () => void }
+interface RowWindow { series: SeriesModel; first: number; setStart: (start: number) => void; setFocusKey: (key: string) => void; snapshot: () => void }
 const useTvKeys = (row: React.RefObject<HTMLDivElement>, on: boolean, state: RowWindow) => {
     const latest = useRef(state);
     latest.current = state;
@@ -470,12 +503,12 @@ const useTvKeys = (row: React.RefObject<HTMLDivElement>, on: boolean, state: Row
         const node = row.current;
         if (!on || !node) return;
         const move = (index: number, step: number) => {
-            const { series, first, count, setStart, setFocusKey, snapshot } = latest.current;
+            const { series, first, setStart, setFocusKey, snapshot } = latest.current;
             const { episodes } = series;
             const next = Math.max(0, Math.min(episodes.length - 1, index + step));
-            // The selection rests in the second slot (the first when only one card fits) and the row slides under it; at the ends
-            // the selection moves along (7d).
-            const start = Math.max(0, Math.min(next - (count > 1 ? 1 : 0), episodes.length - count));
+            // The selection rests in the first slot, under the title, the season pill and Play, and the row slides under it; at the
+            // series' end the row stays anchored with room to its right (the user, 2026-11-23, no arrow for earlier episodes).
+            const start = next;
             if (start !== first && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) snapshot();
             setStart(start);
             series.select(episodes[next].key);
@@ -535,8 +568,8 @@ const EpisodeRow: FC<{ series: SeriesModel }> = ({ series }) => {
     const opened = useRef({ key: '', index: 0 });
     if (opened.current.key !== seriesKey) opened.current = { key: seriesKey, index: Math.max(0, selectedIndex) };
     useEffect(() => setStart(undefined), [seriesKey]);
-    // It opens with the selected episode in the second slot, or the first when only one card fits.
-    const first = Math.max(0, Math.min(start ?? Math.max(0, opened.current.index - (count > 1 ? 1 : 0)), total - count));
+    // It opens with the selected episode in the first slot, as the keys keep it (the user, 2026-11-23).
+    const first = Math.max(0, Math.min(start ?? opened.current.index, total - 1));
     const seasons = useMemo(() => [...new Set(episodes.map(episode => episode.season))]
         .map(number => ({ number, count: episodes.filter(episode => episode.season === number).length })), [episodes]);
     const close = useCallback(() => setOpen(false), []);
@@ -549,7 +582,7 @@ const EpisodeRow: FC<{ series: SeriesModel }> = ({ series }) => {
     useTvScreen(row, total > 0, series.selected?.key, tv, series.select);
     const snapshot = useRowSlide(row, first);
     // The keyboard is the remote on every layout (the user, 2026-11-17); the mouse keeps its clicks.
-    useTvKeys(row, total > 0, { series, first, count, setStart, setFocusKey, snapshot });
+    useTvKeys(row, total > 0, { series, first, setStart, setFocusKey, snapshot });
     // The TV moves the focus itself, a card at a time; the card it lands on is drawn first, then focused.
     useEffect(() => {
         const card = focusKey ? cardOf(row.current, focusKey) : null;
