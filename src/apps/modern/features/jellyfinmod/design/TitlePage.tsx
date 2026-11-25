@@ -622,6 +622,10 @@ const useDpad = (root: React.RefObject<HTMLDivElement>, on: boolean, tv: boolean
         const play = () => (action?.isConnected ? action : first('.actbar .play') ?? first('.actbar button'));
         const routes: Record<string, (element: HTMLElement) => HTMLElement | null> = {
             ArrowDown: element => {
+                // Down from a control whose list is open goes back into that list (Codex review of ds.t20, P2).
+                if (element.getAttribute('aria-expanded') === 'true') {
+                    return document.querySelector<HTMLElement>('.vlist [aria-selected=true]') ?? document.querySelector<HTMLElement>('.vlist .vrow');
+                }
                 if (element.closest('.actbar')) return tracks() ?? first('.jfmod-epRow .spill') ?? selected();
                 if (element.closest('.gpk')) return first('.jfmod-epRow .spill') ?? selected();
                 if (element.closest('.jfmod-epRow .spill')) return selected();
@@ -743,7 +747,7 @@ const Content: FC<{ view: HTMLElement; type: string; art: string; item?: BaseIte
             {model.tracks.length > 0 && <div className='gpk'>
                 {model.tracks.map(track => <TrackField key={track.name} kind={track.kind} name={track.name}
                     value={<TrackValue closed option={track.options.find(option => option.value === track.value) ?? track.options[0]} />}
-                    enabled={track.enabled && (track.options.length > 1 || (track.kind === 'v' && (device === 'computer' || device === 'tv')))} stacked={false}>
+                    enabled={track.enabled && track.options.length > 1} stacked={false}>
                     {track.options.map(option => <ChooseRow key={option.value} selected={option.value === track.value} onChoose={() => {
                         track.select.value = option.value;
                         track.select.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));

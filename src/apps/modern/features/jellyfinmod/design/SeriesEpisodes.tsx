@@ -437,7 +437,7 @@ const useRowSlide = (row: React.RefObject<HTMLDivElement>, first: number) => {
         for (const card of cards.filter(candidate => !prev.widths.has(candidate.dataset.key ?? ''))) card.animate([{ opacity: 0 }, { opacity: 1 }], timing);
         const moved = first - prev.start;
         const kept = cards.find(card => prev.lefts.has(card.dataset.key ?? ''));
-        if (!moved || !kept || cards.length < 2) return;
+        if (!moved || !kept) return;
         // Positions are taken as drawn, so a press during a slide carries on from where the row is instead of jumping (a held or
         // quickly repeated key): the running slide stops, and the row and every card leaving it go on from where they are.
         running.current.slide?.cancel();
@@ -605,7 +605,8 @@ const EpisodeRow: FC<{ series: SeriesModel }> = ({ series }) => {
             <button ref={pill} type='button' className='spill glassy focusable' aria-haspopup='menu' aria-expanded={open} onClick={() => setOpen(!open)}>
                 {seasonName(season)}<Icon name='down' /></button>
             {next && <span className='jfmod-nextEp'><span className='jfmod-creditLabel'>Next episode</span>{next.airs}</span>}
-            <div className={'actbar static glassy arrows' + (total <= count ? ' jfmod-hidden' : '')}>
+            {/* Shown while there is anything to page to: with the selection first, a short season can hide earlier episodes (Codex P2). */}
+            <div className={'actbar static glassy arrows' + (first <= 0 && first + count >= total ? ' jfmod-hidden' : '')}>
                 <button type='button' className={'dbtn focusable' + (first <= 0 ? ' off' : '')} disabled={first <= 0} aria-label='Previous' onClick={() => page(-1)}><Icon name='prev' /></button>
                 <button type='button' className={'dbtn focusable' + (first + count >= total ? ' off' : '')} disabled={first + count >= total} aria-label='Next' onClick={() => page(1)}><Icon name='nextp' /></button>
             </div>

@@ -215,14 +215,16 @@ export const TrackField: FC<{ kind: TrackKind; name: string; value: ReactNode; e
             trigger.current?.focus();
         };
         const outside = (event: Event) => {
-            if ((event.target as Element).closest('.historyportal')) return;
+            // A dialog opened from the list (Cancel Download's confirmation) owns the focus for a while; the list stays open so
+            // the focus can return to its opener (Codex re-review of ds.t20, P2).
+            if ((event.target as Element).closest('.historyportal, .dialogContainer')) return;
             if (!trigger.current?.contains(event.target as Node) && !list.current?.contains(event.target as Node)) close();
         };
         window.addEventListener('keydown', key, true);
         document.addEventListener('pointerdown', outside);
-        // On a computer the focus leaving the control and its chooser closes it, so Tab to another control and Enter never
-        // leaves two choosers open (Codex review of ds.t19, P2).
-        if (quiet) document.addEventListener('focusin', outside);
+        // The focus leaving the control and its list closes it, so Tab, or the TV remote's arrows, never leave a list open behind
+        // the focus or two lists open (Codex reviews of ds.t19 and ds.t20, P2).
+        document.addEventListener('focusin', outside);
         inputManager.on(window, command);
         return () => {
             window.removeEventListener('keydown', key, true);
