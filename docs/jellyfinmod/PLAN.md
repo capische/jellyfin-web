@@ -2736,6 +2736,13 @@ later gates.
 
 ## ds.t20 — the series and movie title pages redesigned on the computer and the TV (2026-11-17)
 
+**Status 2026-11-25: built, reviewed (not accepted).** The user approved the title pages, the track chooser (design A), the
+phone strip and the episode row (focused episode first under the title, the row gliding 0.486 s on an even ease, the leaving card
+sliding out, the ring cross-fading, held keys carrying on). Matrix on beta in Playwright Chromium and real Chrome: computer, TV
+1920 and 1280, light, season break, series end with the mouse arrows, phone, tablet, reduced motion, held keys. Codex gpt-6.1-sol
+high reviewed origin/main-items..0cd51630da (no P1; two P2 and two P3 fixed in the following commit, two delta re-reviews,
+approved). Acceptance: the user's own test on the production copy (28096); the C1 waits for the TV.
+
 **Built (not accepted), first look on beta (computer and TV).** Round 7d's hero (the Backdrop on the right, melting into the blurred
 ground, plates and glow; no poster in the head, a whole poster on the right when there is no Backdrop), the first screen of hero
 and episode row with the description cut to fit, credits on one line, Play label E with its fill, the big selected card in a
